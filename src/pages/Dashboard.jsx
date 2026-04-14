@@ -1,0 +1,390 @@
+import { useState, useMemo } from 'react'
+import { Link } from 'react-router-dom'
+import { Music, Film, Tv, BookOpen, Calendar, Radar, Star, TrendingUp, Plus, ArrowRight, Sparkles, Library, MessageCircle, X, Send, Lightbulb, BookMarked } from 'lucide-react'
+import { useCatalog } from '../hooks/useCatalog'
+import { useTasteProfile } from '../hooks/useTasteProfile'
+import { useWeeklyDumps } from '../hooks/useWeeklyDumps'
+import { useScratchpad } from '../hooks/useScratchpad'
+import { useAuth } from '../hooks/useAuth'
+import { getWeeklyRadar } from '../services/mockData'
+import { getMediaColor } from '../utils/filterUtils'
+import { formatDate } from '../utils/dateUtils'
+import CoverArt from '../components/common/CoverArt'
+import { generateWeeklyLetter } from '../utils/weeklyLetter'
+
+const TYPE_ICONS = { music: Music, movie: Film, tv: Tv, book: BookOpen }
+
+// ─── Tidbits generator ───
+function generateTidbits(stats, profile, streak) {
+  const tidbits = []
+  const seed = new Date().getFullYear() * 100 + Math.floor(new Date().getDate() / 7)
+
+  // Milestone celebrations
+  if (stats.total === 0) {
+    tidbits.push({ emoji: '👀', text: "Your catalog is giving 'new apartment, no furniture.' Let's fix that." })
+  } else if (stats.total >= 50) {
+    tidbits.push({ emoji: '🏛️', text: `${stats.total} items. At this point your catalog qualifies as a cultural institution.` })
+  } else if (stats.total >= 25) {
+    tidbits.push({ emoji: '📚', text: `${stats.total} items deep. You're not cataloging anymore, you're curating.` })
+  } else if (stats.total >= 10) {
+    tidbits.push({ emoji: '🎉', text: `Double digits! ${stats.total} items. Your radar is officially paying attention to you now.` })
+  }
+
+  // Streak
+  if (streak >= 4) {
+    tidbits.push({ emoji: '🔥', text: `${streak} weeks straight of Liner Notes. Your dedication is lowkey inspiring and highkey obsessive. Keep going.` })
+  } else if (streak === 0) {
+    tidbits.push({ emoji: '📮', text: "Your Liner Notes are looking a little lonely this week. Even a one-liner counts." })
+  }
+
+  // Genre loyalty
+  const allGenres = [
+    ...(profile.music?.genres || []),
+    ...(profile.movies?.genres || []),
+    ...(profile.tv?.genres || []),
+    ...(profile.books?.genres || []),
+  ]
+  if (allGenres.length > 0) {
+    const genreCounts = {}
+    allGenres.forEach(g => { genreCounts[g] = (genreCounts[g] || 0) + 1 })
+    const topGenre = Object.entries(genreCounts).sort((a, b) => b[1] - a[1])[0]
+    if (topGenre[1] >= 2) {
+      tidbits.push({ emoji: '🎯', text: `"${topGenre[0]}" keeps showing up like it's your personality type. (It might be.)` })
+    }
+  }
+
+  // Type balance
+  if (stats.byType.music > 0 && stats.byType.book > 0 && stats.byType.movie > 0) {
+    tidbits.push({ emoji: '🦄', text: "Music, film, AND books? A true triple-threat consumer. We see you." })
+  } else if (stats.total > 3 && stats.byType.music === stats.total) {
+    tidbits.push({ emoji: '🎵', text: "Your catalog is 100% music. No notes. (Well, actually, lots of notes.)" })
+  }
+
+  // Prompts (always available)
+  const prompts = [
+    { emoji: '🌶️', text: "Spicy prompt: what's the most overrated thing in your catalog? Be honest. We won't tell." },
+    { emoji: '💬', text: "Has anyone recommended something to you lately? Drop it in the scratchpad before you forget and feel guilty about it in 3 months." },
+    { emoji: '🔄', text: "Remember that thing you gave 2 stars? Go revisit it. Redemption arcs are real." },
+    { emoji: '🎰', text: "Feeling indecisive? Go to your Radar and commit to the first thing that makes you go 'huh.'" },
+    { emoji: '🪩', text: "Hot take: your Liner Notes are the most interesting journal you'll ever keep. Write in them." },
+    { emoji: '🧊', text: "Cold take: you have objectively great taste. We checked." },
+    { emoji: '📱', text: "Quick — text a friend the last thing you 5-starred. They need to know." },
+  ]
+  tidbits.push(prompts[seed % prompts.length])
+
+  // Return 2 tidbits max, deterministically selected
+  const selected = tidbits.slice(0, 2)
+  return selected
+}
+
+// ─── Time-based greeting ───
+function getGreeting(name) {
+  const hour = new Date().getHours()
+  const first = name?.split(' ')[0] || 'there'
+  if (hour < 12) return `Good morning, ${first}.`
+  if (hour < 17) return `Good afternoon, ${first}.`
+  return `Good evening, ${first}.`
+}
+
+export default function Dashboard() {
+  const { user } = useAuth()
+  const { items, getStats } = useCatalog()
+  const { profile, isProfileEmpty } = useTasteProfile()
+  const { dumps, getStreak, getCurrentWeekDump } = useWeeklyDumps()
+  const { notes, addNote, deleteNote } = useScratchpad()
+  const [noteText, setNoteText] = useState('')
+
+  const stats = getStats()
+  const streak = getStreak()
+  const currentDump = getCurrentWeekDump()
+
+  const radar = useMemo(() => {
+    if (isProfileEmpty()) return null
+    return getWeeklyRadar(profile, items)
+  }, [profile, items])
+
+  const recentItems = items.slice(0, 5)
+  const tidbits = generateTidbits(stats, profile, streak)
+
+  const letter = useMemo(() => {
+    if (!radar) return null
+    return generateWeeklyLetter(profile, radar)
+  }, [profile, radar])
+
+  // Build a teaser from the letter
+  const radarTeaser = useMemo(() => {
+    if (!letter || letter.sections.length === 0) return null
+    // Grab the first sentence from the first section
+    const first = letter.sections[0]
+    const raw = first.body.replace(/\*\*(.+?)\*\*/g, '$1').replace(/\*(.+?)\*/g, '$1')
+    const firstSentence = raw.split(/\.\s/)[0] + '.'
+    return { emoji: first.emoji, title: first.title, teaser: firstSentence }
+  }, [letter])
+
+  // Determine CTA
+  let cta = { to: '/catalog', label: 'Add Something to Catalog', icon: Plus }
+  if (isProfileEmpty()) {
+    cta = { to: '/profile', label: 'Build Your Taste Profile', icon: Sparkles }
+  } else if (!currentDump) {
+    cta = { to: '/weekly', label: "Write This Week's Liner Notes", icon: BookMarked }
+  } else if (radar) {
+    cta = { to: '/radar', label: 'Check Your Weekly Radar', icon: Radar }
+  }
+
+  const handleAddNote = () => {
+    if (noteText.trim()) {
+      addNote(noteText)
+      setNoteText('')
+    }
+  }
+
+  return (
+    <div>
+      {/* ─── Hero Greeting ─── */}
+      <div className="mb-8">
+        <h1 className="text-2xl md:text-3xl font-bold text-text-primary mb-2">
+          {getGreeting(user?.displayName)}
+        </h1>
+        <p className="text-text-secondary mb-4">Here's the vibe check on your media universe.</p>
+        <Link
+          to={cta.to}
+          className="inline-flex items-center gap-2 bg-accent-primary hover:bg-accent-hover text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-colors"
+        >
+          <cta.icon size={16} />
+          {cta.label}
+        </Link>
+      </div>
+
+      {/* ─── Stats Row ─── */}
+      <div className="grid grid-cols-4 gap-3 mb-8">
+        {[
+          { label: 'Cataloged', value: stats.total, icon: Library, to: '/catalog' },
+          { label: 'Streak', value: streak, icon: TrendingUp, color: 'var(--color-accent-primary)', to: '/weekly' },
+          { label: 'Avg Rating', value: stats.avgRating || '—', icon: Star, color: '#f59e0b' },
+          { label: 'Finished', value: stats.byStatus.finished, icon: Sparkles, color: 'var(--color-accent-books)' },
+        ].map(({ label, value, icon: Icon, color, to }) => {
+          const inner = (
+            <>
+              <Icon size={16} style={{ color: color || 'var(--color-text-muted)' }} />
+              <span className="text-xl font-bold text-text-primary">{value}</span>
+              <span className="text-xs text-text-muted">{label}</span>
+            </>
+          )
+          return to ? (
+            <Link key={label} to={to} className="bg-bg-secondary border border-border rounded-xl p-3 flex flex-col items-center gap-1 hover:border-accent-primary/30 transition-all">
+              {inner}
+            </Link>
+          ) : (
+            <div key={label} className="bg-bg-secondary border border-border rounded-xl p-3 flex flex-col items-center gap-1">
+              {inner}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* ─── Main Grid ─── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+
+        {/* Left column */}
+        <div className="space-y-6">
+          {/* Weekly Tidbits */}
+          <div className="bg-bg-secondary border border-border rounded-2xl p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <Lightbulb size={18} className="text-accent-primary" />
+              <h2 className="font-semibold text-text-primary">This Week</h2>
+            </div>
+            <div className="space-y-3">
+              {tidbits.map((tidbit, i) => (
+                <div key={i} className="flex items-start gap-3 p-3 bg-bg-tertiary rounded-xl">
+                  <span className="text-lg shrink-0">{tidbit.emoji}</span>
+                  <p className="text-sm text-text-secondary leading-relaxed">{tidbit.text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Scratchpad */}
+          <div className="bg-bg-secondary border border-border rounded-2xl p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <MessageCircle size={18} className="text-accent-primary" />
+              <h2 className="font-semibold text-text-primary">Someone Told Me About...</h2>
+            </div>
+            <p className="text-xs text-text-muted mb-3">For when someone says "you HAVE to watch this" and you need to write it down before your brain deletes it.</p>
+
+            {/* Input */}
+            <div className="flex gap-2 mb-4">
+              <input
+                type="text"
+                value={noteText}
+                onChange={(e) => setNoteText(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAddNote()}
+                placeholder="e.g. My coworker said to watch Shogun..."
+                className="flex-1 bg-bg-tertiary border border-border rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-primary transition-colors"
+              />
+              <button
+                onClick={handleAddNote}
+                disabled={!noteText.trim()}
+                className="p-2 bg-accent-primary/10 text-accent-primary rounded-lg hover:bg-accent-primary/20 transition-colors disabled:opacity-30"
+              >
+                <Send size={16} />
+              </button>
+            </div>
+
+            {/* Notes list */}
+            {notes.length > 0 ? (
+              <div className="space-y-2 max-h-[240px] overflow-y-auto">
+                {notes.map((note) => (
+                  <div key={note.id} className="flex items-start gap-2 group p-2 rounded-lg hover:bg-bg-tertiary transition-colors">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-text-primary">{note.text}</p>
+                      <p className="text-xs text-text-muted mt-0.5">{formatDate(note.createdAt)}</p>
+                    </div>
+                    <button
+                      onClick={() => deleteNote(note.id)}
+                      className="p-1 rounded text-text-muted/0 group-hover:text-text-muted hover:text-accent-movies transition-colors shrink-0"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-text-muted italic text-center py-4">Empty. For now. Next time someone corners you at a party with a rec, this is your escape plan.</p>
+            )}
+          </div>
+        </div>
+
+        {/* Right column */}
+        <div className="space-y-6">
+          {/* Radar preview */}
+          <div className="bg-bg-secondary border border-border rounded-2xl p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-semibold text-text-primary">Weekly Radar</h2>
+              <Link to="/radar" className="text-sm text-accent-primary hover:underline flex items-center gap-1">
+                Read the full letter <ArrowRight size={14} />
+              </Link>
+            </div>
+            {radar ? (
+              <div className="space-y-3">
+                {/* Teaser */}
+                {radarTeaser && (
+                  <Link to="/radar" className="block p-3 bg-bg-tertiary rounded-xl hover:bg-bg-hover transition-colors">
+                    <p className="text-sm text-text-secondary leading-relaxed italic">
+                      "{radarTeaser.teaser}"
+                    </p>
+                    <p className="text-xs text-accent-primary mt-1.5">Read this week's full dispatch →</p>
+                  </Link>
+                )}
+                {radar.newReleases.slice(0, 3).map((item, i) => {
+                  const color = getMediaColor(item.type)
+                  return (
+                    <Link to="/radar" key={i} className="flex items-center gap-3 p-2 rounded-lg hover:bg-bg-hover transition-colors">
+                      <CoverArt title={item.title} type={item.type} size="sm" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-text-primary truncate">{item.title}</p>
+                        <p className="text-xs text-text-muted truncate">{item.creator}</p>
+                      </div>
+                      <span className="text-xs text-text-muted shrink-0">{formatDate(item.releaseDate)}</span>
+                    </Link>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Radar size={24} className="mx-auto text-text-muted/30 mb-2" />
+                <p className="text-text-muted text-sm mb-3">Set up your taste profile for recommendations</p>
+                <Link to="/profile" className="inline-flex items-center gap-1 text-sm text-accent-primary hover:underline">
+                  Build profile <ArrowRight size={14} />
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {/* The Liner Notes */}
+          <div className="bg-bg-secondary border border-border rounded-2xl p-5">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="font-semibold text-text-primary">The Liner Notes</h2>
+              <Link to="/weekly" className="text-sm text-accent-primary hover:underline flex items-center gap-1">
+                {currentDump ? 'Edit' : 'Write'} <ArrowRight size={14} />
+              </Link>
+            </div>
+            <p className="text-xs text-text-muted mb-4">Your weekly field notes on what you're into. Think of it as a diary, but cooler.</p>
+            {currentDump ? (
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { key: 'listening', label: 'Listening', icon: Music, color: 'var(--color-accent-music)' },
+                  { key: 'watching', label: 'Watching', icon: Film, color: 'var(--color-accent-movies)' },
+                  { key: 'reading', label: 'Reading', icon: BookOpen, color: 'var(--color-accent-books)' },
+                  { key: 'discovered', label: 'Discovered', icon: Sparkles, color: 'var(--color-accent-primary)' },
+                ].map(({ key, label, icon: Icon, color }) => (
+                  <div key={key}>
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <Icon size={13} style={{ color }} />
+                      <span className="text-xs font-medium text-text-muted">{label}</span>
+                    </div>
+                    {(currentDump[key] || []).length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {currentDump[key].map((item) => (
+                          <span key={item} className="text-xs px-2 py-0.5 rounded-full bg-bg-tertiary text-text-secondary">
+                            {item}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-text-muted italic">—</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <Link to="/weekly" className="block text-center py-6 rounded-xl bg-bg-tertiary hover:bg-bg-hover transition-colors">
+                <BookMarked size={28} className="mx-auto text-accent-primary mb-2" />
+                <p className="text-sm font-medium text-text-primary mb-1">What's in your ears, eyes, and hands this week?</p>
+                <p className="text-xs text-text-muted">Drop your weekly recs, hot takes, and questionable discoveries. No judgment (mostly).</p>
+              </Link>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ─── Recent Catalog ─── */}
+      <div className="bg-bg-secondary border border-border rounded-2xl p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-semibold text-text-primary">Recent in Catalog</h2>
+          <Link to="/catalog" className="text-sm text-accent-primary hover:underline flex items-center gap-1">
+            View all <ArrowRight size={14} />
+          </Link>
+        </div>
+        {recentItems.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {recentItems.map((item) => {
+              const color = getMediaColor(item.type)
+              return (
+                <Link to="/catalog" key={item.id} className="flex items-center gap-3 p-3 rounded-xl bg-bg-tertiary hover:bg-bg-hover transition-colors">
+                  <CoverArt title={item.title} type={item.type} size="sm" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-text-primary truncate">{item.title}</p>
+                    <p className="text-xs text-text-muted truncate">{item.creator}</p>
+                  </div>
+                  {item.rating > 0 && (
+                    <div className="flex items-center gap-1 text-amber-500 shrink-0">
+                      <Star size={12} fill="currentColor" />
+                      <span className="text-xs font-medium">{item.rating}</span>
+                    </div>
+                  )}
+                </Link>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <p className="text-text-muted text-sm mb-3">No items yet</p>
+            <Link to="/catalog" className="inline-flex items-center gap-1 text-sm text-accent-primary hover:underline">
+              <Plus size={14} /> Add your first item
+            </Link>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
