@@ -35,7 +35,22 @@ function ProtectedRoute({ children }) {
 
 function PublicRoute({ children }) {
   const { user, loading } = useAuth()
-  if (loading) return null
+  // Wait for auth to fully resolve (important for OAuth redirects)
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-bg-primary">
+        <div className="w-8 h-8 border-2 border-accent-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+  // If there's a hash with access_token, auth is still processing — wait
+  if (window.location.hash.includes('access_token')) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-bg-primary">
+        <div className="w-8 h-8 border-2 border-accent-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
   return user ? <Navigate to="/" /> : children
 }
 

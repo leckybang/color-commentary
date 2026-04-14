@@ -30,20 +30,21 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     if (isSupabaseConfigured) {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        const mapped = session ? mapSupabaseUser(session.user) : null
-        setUser(mapped)
-        setLoading(false)
-      })
+      // Listen for auth changes FIRST (catches OAuth redirects)
       const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
         const mapped = session ? mapSupabaseUser(session.user) : null
         setUser(mapped)
         if (mapped) {
-          // Also persist to localStorage so we have a fallback
           localStorage.setItem('cc_user', JSON.stringify(mapped))
         } else {
           localStorage.removeItem('cc_user')
         }
+        setLoading(false)
+      })
+      // Then check for existing session
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        const mapped = session ? mapSupabaseUser(session.user) : null
+        setUser(mapped)
         setLoading(false)
       })
       return () => subscription.unsubscribe()
