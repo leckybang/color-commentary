@@ -30,23 +30,34 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     if (isSupabaseConfigured) {
-      // Listen for auth changes FIRST (catches OAuth redirects)
+      const hasOAuthTokens = window.location.hash.includes('access_token')
+
+      // Listen for auth changes (catches OAuth redirects)
       const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
         const mapped = session ? mapSupabaseUser(session.user) : null
         setUser(mapped)
         if (mapped) {
           localStorage.setItem('cc_user', JSON.stringify(mapped))
-        } else {
+        } else if (!hasOAuthTokens) {
           localStorage.removeItem('cc_user')
         }
         setLoading(false)
+        // Clean up the hash after processing
+        if (hasOAuthTokens && session) {
+          window.history.replaceState(null, '', window.location.pathname)
+        }
       })
-      // Then check for existing session
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        const mapped = session ? mapSupabaseUser(session.user) : null
-        setUser(mapped)
-        setLoading(false)
-      })
+
+      // If we're processing an OAuth redirect, DON'T call getSession yet —
+      // let onAuthStateChange handle it once Supabase parses the hash
+      if (!hasOAuthTokens) {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          const mapped = session ? mapSupabaseUser(session.user) : null
+          setUser(mapped)
+          setLoading(false)
+        })
+      }
+
       return () => subscription.unsubscribe()
     } else {
       const saved = localStorage.getItem('cc_user')
