@@ -11,12 +11,16 @@ const DEMO_USER = {
 
 function mapSupabaseUser(supaUser) {
   if (!supaUser) return null
+  // Check localStorage for onboardingComplete (more reliable than user_metadata)
+  const localData = localStorage.getItem(`cc_user_meta_${supaUser.id}`)
+  const localMeta = localData ? JSON.parse(localData) : {}
+
   return {
     uid: supaUser.id,
     email: supaUser.email,
     displayName: supaUser.user_metadata?.full_name || supaUser.email?.split('@')[0] || 'User',
     avatarUrl: supaUser.user_metadata?.avatar_url || '',
-    onboardingComplete: supaUser.user_metadata?.onboardingComplete || false,
+    onboardingComplete: localMeta.onboardingComplete || supaUser.user_metadata?.onboardingComplete || false,
   }
 }
 
@@ -26,17 +30,24 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     if (isSupabaseConfigured) {
-      // Supabase auth
       supabase.auth.getSession().then(({ data: { session } }) => {
-        setUser(session ? mapSupabaseUser(session.user) : null)
+        const mapped = session ? mapSupabaseUser(session.user) : null
+        setUser(mapped)
         setLoading(false)
       })
       const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-        setUser(session ? mapSupabaseUser(session.user) : null)
+        const mapped = session ? mapSupabaseUser(session.user) : null
+        setUser(mapped)
+        if (mapped) {
+          // Also persist to localStorage so we have a fallback
+          localStorage.setItem('cc_user', JSON.stringify(mapped))
+        } else {
+          localStorage.removeItem('cc_user')
+        }
+        setLoading(false)
       })
       return () => subscription.unsubscribe()
     } else {
-      // localStorage auth
       const saved = localStorage.getItem('cc_user')
       if (saved) {
         setUser(JSON.parse(saved))
@@ -49,7 +60,6 @@ export function AuthProvider({ children }) {
     if (isSupabaseConfigured) {
       const { error } = await supabase.auth.signInWithPassword({ email, password: email })
       if (error) {
-        // Try sign up if login fails
         const { error: signUpError } = await supabase.auth.signUp({
           email,
           password: email,
@@ -89,10 +99,17 @@ export function AuthProvider({ children }) {
 
   const updateProfile = (updates) => {
     const updated = { ...user, ...updates }
+    localStorage.setItem('cc_user', JSON.stringify(updated))
+    // Also persist specific flags to a user-scoped key for Supabase users
+    if (user?.uid) {
+      const metaKey = `cc_user_meta_${user.uid}`
+      const existing = localStorage.getItem(metaKey)
+      const meta = existing ? JSON.parse(existing) : {}
+      localStorage.setItem(metaKey, JSON.stringify({ ...meta, ...updates }))
+    }
     if (isSupabaseConfigured) {
       supabase.auth.updateUser({ data: updates }).catch(console.error)
     }
-    localStorage.setItem('cc_user', JSON.stringify(updated))
     setUser(updated)
   }
 
