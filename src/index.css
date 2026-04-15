@@ -1,21 +1,21 @@
 @import "tailwindcss";
 
 @theme {
-  /* Warm, editorial palette — McSweeney's meets late-night bookshop */
-  --color-bg-primary: #1c1915;
-  --color-bg-secondary: #262219;
-  --color-bg-tertiary: #332e24;
-  --color-bg-hover: #3d3729;
-  --color-border: #4a432f;
-  --color-text-primary: #f0ebe0;
-  --color-text-secondary: #b8ad96;
-  --color-text-muted: #877e6a;
-  --color-accent-music: #c47aff;
-  --color-accent-movies: #ff6b5a;
-  --color-accent-tv: #5bb8f5;
-  --color-accent-books: #7ec87e;
-  --color-accent-primary: #d4935e;
-  --color-accent-hover: #c17f48;
+  /* Default: Velvet Darkroom */
+  --color-bg-primary: #110d18;
+  --color-bg-secondary: #1a1425;
+  --color-bg-tertiary: #241d30;
+  --color-bg-hover: #2e263c;
+  --color-border: #3a3050;
+  --color-text-primary: #ede8f5;
+  --color-text-secondary: #a99fc0;
+  --color-text-muted: #6e6488;
+  --color-accent-music: #d4a0ff;
+  --color-accent-movies: #ff7a8a;
+  --color-accent-tv: #7ab8ff;
+  --color-accent-books: #7fe0a0;
+  --color-accent-primary: #c49bff;
+  --color-accent-hover: #b07af5;
   --font-heading: 'Libre Baskerville', 'Georgia', serif;
   --font-body: 'Karla', -apple-system, BlinkMacSystemFont, sans-serif;
 }

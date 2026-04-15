@@ -24,6 +24,24 @@ function mapSupabaseUser(supaUser) {
   }
 }
 
+// Create a profile row in Supabase if one doesn't exist
+async function ensureProfile(supaUser) {
+  if (!supabase || !supaUser) return
+  const { data } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('id', supaUser.id)
+    .single()
+  if (!data) {
+    await supabase.from('profiles').insert({
+      id: supaUser.id,
+      display_name: supaUser.user_metadata?.full_name || supaUser.email?.split('@')[0] || 'User',
+      email: supaUser.email,
+      avatar_url: supaUser.user_metadata?.avatar_url || '',
+    })
+  }
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -33,11 +51,15 @@ export function AuthProvider({ children }) {
       const hasOAuthTokens = window.location.hash.includes('access_token')
 
       // Listen for auth changes (catches OAuth redirects)
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
         const mapped = session ? mapSupabaseUser(session.user) : null
         setUser(mapped)
         if (mapped) {
           localStorage.setItem('cc_user', JSON.stringify(mapped))
+          // Ensure a profile row exists in Supabase (since we removed the trigger)
+          if (_event === 'SIGNED_IN') {
+            ensureProfile(session.user).catch(console.error)
+          }
         } else if (!hasOAuthTokens) {
           localStorage.removeItem('cc_user')
         }

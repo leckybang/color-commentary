@@ -162,7 +162,7 @@ export default function Onboarding() {
   const selectedPicks = current.category ? (profile[current.category]?.[SUGGESTION_FIELD[current.category]] || []) : []
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(135deg, #1c1915 0%, #2a2218 50%, #1e1a14 100%)' }}>
+    <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(135deg, #110d18 0%, #1a1228 50%, #0f0d16 100%)' }}>
       {/* Progress bar */}
       {isMediaStep && (
         <div className="fixed top-0 left-0 right-0 z-10">

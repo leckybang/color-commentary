@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { isSupabaseConfigured } from '../lib/supabase'
-import { Music, Film, Tv, BookOpen, Sparkles } from 'lucide-react'
+import { Music, Film, Tv, BookOpen, Sparkles, Radar, BookMarked, Star, Users } from 'lucide-react'
 
 export default function Login() {
   const { login, loginDemo, loginWithGoogle } = useAuth()
@@ -26,8 +26,9 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'linear-gradient(135deg, #1c1915 0%, #2a2218 50%, #1e1a14 100%)' }}>
+    <div className="min-h-screen flex flex-col items-center justify-center p-4" style={{ background: 'linear-gradient(135deg, #110d18 0%, #1a1228 50%, #0f0d16 100%)' }}>
       <div className="w-full max-w-md">
+        {/* Logo & tagline */}
         <div className="text-center mb-8">
           <div className="flex justify-center gap-3 mb-6">
             <div className="w-12 h-12 rounded-xl bg-accent-music/20 flex items-center justify-center">
@@ -46,29 +47,17 @@ export default function Login() {
           <h1 className="text-3xl font-bold bg-gradient-to-r from-accent-music via-accent-movies to-accent-tv bg-clip-text text-transparent mb-2">
             Color Commentary
           </h1>
-          <p className="text-text-secondary">
-            Track, review, and discover your media universe
+          <p className="text-text-secondary text-lg">
+            Your media universe, organized.
           </p>
         </div>
 
-        <div className="bg-bg-secondary border border-border rounded-2xl p-6">
+        {/* Sign in card */}
+        <div className="bg-bg-secondary border border-border rounded-2xl p-6 mb-6">
           {mode === 'welcome' ? (
             <div className="space-y-4">
-              <button
-                onClick={loginDemo}
-                className="w-full flex items-center justify-center gap-2 bg-accent-primary hover:bg-accent-hover text-white font-medium py-3 px-4 rounded-xl transition-colors"
-              >
-                <Sparkles size={18} />
-                Try Demo Mode
-              </button>
-
               {isSupabaseConfigured && (
                 <>
-                  <div className="flex items-center gap-3">
-                    <div className="flex-1 h-px bg-border" />
-                    <span className="text-xs text-text-muted">or</span>
-                    <div className="flex-1 h-px bg-border" />
-                  </div>
                   <button
                     onClick={handleGoogleSignIn}
                     className="w-full flex items-center justify-center gap-2 bg-white text-gray-800 font-medium py-3 px-4 rounded-xl transition-all hover:bg-gray-200 hover:shadow-lg hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
@@ -79,14 +68,21 @@ export default function Login() {
                   {authError && (
                     <p className="text-xs text-red-400 text-center mt-2">{authError}</p>
                   )}
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 h-px bg-border" />
+                    <span className="text-xs text-text-muted">or</span>
+                    <div className="flex-1 h-px bg-border" />
+                  </div>
                 </>
               )}
 
-              <div className="flex items-center gap-3">
-                <div className="flex-1 h-px bg-border" />
-                <span className="text-xs text-text-muted">or</span>
-                <div className="flex-1 h-px bg-border" />
-              </div>
+              <button
+                onClick={loginDemo}
+                className="w-full flex items-center justify-center gap-2 bg-accent-primary hover:bg-accent-hover text-white font-medium py-3 px-4 rounded-xl transition-colors"
+              >
+                <Sparkles size={18} />
+                Try Demo Mode
+              </button>
 
               <button
                 onClick={() => setMode('signup')}
@@ -96,7 +92,7 @@ export default function Login() {
               </button>
 
               <p className="text-xs text-text-muted text-center">
-                Demo mode uses local storage. No account needed.
+                Demo mode saves locally. Sign in with Google to sync across devices.
               </p>
             </div>
           ) : (
@@ -137,6 +133,25 @@ export default function Login() {
               </button>
             </form>
           )}
+        </div>
+
+        {/* App overview */}
+        <div className="space-y-3">
+          <p className="text-xs text-text-muted text-center uppercase tracking-widest mb-2">What you get</p>
+          {[
+            { icon: Radar, color: 'text-accent-primary', title: 'Weekly Radar', desc: 'Personalized new releases and discoveries, delivered like a Substack for your taste.' },
+            { icon: BookMarked, color: 'text-accent-music', title: 'Liner Notes', desc: 'A weekly journal for what you\'re watching, reading, and listening to. Hot takes welcome.' },
+            { icon: Star, color: 'text-amber-500', title: 'Catalog & Rate', desc: 'Track everything you consume. Rate it, review it, never forget what you thought.' },
+            { icon: Users, color: 'text-accent-tv', title: 'Friends & Group Chat', desc: 'Find friends with taste. Start a group chat around a book, album, or movie.' },
+          ].map(({ icon: Icon, color, title, desc }) => (
+            <div key={title} className="flex items-start gap-3 bg-bg-secondary/50 border border-border/50 rounded-xl p-3">
+              <Icon size={18} className={`${color} mt-0.5 shrink-0`} />
+              <div>
+                <p className="text-sm font-medium text-text-primary">{title}</p>
+                <p className="text-xs text-text-muted">{desc}</p>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
