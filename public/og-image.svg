@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <!-- Rich gradient background in Velvet Darkroom tones -->
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#110d18" />
+      <stop offset="50%" stop-color="#1e1430" />
+      <stop offset="100%" stop-color="#120e1a" />
+    </linearGradient>
+
+    <!-- Radial glow behind the content -->
+    <radialGradient id="glow" cx="50%" cy="50%" r="55%">
+      <stop offset="0%" stop-color="#c49bff" stop-opacity="0.22" />
+      <stop offset="60%" stop-color="#c49bff" stop-opacity="0.05" />
+      <stop offset="100%" stop-color="#c49bff" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Rainbow text gradient -->
+    <linearGradient id="titleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#d4a0ff" />
+      <stop offset="35%" stop-color="#ff7a8a" />
+      <stop offset="70%" stop-color="#7ab8ff" />
+      <stop offset="100%" stop-color="#7fe0a0" />
+    </linearGradient>
+
+    <!-- Bolt gradient -->
+    <linearGradient id="boltGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e0c4ff" />
+      <stop offset="50%" stop-color="#c49bff" />
+      <stop offset="100%" stop-color="#a066ee" />
+    </linearGradient>
+
+    <filter id="boltGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)" />
+  <rect width="1200" height="630" fill="url(#glow)" />
+
+  <!-- Subtle grain pattern (tiny dots) -->
+  <g opacity="0.04" fill="#ffffff">
+    <circle cx="100" cy="120" r="1" />
+    <circle cx="300" cy="80" r="1" />
+    <circle cx="500" cy="180" r="1" />
+    <circle cx="700" cy="100" r="1" />
+    <circle cx="900" cy="160" r="1" />
+    <circle cx="1100" cy="120" r="1" />
+    <circle cx="150" cy="300" r="1" />
+    <circle cx="400" cy="350" r="1" />
+    <circle cx="800" cy="320" r="1" />
+    <circle cx="1050" cy="380" r="1" />
+    <circle cx="200" cy="500" r="1" />
+    <circle cx="600" cy="520" r="1" />
+    <circle cx="1000" cy="540" r="1" />
+  </g>
+
+  <!-- Thunderbolt icon, left-aligned -->
+  <g transform="translate(100, 175)">
+    <g transform="scale(5.5)">
+      <path
+        fill="url(#boltGrad)"
+        filter="url(#boltGlow)"
+        d="M25.946 44.938c-.664.845-2.021.375-2.021-.698V33.937a2.26 2.26 0 0 0-2.262-2.262H10.287c-.92 0-1.456-1.04-.92-1.788l7.48-10.471c1.07-1.497 0-3.578-1.842-3.578H1.237c-.92 0-1.456-1.04-.92-1.788L10.013.474c.214-.297.556-.474.92-.474h28.894c.92 0 1.456 1.04.92 1.788l-7.48 10.471c-1.07 1.498 0 3.579 1.842 3.579h11.377c.943 0 1.473 1.088.89 1.83L25.947 44.94z"
+      />
+    </g>
+  </g>
+
+  <!-- Text block -->
+  <g transform="translate(420, 215)">
+    <!-- Subtle eyebrow label -->
+    <text
+      x="0" y="0"
+      font-family="'Karla', -apple-system, BlinkMacSystemFont, sans-serif"
+      font-size="22"
+      font-weight="500"
+      letter-spacing="6"
+      fill="#a99fc0"
+    >COLOR COMMENTARY</text>
+
+    <!-- Main tagline -->
+    <text
+      x="0" y="95"
+      font-family="'Libre Baskerville', Georgia, serif"
+      font-size="82"
+      font-weight="700"
+      fill="url(#titleGrad)"
+    >Your media</text>
+    <text
+      x="0" y="180"
+      font-family="'Libre Baskerville', Georgia, serif"
+      font-size="82"
+      font-weight="700"
+      fill="url(#titleGrad)"
+    >universe.</text>
+
+    <!-- Subheading -->
+    <text
+      x="0" y="240"
+      font-family="'Karla', -apple-system, BlinkMacSystemFont, sans-serif"
+      font-size="24"
+      font-weight="400"
+      fill="#ede8f5"
+      opacity="0.8"
+    >Track. Review. Discover. Share.</text>
+  </g>
+
+  <!-- Four little media type dots bottom-left -->
+  <g transform="translate(420, 520)">
+    <circle cx="0" cy="0" r="6" fill="#d4a0ff" />
+    <circle cx="22" cy="0" r="6" fill="#ff7a8a" />
+    <circle cx="44" cy="0" r="6" fill="#7ab8ff" />
+    <circle cx="66" cy="0" r="6" fill="#7fe0a0" />
+    <text
+      x="88" y="5"
+      font-family="'Karla', sans-serif"
+      font-size="14"
+      letter-spacing="2"
+      fill="#6e6488"
+    >MUSIC · MOVIES · TV · BOOKS</text>
+  </g>
+</svg>
