@@ -5,20 +5,29 @@ import { useCatalog } from '../hooks/useCatalog'
 import { useScratchpad } from '../hooks/useScratchpad'
 import { getWeekId, getWeekRange, formatWeekRange } from '../utils/dateUtils'
 import { formatDate } from '../utils/dateUtils'
-import TagInput from '../components/common/TagInput'
+import MediaSearchInput from '../components/common/MediaSearchInput'
+import ParseWithAIButton from '../components/weekly/ParseWithAIButton'
+import AIParseModal from '../components/weekly/AIParseModal'
 
 const SECTIONS = [
-  { key: 'listening', label: 'Listening To', icon: Headphones, color: 'var(--color-accent-music)', placeholder: 'Albums, songs, playlists...' },
-  { key: 'watching', label: 'Watching', icon: Eye, color: 'var(--color-accent-movies)', placeholder: 'Movies, shows, videos...' },
-  { key: 'reading', label: 'Reading', icon: BookOpen, color: 'var(--color-accent-books)', placeholder: 'Books, articles, comics...' },
-  { key: 'discovered', label: 'Discovered', icon: Sparkles, color: 'var(--color-accent-primary)', placeholder: 'New finds, recommendations...' },
+  { key: 'listening', label: 'Listening To', icon: Headphones, color: 'var(--color-accent-music)', placeholder: 'Search Spotify for an album, artist, or track...', preferredTypes: ['music'] },
+  { key: 'watching', label: 'Watching', icon: Eye, color: 'var(--color-accent-movies)', placeholder: 'Search for a movie or show...', preferredTypes: ['movie', 'tv'] },
+  { key: 'reading', label: 'Reading', icon: BookOpen, color: 'var(--color-accent-books)', placeholder: 'Search for a book...', preferredTypes: ['book'] },
+  { key: 'discovered', label: 'Discovered', icon: Sparkles, color: 'var(--color-accent-primary)', placeholder: 'Anything new — we\'ll search everywhere...', preferredTypes: ['music', 'movie', 'tv', 'book'] },
 ]
+
+function tagKey(tag) {
+  if (typeof tag === 'string') return `text:${tag.toLowerCase()}`
+  if (tag.provider && tag.externalId) return `${tag.provider}:${tag.externalId}`
+  return `text:${(tag.title || '').toLowerCase()}`
+}
 
 export default function Weekly() {
   const { dumps, saveDump, getStreak } = useWeeklyDumps()
   const { addItem } = useCatalog()
   const { notes: scratchpadNotes, deleteNote } = useScratchpad()
   const [weekOffset, setWeekOffset] = useState(0)
+  const [aiModalOpen, setAiModalOpen] = useState(false)
 
   const currentDate = new Date()
   currentDate.setDate(currentDate.getDate() + weekOffset * 7)
@@ -54,11 +63,54 @@ export default function Weekly() {
   }
 
   const addTagToSection = (section, value) => {
-    setForm({ ...form, [section]: [...form[section], value] })
+    setForm((prev) => {
+      const current = prev[section] || []
+      const newKey = tagKey(value)
+      if (current.some((t) => tagKey(t) === newKey)) return prev
+      return { ...prev, [section]: [...current, value] }
+    })
   }
 
   const removeTagFromSection = (section, value) => {
-    setForm({ ...form, [section]: form[section].filter((v) => v !== value) })
+    const removeKey = tagKey(value)
+    setForm((prev) => ({ ...prev, [section]: prev[section].filter((v) => tagKey(v) !== removeKey) }))
+  }
+
+  // Handle batch of AI-parsed items, optionally also adding to catalog
+  const handleAIConfirm = (items) => {
+    setForm((prev) => {
+      const next = { ...prev }
+      for (const item of items) {
+        const section = item.section || 'discovered'
+        const tag = {
+          kind: 'media',
+          title: item.title,
+          creator: item.creator || '',
+          year: item.year ? String(item.year) : '',
+          type: item.type,
+          provider: 'ai',
+          externalId: `${item.title}-${item.creator || ''}`.toLowerCase(),
+        }
+        const current = next[section] || []
+        const key = tagKey(tag)
+        if (!current.some((t) => tagKey(t) === key)) {
+          next[section] = [...current, tag]
+        }
+        // Also add to catalog if user opted in
+        if (item.addToCatalog) {
+          addItem({
+            title: item.title,
+            creator: item.creator || '',
+            type: item.type,
+            rating: item.rating || 0,
+            review: item.notes || '',
+            status: item.rating ? 'finished' : 'want',
+          })
+        }
+      }
+      return next
+    })
+    setAiModalOpen(false)
   }
 
   const isCurrentWeek = weekOffset === 0
@@ -110,7 +162,7 @@ export default function Weekly() {
 
       {/* Media sections */}
       <div className="space-y-4">
-        {SECTIONS.map(({ key, label, icon: Icon, color, placeholder }) => (
+        {SECTIONS.map(({ key, label, icon: Icon, color, placeholder, preferredTypes }) => (
           <div key={key} className="bg-bg-secondary border border-border rounded-xl p-5">
             <div className="flex items-center gap-2 mb-3">
               <Icon size={18} style={{ color }} />
@@ -121,12 +173,13 @@ export default function Weekly() {
                 </span>
               )}
             </div>
-            <TagInput
+            <MediaSearchInput
               tags={form[key]}
               onAdd={(val) => addTagToSection(key, val)}
               onRemove={(val) => removeTagFromSection(key, val)}
               placeholder={placeholder}
               color={color}
+              preferredTypes={preferredTypes}
             />
           </div>
         ))}
@@ -147,7 +200,7 @@ export default function Weekly() {
                   <span className="text-xs text-text-muted shrink-0">{formatDate(note.createdAt)}</span>
                   <button
                     onClick={() => {
-                      addTagToSection('discovered', note.text)
+                      addTagToSection('discovered', { kind: 'text', title: note.text })
                       deleteNote(note.id)
                     }}
                     className="p-1 rounded text-accent-primary hover:bg-accent-primary/10 transition-colors shrink-0"
@@ -170,12 +223,15 @@ export default function Weekly() {
 
         {/* Notes */}
         <div className="bg-bg-secondary border border-border rounded-xl p-5">
-          <h3 className="font-medium text-text-primary mb-3">Notes & Thoughts</h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-medium text-text-primary">Notes & Thoughts</h3>
+            <ParseWithAIButton onClick={() => setAiModalOpen(true)} hasText={!!form.notes.trim()} />
+          </div>
           <textarea
             value={form.notes}
             onChange={(e) => setForm({ ...form, notes: e.target.value })}
-            placeholder="Any thoughts on what you consumed this week? Hot takes? Recommendations for your future self?"
-            rows={4}
+            placeholder="Write freeform about your week. Mention titles, rate things ('Dune was a 5/5'), drop hot takes. Then hit '✨ Parse with AI' to turn it into structured items."
+            rows={5}
             className="w-full bg-bg-tertiary border border-border rounded-lg px-4 py-3 text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-primary transition-colors resize-none text-sm"
           />
         </div>
@@ -197,6 +253,14 @@ export default function Weekly() {
           </button>
         </div>
       </div>
+
+      {/* AI Parse Modal */}
+      <AIParseModal
+        isOpen={aiModalOpen}
+        onClose={() => setAiModalOpen(false)}
+        initialText={form.notes}
+        onConfirm={handleAIConfirm}
+      />
     </div>
   )
 }
