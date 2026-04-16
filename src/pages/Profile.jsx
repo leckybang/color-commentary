@@ -1,14 +1,16 @@
-import { useState } from 'react'
-import { Music, Film, Tv, BookOpen, Check, SlidersHorizontal, Palette, Plus, X, Globe, Lock, Eye, ArrowUp, ArrowDown } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Music, Film, Tv, BookOpen, Check, SlidersHorizontal, Palette, Plus, X, Globe, Lock, Eye, ArrowUp, ArrowDown, Mail, Save } from 'lucide-react'
 import TagInput from '../components/common/TagInput'
 import SpectrumSlider from '../components/common/SpectrumSlider'
 import CoverArt from '../components/common/CoverArt'
 import Modal from '../components/common/Modal'
+import EmojiPicker from '../components/common/EmojiPicker'
 import { useTasteProfile } from '../hooks/useTasteProfile'
 import { useTheme } from '../hooks/useTheme'
 import { useHeavyRotation } from '../hooks/useHeavyRotation'
 import { usePublicProfile } from '../hooks/usePublicProfile'
 import { useCatalog } from '../hooks/useCatalog'
+import { isSupabaseConfigured } from '../lib/supabase'
 
 const CATEGORIES = [
   {
@@ -97,10 +99,29 @@ export default function Profile() {
   const { profile, addTag, removeTag, isProfileEmpty, getSpectrum, setSpectrum } = useTasteProfile()
   const { themeIndex, setTheme, themes } = useTheme()
   const { itemIds, addToRotation, removeFromRotation, reorder } = useHeavyRotation()
-  const { isPublic, username, togglePublic, setUsername } = usePublicProfile()
+  const publicProfile = usePublicProfile()
   const { items: catalogItems } = useCatalog()
   const [activeTab, setActiveTab] = useState('music')
   const [showRotationPicker, setShowRotationPicker] = useState(false)
+
+  // Local draft state for public profile fields that need a Save action
+  const [usernameDraft, setUsernameDraft] = useState('')
+  const [bioDraft, setBioDraft] = useState('')
+  const [saveMessage, setSaveMessage] = useState('')
+
+  useEffect(() => {
+    setUsernameDraft(publicProfile.username || '')
+    setBioDraft(publicProfile.bio || '')
+  }, [publicProfile.username, publicProfile.bio])
+
+  const hasProfileChanges = usernameDraft !== (publicProfile.username || '') || bioDraft !== (publicProfile.bio || '')
+
+  const handleSaveProfile = async () => {
+    const cleanUsername = usernameDraft.toLowerCase().replace(/[^a-z0-9-_]/g, '')
+    await publicProfile.savePublicProfile({ username: cleanUsername, bio: bioDraft })
+    setSaveMessage('Saved!')
+    setTimeout(() => setSaveMessage(''), 2500)
+  }
 
   const activeCat = CATEGORIES.find((c) => c.key === activeTab)
   const rotationItems = itemIds.map((id) => catalogItems.find((i) => i.id === id)).filter(Boolean)
@@ -159,10 +180,10 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* ─── The Heavy Rotation ─── */}
+      {/* ─── Current Favorites ─── */}
       <div className="bg-bg-secondary border border-border rounded-2xl p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-text-primary">The Heavy Rotation</h2>
+          <h2 className="text-lg font-semibold text-text-primary">Current Favorites</h2>
           {catalogItems.length > 0 && itemIds.length < 8 && (
             <button
               onClick={() => setShowRotationPicker(true)}
@@ -172,7 +193,7 @@ export default function Profile() {
             </button>
           )}
         </div>
-        <p className="text-xs text-text-muted mb-4">Your MySpace Top 8 for grownups. What's getting all the plays right now? Shows on your profile.</p>
+        <p className="text-xs text-text-muted mb-4">What I'm endorsing this week. Up to 8 picks. Shows on your public profile.</p>
         {rotationItems.length > 0 ? (
           <div className="grid grid-cols-4 gap-3">
             {rotationItems.map((item, idx) => (
@@ -240,39 +261,110 @@ export default function Profile() {
           <Globe size={20} className="text-accent-primary" />
           <h2 className="text-lg font-semibold text-text-primary">Public Profile</h2>
         </div>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
+        <div className="space-y-5">
+          {/* Avatar + emoji picker */}
+          <div>
+            <label className="block text-sm font-medium text-text-secondary mb-2">Your avatar</label>
+            <div className="flex items-start gap-4">
+              <EmojiPicker
+                value={publicProfile.avatarEmoji}
+                onChange={publicProfile.setAvatarEmoji}
+              />
+              <div className="flex-1 text-xs text-text-muted pt-3">
+                Pick an emoji to be your avatar on your public profile. Or don't — we're not your parents.
+              </div>
+            </div>
+          </div>
+
+          {/* Public toggle */}
+          <div className="flex items-center justify-between pt-2 border-t border-border">
             <div>
               <p className="text-sm font-medium text-text-primary">Make profile public</p>
-              <p className="text-xs text-text-muted">Let others see your taste profile, Heavy Rotation, and spectrums</p>
+              <p className="text-xs text-text-muted">Let anyone at /{publicProfile.username || 'your-username'} see your profile.</p>
             </div>
             <button
-              onClick={togglePublic}
-              className={`w-12 h-7 rounded-full transition-colors relative ${isPublic ? 'bg-accent-primary' : 'bg-bg-tertiary border border-border'}`}
+              onClick={publicProfile.togglePublic}
+              className={`w-12 h-7 rounded-full transition-colors relative shrink-0 ml-3 ${publicProfile.isPublic ? 'bg-accent-primary' : 'bg-bg-tertiary border border-border'}`}
             >
-              <div className={`w-5 h-5 rounded-full bg-white absolute top-1 transition-transform ${isPublic ? 'translate-x-6' : 'translate-x-1'}`} />
+              <div className={`w-5 h-5 rounded-full bg-white absolute top-1 transition-transform ${publicProfile.isPublic ? 'translate-x-6' : 'translate-x-1'}`} />
             </button>
           </div>
+
+          {/* Username */}
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-1.5">Username</label>
             <div className="flex gap-2">
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, ''))}
-                placeholder="your-username"
-                className="flex-1 bg-bg-tertiary border border-border rounded-lg px-4 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-primary transition-colors"
-              />
-              {username && (
+              <div className="flex-1 flex items-center bg-bg-tertiary border border-border rounded-lg focus-within:border-accent-primary transition-colors overflow-hidden">
+                <span className="px-3 text-sm text-text-muted border-r border-border select-none">/</span>
+                <input
+                  type="text"
+                  value={usernameDraft}
+                  onChange={(e) => setUsernameDraft(e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, ''))}
+                  placeholder="leckybang"
+                  maxLength={30}
+                  className="flex-1 bg-transparent px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none"
+                />
+              </div>
+              {publicProfile.username && publicProfile.username === usernameDraft && (
                 <a
-                  href={`/u/${username}`}
+                  href={`/u/${publicProfile.username}`}
                   target="_blank"
+                  rel="noopener noreferrer"
                   className="flex items-center gap-1 px-3 py-2 text-xs text-accent-primary hover:underline"
                 >
-                  <Eye size={14} /> Preview
+                  <Eye size={14} /> View
                 </a>
               )}
             </div>
+            <p className="text-xs text-text-muted mt-1.5">Letters, numbers, dashes. This will be your URL.</p>
+          </div>
+
+          {/* Bio */}
+          <div>
+            <label className="block text-sm font-medium text-text-secondary mb-1.5">Bio</label>
+            <textarea
+              value={bioDraft}
+              onChange={(e) => setBioDraft(e.target.value.slice(0, 160))}
+              placeholder="A few words about your taste, vibe, or whatever."
+              rows={2}
+              className="w-full bg-bg-tertiary border border-border rounded-lg px-4 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-primary transition-colors resize-none"
+            />
+            <p className="text-xs text-text-muted mt-1">{bioDraft.length}/160</p>
+          </div>
+
+          {/* Save button */}
+          <div className="flex items-center justify-between pt-2">
+            <span className="text-xs text-text-muted">
+              {saveMessage ? <span className="text-accent-books flex items-center gap-1"><Check size={12} />{saveMessage}</span> : publicProfile.saving ? 'Saving…' : ''}
+            </span>
+            <button
+              onClick={handleSaveProfile}
+              disabled={!hasProfileChanges || publicProfile.saving}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-accent-primary hover:bg-accent-hover text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Save size={14} />
+              Save Profile
+            </button>
+          </div>
+
+          {/* Email opt-in */}
+          <div className="flex items-center justify-between pt-4 border-t border-border">
+            <div className="flex items-start gap-3">
+              <Mail size={18} className="text-accent-primary mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-text-primary">Email me my Weekly Radar</p>
+                <p className="text-xs text-text-muted">Every Monday morning, get a personalized dispatch in your inbox.</p>
+                {publicProfile.emailRadar && !isSupabaseConfigured && (
+                  <p className="text-xs text-amber-500 mt-1">⚠️ Requires Supabase + a scheduled function to actually send. See docs/EMAIL_RADAR_SETUP.md.</p>
+                )}
+              </div>
+            </div>
+            <button
+              onClick={publicProfile.toggleEmailRadar}
+              className={`w-12 h-7 rounded-full transition-colors relative shrink-0 ml-3 ${publicProfile.emailRadar ? 'bg-accent-primary' : 'bg-bg-tertiary border border-border'}`}
+            >
+              <div className={`w-5 h-5 rounded-full bg-white absolute top-1 transition-transform ${publicProfile.emailRadar ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
           </div>
         </div>
       </div>

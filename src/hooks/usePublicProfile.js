@@ -1,32 +1,95 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from './useAuth'
+import { supabase, isSupabaseConfigured } from '../lib/supabase'
 
 const DEFAULT_PUBLIC_PROFILE = {
   isPublic: false,
   username: '',
   bio: '',
+  avatarEmoji: '',
+  emailRadar: false,
 }
 
 export function usePublicProfile() {
   const { user } = useAuth()
   const [settings, setSettings] = useState(DEFAULT_PUBLIC_PROFILE)
+  const [saving, setSaving] = useState(false)
+  const [lastSaved, setLastSaved] = useState(0)
 
   const storageKey = user ? `cc_public_${user.uid}` : null
 
   useEffect(() => {
     if (!storageKey) return
     const saved = localStorage.getItem(storageKey)
-    if (saved) setSettings(JSON.parse(saved))
-  }, [storageKey])
+    if (saved) setSettings({ ...DEFAULT_PUBLIC_PROFILE, ...JSON.parse(saved) })
 
-  const save = (updated) => {
+    // Also hydrate from Supabase if configured
+    if (isSupabaseConfigured && user?.uid && !user.uid.startsWith('demo') && !user.uid.startsWith('user-')) {
+      supabase
+        .from('profiles')
+        .select('username, bio, is_public, avatar_emoji, email_radar')
+        .eq('id', user.uid)
+        .single()
+        .then(({ data }) => {
+          if (data) {
+            const merged = {
+              username: data.username || '',
+              bio: data.bio || '',
+              isPublic: !!data.is_public,
+              avatarEmoji: data.avatar_emoji || '',
+              emailRadar: !!data.email_radar,
+            }
+            setSettings(merged)
+            if (storageKey) localStorage.setItem(storageKey, JSON.stringify(merged))
+          }
+        })
+    }
+  }, [storageKey, user?.uid])
+
+  const persist = async (updated) => {
     setSettings(updated)
     if (storageKey) localStorage.setItem(storageKey, JSON.stringify(updated))
+
+    // Sync to Supabase (fire and forget)
+    if (isSupabaseConfigured && user?.uid && !user.uid.startsWith('demo') && !user.uid.startsWith('user-')) {
+      setSaving(true)
+      try {
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            username: updated.username || null,
+            bio: updated.bio || '',
+            is_public: updated.isPublic,
+            avatar_emoji: updated.avatarEmoji || null,
+            email_radar: updated.emailRadar || false,
+          })
+          .eq('id', user.uid)
+        if (error) console.error('Profile sync error:', error.message)
+        setLastSaved(Date.now())
+      } finally {
+        setSaving(false)
+      }
+    } else {
+      setLastSaved(Date.now())
+    }
   }
 
-  const togglePublic = () => save({ ...settings, isPublic: !settings.isPublic })
-  const setUsername = (username) => save({ ...settings, username })
-  const setBio = (bio) => save({ ...settings, bio })
+  const togglePublic = () => persist({ ...settings, isPublic: !settings.isPublic })
+  const setUsername = (username) => persist({ ...settings, username })
+  const setBio = (bio) => persist({ ...settings, bio })
+  const setAvatarEmoji = (avatarEmoji) => persist({ ...settings, avatarEmoji })
+  const toggleEmailRadar = () => persist({ ...settings, emailRadar: !settings.emailRadar })
+  const savePublicProfile = (overrides) => persist({ ...settings, ...overrides })
 
-  return { ...settings, togglePublic, setUsername, setBio }
+  return {
+    ...settings,
+    saving,
+    lastSaved,
+    togglePublic,
+    setUsername,
+    setBio,
+    setAvatarEmoji,
+    toggleEmailRadar,
+    savePublicProfile,
+  }
 }

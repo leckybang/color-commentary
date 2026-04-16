@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import { LayoutDashboard, SlidersHorizontal, BookMarked, Library, Radar, LogOut, Users, MessageCircle, User } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
+import { usePublicProfile } from '../../hooks/usePublicProfile'
 
 const NAV_ITEMS = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -15,6 +16,7 @@ const NAV_ITEMS = [
 
 export default function Sidebar() {
   const { user, logout } = useAuth()
+  const { avatarEmoji } = usePublicProfile()
 
   return (
     <>
@@ -48,9 +50,15 @@ export default function Sidebar() {
 
         <div className="p-4 border-t border-border">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-8 h-8 rounded-full bg-accent-primary/20 flex items-center justify-center text-accent-primary text-sm font-bold">
-              {user?.displayName?.[0]?.toUpperCase() || '?'}
-            </div>
+            {avatarEmoji ? (
+              <div className="w-8 h-8 rounded-full bg-bg-tertiary flex items-center justify-center text-lg">
+                {avatarEmoji}
+              </div>
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-accent-primary/20 flex items-center justify-center text-accent-primary text-sm font-bold">
+                {user?.displayName?.[0]?.toUpperCase() || '?'}
+              </div>
+            )}
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-text-primary truncate">{user?.displayName}</p>
               <p className="text-xs text-text-muted truncate">{user?.email}</p>

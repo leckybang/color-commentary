@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { CalendarDays, ChevronLeft, ChevronRight, Save, Headphones, Eye, BookOpen, Sparkles, MessageCircle, ArrowUpRight, X } from 'lucide-react'
+import { CalendarDays, ChevronLeft, ChevronRight, Save, Headphones, Eye, BookOpen, Sparkles, MessageCircle, ArrowUpRight, X, Wand2 } from 'lucide-react'
 import { useWeeklyDumps } from '../hooks/useWeeklyDumps'
 import { useCatalog } from '../hooks/useCatalog'
 import { useScratchpad } from '../hooks/useScratchpad'
@@ -28,6 +28,14 @@ export default function Weekly() {
   const { notes: scratchpadNotes, deleteNote } = useScratchpad()
   const [weekOffset, setWeekOffset] = useState(0)
   const [aiModalOpen, setAiModalOpen] = useState(false)
+  const [aiModalText, setAiModalText] = useState('')
+  const [aiModalSourceNoteId, setAiModalSourceNoteId] = useState(null)
+
+  const openAIModal = (text, sourceNoteId = null) => {
+    setAiModalText(text || '')
+    setAiModalSourceNoteId(sourceNoteId)
+    setAiModalOpen(true)
+  }
 
   const currentDate = new Date()
   currentDate.setDate(currentDate.getDate() + weekOffset * 7)
@@ -110,7 +118,17 @@ export default function Weekly() {
       }
       return next
     })
+    // Auto-save the weekly dump so the items stick
+    setTimeout(() => {
+      saveDump({ weekId, ...form })
+    }, 100)
+    // If this was from a scratchpad note, delete it
+    if (aiModalSourceNoteId) {
+      deleteNote(aiModalSourceNoteId)
+    }
     setAiModalOpen(false)
+    setAiModalText('')
+    setAiModalSourceNoteId(null)
   }
 
   const isCurrentWeek = weekOffset === 0
@@ -187,24 +205,43 @@ export default function Weekly() {
         {/* Scratchpad reminders */}
         {scratchpadNotes.length > 0 && (
           <div className="bg-bg-secondary border border-accent-primary/20 rounded-xl p-5">
-            <div className="flex items-center gap-2 mb-3">
-              <MessageCircle size={18} className="text-accent-primary" />
-              <h3 className="font-medium text-text-primary">From Your Scratchpad</h3>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-accent-primary/15 text-accent-primary">{scratchpadNotes.length}</span>
+            <div className="flex items-center justify-between mb-3 gap-2">
+              <div className="flex items-center gap-2">
+                <MessageCircle size={18} className="text-accent-primary" />
+                <h3 className="font-medium text-text-primary">From Your Scratchpad</h3>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-accent-primary/15 text-accent-primary">{scratchpadNotes.length}</span>
+              </div>
+              {scratchpadNotes.length >= 2 && (
+                <button
+                  onClick={() => openAIModal(scratchpadNotes.map(n => n.text).join('\n\n'))}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-accent-primary hover:bg-accent-hover text-white transition-colors"
+                >
+                  <Wand2 size={13} />
+                  Add all with AI
+                </button>
+              )}
             </div>
-            <p className="text-xs text-text-muted mb-3">Things people told you about — tap to add to a section above, or dismiss.</p>
+            <p className="text-xs text-text-muted mb-3">Things people told you about. Tap ✨ to let AI parse and add to your sections.</p>
             <div className="space-y-2">
               {scratchpadNotes.map((note) => (
                 <div key={note.id} className="flex items-center gap-2 p-2.5 bg-bg-tertiary rounded-lg group">
                   <p className="flex-1 text-sm text-text-primary">{note.text}</p>
                   <span className="text-xs text-text-muted shrink-0">{formatDate(note.createdAt)}</span>
                   <button
+                    onClick={() => openAIModal(note.text, note.id)}
+                    className="flex items-center gap-1 px-2 py-1 rounded text-accent-primary hover:bg-accent-primary/10 transition-colors shrink-0"
+                    title="Parse with AI and add to a section"
+                  >
+                    <Sparkles size={13} />
+                    <span className="text-xs font-medium">Add with AI</span>
+                  </button>
+                  <button
                     onClick={() => {
                       addTagToSection('discovered', { kind: 'text', title: note.text })
                       deleteNote(note.id)
                     }}
-                    className="p-1 rounded text-accent-primary hover:bg-accent-primary/10 transition-colors shrink-0"
-                    title="Add to Discovered"
+                    className="p-1 rounded text-text-muted hover:text-accent-primary transition-colors shrink-0"
+                    title="Add as plain text to Discovered"
                   >
                     <ArrowUpRight size={14} />
                   </button>
@@ -225,15 +262,17 @@ export default function Weekly() {
         <div className="bg-bg-secondary border border-border rounded-xl p-5">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-medium text-text-primary">Notes & Thoughts</h3>
-            <ParseWithAIButton onClick={() => setAiModalOpen(true)} hasText={!!form.notes.trim()} />
           </div>
           <textarea
             value={form.notes}
             onChange={(e) => setForm({ ...form, notes: e.target.value })}
-            placeholder="Write freeform about your week. Mention titles, rate things ('Dune was a 5/5'), drop hot takes. Then hit '✨ Parse with AI' to turn it into structured items."
+            placeholder="Write freeform about your week. Mention titles, rate things ('Dune was a 5/5'), drop hot takes. Then hit 'Add with AI' to turn it into structured items."
             rows={5}
-            className="w-full bg-bg-tertiary border border-border rounded-lg px-4 py-3 text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-primary transition-colors resize-none text-sm"
+            className="w-full bg-bg-tertiary border border-border rounded-lg px-4 py-3 text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-primary transition-colors resize-none text-sm mb-3"
           />
+          <div className="flex justify-end">
+            <ParseWithAIButton onClick={() => openAIModal(form.notes)} hasText={!!form.notes.trim()} />
+          </div>
         </div>
       </div>
 
@@ -257,8 +296,8 @@ export default function Weekly() {
       {/* AI Parse Modal */}
       <AIParseModal
         isOpen={aiModalOpen}
-        onClose={() => setAiModalOpen(false)}
-        initialText={form.notes}
+        onClose={() => { setAiModalOpen(false); setAiModalSourceNoteId(null) }}
+        initialText={aiModalText}
         onConfirm={handleAIConfirm}
       />
     </div>

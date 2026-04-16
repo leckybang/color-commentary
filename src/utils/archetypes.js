@@ -1,40 +1,52 @@
 const ARCHETYPES = [
   {
-    name: 'The Curator',
-    emoji: '🎯',
+    name: 'The Gatekeeper',
+    emoji: '🎟️',
     test: (stats) => stats.totalPicks >= 15 && stats.uniqueGenres <= 4,
-    description: "You don't browse. You select. Your taste is a velvet rope and most things aren't getting in.",
+    description: "You have a type and you will die on that hill. Your recommendations come with a subtle warning: if you don't love this, we might need to rethink things.",
   },
   {
-    name: 'The Genre Hopper',
-    emoji: '🦋',
+    name: 'The Feral Librarian',
+    emoji: '📖',
     test: (stats) => stats.uniqueGenres >= 8 && stats.categoriesWithGenres >= 3,
-    description: "You contain multitudes. Sci-fi before breakfast, poetry at lunch, horror by midnight. We love the range.",
+    description: "Memoir, true crime, art-house cinema, a random jazz deep-cut — you're reading three books at once and ranking them in your head. Nothing is off the table.",
   },
   {
-    name: 'The Deep Diver',
-    emoji: '🤿',
+    name: 'The Completionist',
+    emoji: '🗂️',
     test: (stats) => stats.totalPicks >= 10 && stats.categoriesWithGenres <= 2,
-    description: "You found your lane and you're doing 90 in it. We'll keep surfacing the deep cuts you crave.",
+    description: "You find a director, a band, an author — and then you consume their ENTIRE catalog in chronological order before moving on. This is not a flaw.",
   },
   {
-    name: 'The Creature of Comforts',
-    emoji: '🛋️',
+    name: 'The Cozy Rewatcher',
+    emoji: '☕',
     test: (stats) => stats.totalGenres <= 4 && stats.totalPicks <= 8,
-    description: "You know what you like and you're not apologizing. Comfort is king. We'll find more of the good stuff.",
+    description: "You've seen the same five comfort shows seventeen times and your algorithm has given up trying to convert you. We respect that deeply.",
   },
   {
-    name: 'The Tastemaker',
-    emoji: '✨',
+    name: 'The Tastemaker-at-Large',
+    emoji: '📣',
     test: (stats) => stats.totalPicks >= 12 && stats.categoriesWithGenres >= 3 && stats.uniqueGenres >= 5,
-    description: "Your friends definitely text you 'what should I watch tonight.' This is your natural habitat.",
+    description: "You're in three group chats where you're the de facto critic. Your takes are loud, informed, and slightly performative. We love this for you.",
+  },
+  {
+    name: 'The Soft Snob',
+    emoji: '🫧',
+    test: (stats) => stats.totalPicks >= 6 && stats.uniqueGenres <= 5 && stats.categoriesWithGenres >= 2,
+    description: "You claim to like everything but really you only like things that have been quietly vetted by three taste-making editors you secretly follow. It's giving curated.",
+  },
+  {
+    name: 'The Night Owl Critic',
+    emoji: '🌙',
+    test: (stats) => stats.totalPicks >= 8 && stats.uniqueGenres >= 4,
+    description: "Everything gets a review in your head at 1am. Some of these reviews are poetry. None of them leave the Notes app, until now.",
   },
 ]
 
 const DEFAULT_ARCHETYPE = {
-  name: 'The Explorer',
-  emoji: '🧭',
-  description: "You're at the beginning of something beautiful. Or chaotic. Probably both. Let's find out.",
+  name: 'The Blank Page',
+  emoji: '📝',
+  description: "You're about to become someone whose opinions people text each other about. The question is only which flavor of insufferable you'll be. (Affectionate.)",
 }
 
 export function determineArchetype(profile) {

@@ -139,7 +139,7 @@ export default function Login() {
         <div className="space-y-3">
           <p className="text-xs text-text-muted text-center uppercase tracking-widest mb-2">What you get</p>
           {[
-            { icon: Radar, color: 'text-accent-primary', title: 'Weekly Radar', desc: 'Personalized new releases and discoveries, delivered like a Substack for your taste.' },
+            { icon: Radar, color: 'text-accent-primary', title: 'Weekly Radar', desc: 'A personalized weekly dispatch of new releases and discoveries, written like a dear-reader letter from someone who actually gets your taste.' },
             { icon: BookMarked, color: 'text-accent-music', title: 'Liner Notes', desc: 'A weekly journal for what you\'re watching, reading, and listening to. Hot takes welcome.' },
             { icon: Star, color: 'text-amber-500', title: 'Catalog & Rate', desc: 'Track everything you consume. Rate it, review it, never forget what you thought.' },
             { icon: Users, color: 'text-accent-tv', title: 'Friends & Group Chat', desc: 'Find friends with taste. Start a group chat around a book, album, or movie.' },
