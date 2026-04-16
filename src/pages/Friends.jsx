@@ -1,14 +1,30 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Users, Search, UserPlus, UserMinus, ArrowRight, MessageCircle } from 'lucide-react'
 import { useFriends } from '../hooks/useFriends'
 import { isSupabaseConfigured } from '../lib/supabase'
 
 export default function Friends() {
-  const { following, followers, follow, unfollow, searchUsers } = useFriends()
+  const { following, followers, follow, unfollow, searchUsersAsync } = useFriends()
   const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState([])
   const [activeTab, setActiveTab] = useState('following')
 
-  const searchResults = searchQuery.length >= 2 ? searchUsers(searchQuery) : []
+  // Debounced async search
+  useEffect(() => {
+    if (searchQuery.length < 2) {
+      setSearchResults([])
+      return
+    }
+    let cancelled = false
+    const timer = setTimeout(async () => {
+      const results = await searchUsersAsync(searchQuery)
+      if (!cancelled) setSearchResults(results)
+    }, 250)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [searchQuery])
 
   return (
     <div>

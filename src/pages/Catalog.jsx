@@ -6,9 +6,18 @@ import FilterBar from '../components/common/FilterBar'
 import StarRating from '../components/common/StarRating'
 import Modal from '../components/common/Modal'
 import ExternalLinks from '../components/common/ExternalLinks'
+import MediaPickerInput from '../components/common/MediaPickerInput'
 import { filterCatalog, sortCatalog, MEDIA_TYPES, STATUS_OPTIONS, getMediaColor } from '../utils/filterUtils'
 
-const EMPTY_ITEM = { title: '', creator: '', type: 'music', genre: '', status: 'want', rating: 0, review: '', coverUrl: '' }
+const EMPTY_ITEM = { title: '', creator: '', type: 'music', genre: '', status: 'want', rating: 0, review: '', coverUrl: '', year: '' }
+
+// Map app type to the preferredTypes used by media search
+const TYPE_TO_SEARCH_TYPES = {
+  music: ['music'],
+  movie: ['movie'],
+  tv: ['tv'],
+  book: ['book'],
+}
 
 export default function Catalog() {
   const { items, addItem, updateItem, deleteItem } = useCatalog()
@@ -145,17 +154,70 @@ export default function Catalog() {
         maxWidth="550px"
       >
         <div className="space-y-4">
+          {/* Type picker first — determines which API(s) we search */}
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">Title *</label>
-            <input
-              type="text"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              placeholder="What did you watch, listen to, or read?"
-              className="w-full bg-bg-tertiary border border-border rounded-lg px-4 py-2.5 text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-primary transition-colors"
-            />
+            <label className="block text-sm font-medium text-text-secondary mb-1.5">
+              What is it? {editItem && <span className="text-xs text-text-muted">(locked when editing)</span>}
+            </label>
+            <div className="flex gap-2">
+              {MEDIA_TYPES.map((t) => (
+                <button
+                  key={t.value}
+                  type="button"
+                  onClick={() => !editItem && setFormData({ ...formData, type: t.value })}
+                  disabled={!!editItem}
+                  className={`flex-1 py-2 rounded-lg text-xs font-medium border transition-all ${
+                    formData.type === t.value
+                      ? 'border-transparent'
+                      : 'bg-bg-tertiary border-border text-text-muted hover:bg-bg-hover'
+                  } ${editItem ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'}`}
+                  style={formData.type === t.value ? {
+                    backgroundColor: `color-mix(in srgb, ${t.color} 20%, transparent)`,
+                    color: t.color,
+                  } : {}}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
           </div>
 
+          {/* Smart search (add mode) or plain input (edit mode) */}
+          <div>
+            <label className="block text-sm font-medium text-text-secondary mb-1.5">Title *</label>
+            {editItem ? (
+              <input
+                type="text"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder="Title"
+                className="w-full bg-bg-tertiary border border-border rounded-lg px-4 py-2.5 text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-primary transition-colors"
+              />
+            ) : (
+              <MediaPickerInput
+                value={formData.title}
+                onChange={(v) => setFormData({ ...formData, title: v })}
+                onPick={(result) => {
+                  if (result.kind === 'text') {
+                    setFormData({ ...formData, title: result.title })
+                  } else {
+                    setFormData({
+                      ...formData,
+                      title: result.title,
+                      creator: result.creator || formData.creator,
+                      year: result.year || formData.year,
+                      coverUrl: result.coverUrl || formData.coverUrl,
+                      // Keep user's already-chosen type — don't override from result
+                    })
+                  }
+                }}
+                placeholder={`Search ${formData.type === 'music' ? 'Spotify' : formData.type === 'book' ? 'books' : formData.type === 'tv' ? 'TV shows' : 'movies'}...`}
+                preferredTypes={TYPE_TO_SEARCH_TYPES[formData.type] || ['movie']}
+              />
+            )}
+          </div>
+
+          {/* Creator (auto-filled from picked result, but editable) */}
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-1.5">Creator</label>
             <input
@@ -167,42 +229,18 @@ export default function Catalog() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-text-secondary mb-1.5">Type</label>
-              <div className="flex gap-2">
-                {MEDIA_TYPES.map((t) => (
-                  <button
-                    key={t.value}
-                    type="button"
-                    onClick={() => setFormData({ ...formData, type: t.value })}
-                    className={`flex-1 py-2 rounded-lg text-xs font-medium border transition-all ${
-                      formData.type === t.value
-                        ? 'border-transparent'
-                        : 'bg-bg-tertiary border-border text-text-muted hover:bg-bg-hover'
-                    }`}
-                    style={formData.type === t.value ? {
-                      backgroundColor: `color-mix(in srgb, ${t.color} 20%, transparent)`,
-                      color: t.color,
-                    } : {}}
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-text-secondary mb-1.5">Status</label>
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                className="w-full bg-bg-tertiary border border-border rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent-primary cursor-pointer"
-              >
-                {STATUS_OPTIONS.map((s) => (
-                  <option key={s.value} value={s.value}>{s.label}</option>
-                ))}
-              </select>
-            </div>
+          {/* Status */}
+          <div>
+            <label className="block text-sm font-medium text-text-secondary mb-1.5">Status</label>
+            <select
+              value={formData.status}
+              onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+              className="w-full bg-bg-tertiary border border-border rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent-primary cursor-pointer"
+            >
+              {STATUS_OPTIONS.map((s) => (
+                <option key={s.value} value={s.value}>{s.label}</option>
+              ))}
+            </select>
           </div>
 
           <div>

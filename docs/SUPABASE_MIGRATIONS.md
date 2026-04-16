@@ -45,3 +45,40 @@ After running, the app supports:
 - Emoji avatars (stored as a single character in `avatar_emoji`)
 - Weekly radar email opt-in (`email_radar`)
 - `/u/:username` lookups that work across devices — anyone can view a public profile by its username
+
+---
+
+## 2026-04 — Cross-device data sync for all features
+
+Run this to add the `year` column to `catalog_items` (for API-fetched release years) and make sure the `weekly_dumps` unique constraint is in place:
+
+```sql
+-- Catalog items: add year column for API-returned release years
+ALTER TABLE catalog_items
+  ADD COLUMN IF NOT EXISTS year TEXT;
+
+-- Ensure weekly_dumps has a unique constraint for upserts
+DO $$ BEGIN
+  ALTER TABLE weekly_dumps ADD CONSTRAINT weekly_dumps_user_week_unique UNIQUE (user_id, week_id);
+EXCEPTION
+  WHEN duplicate_table THEN NULL;
+  WHEN duplicate_object THEN NULL;
+END $$;
+
+-- Taste profiles: one row per user
+DO $$ BEGIN
+  ALTER TABLE taste_profiles ADD CONSTRAINT taste_profiles_user_unique UNIQUE (user_id);
+EXCEPTION
+  WHEN duplicate_table THEN NULL;
+  WHEN duplicate_object THEN NULL;
+END $$;
+```
+
+After running, the app syncs:
+- **Catalog** — individual items with full CRUD
+- **Taste profile** — whole profile as JSONB, debounced writes
+- **Weekly dumps** — one row per week, upsert on `(user_id, week_id)`
+- **Scratchpad notes** — per-row insert/delete
+- **Heavy Rotation / Current Favorites** — bulk replace on every change
+- **Follows / Friends** — per-row insert/delete, async user search via public profiles
+- **Group Chat / Together sessions** — full multi-table sync (sessions + participants + notes)

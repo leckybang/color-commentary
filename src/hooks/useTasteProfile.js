@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from './useAuth'
+import { supabase, shouldSync } from '../lib/syncToSupabase'
 
 const DEFAULT_PROFILE = {
   music: { artists: [], genres: [], albums: [] },
@@ -8,27 +9,67 @@ const DEFAULT_PROFILE = {
   books: { authors: [], genres: [], books: [] },
 }
 
+/**
+ * Taste profile — syncs to Supabase's taste_profiles table (whole profile as a JSONB blob).
+ * Conflict resolution: last-write-wins. Writes are debounced so rapid edits don't spam the network.
+ */
 export function useTasteProfile() {
   const { user } = useAuth()
   const [profile, setProfile] = useState(DEFAULT_PROFILE)
   const [loading, setLoading] = useState(true)
+  const syncTimerRef = useRef(null)
 
   const storageKey = user ? `cc_taste_${user.uid}` : null
+  const canSync = shouldSync(user)
 
   useEffect(() => {
     if (!storageKey) return
+
     const saved = localStorage.getItem(storageKey)
-    if (saved) {
-      setProfile(JSON.parse(saved))
-    }
+    if (saved) setProfile(JSON.parse(saved))
     setLoading(false)
-  }, [storageKey])
+
+    if (canSync) {
+      supabase
+        .from('taste_profiles')
+        .select('profile_data')
+        .eq('user_id', user.uid)
+        .maybeSingle()
+        .then(({ data, error }) => {
+          if (error) {
+            console.error('Taste profile fetch failed:', error.message)
+            return
+          }
+          if (data?.profile_data) {
+            setProfile(data.profile_data)
+            if (storageKey) localStorage.setItem(storageKey, JSON.stringify(data.profile_data))
+          }
+        })
+    }
+  }, [storageKey, canSync, user?.uid])
+
+  // Debounced Supabase sync
+  const scheduleSync = (updated) => {
+    if (!canSync) return
+    if (syncTimerRef.current) clearTimeout(syncTimerRef.current)
+    syncTimerRef.current = setTimeout(() => {
+      supabase
+        .from('taste_profiles')
+        .upsert({
+          user_id: user.uid,
+          profile_data: updated,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'user_id' })
+        .then(({ error }) => {
+          if (error) console.error('Taste profile sync failed:', error.message)
+        })
+    }, 800)
+  }
 
   const saveProfile = (updated) => {
     setProfile(updated)
-    if (storageKey) {
-      localStorage.setItem(storageKey, JSON.stringify(updated))
-    }
+    if (storageKey) localStorage.setItem(storageKey, JSON.stringify(updated))
+    scheduleSync(updated)
   }
 
   const updateCategory = (category, field, values) => {
@@ -84,17 +125,12 @@ export function useTasteProfile() {
     })
   }
 
-  const getSpectrum = (key) => {
-    return profile.spectrums?.[key] ?? 50
-  }
+  const getSpectrum = (key) => profile.spectrums?.[key] ?? 50
 
   const setSpectrum = (key, value) => {
     const updated = {
       ...profile,
-      spectrums: {
-        ...(profile.spectrums || {}),
-        [key]: value,
-      },
+      spectrums: { ...(profile.spectrums || {}), [key]: value },
     }
     saveProfile(updated)
   }
