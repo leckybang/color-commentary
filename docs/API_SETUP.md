@@ -23,6 +23,27 @@ Total cost: **~free** for hobbyist use. Claude runs on Haiku at fractions of a c
 
 ---
 
+## 1.5. Google Books (Books) — Free, Recommended
+
+Google Books **works without a key** but aggressively rate-limits (returns 429 errors quickly). Add a free key to unlock the full 1000 req/day quota:
+
+1. Go to [console.cloud.google.com](https://console.cloud.google.com/)
+2. Create a new project (or use an existing one)
+3. Go to **APIs & Services → Library**
+4. Search for **Books API** and enable it
+5. Go to **APIs & Services → Credentials**
+6. Click **+ Create Credentials → API key**
+7. Copy the key
+8. Add to your local `.env`:
+   ```
+   VITE_GOOGLE_BOOKS_API_KEY=your_key_here
+   ```
+9. Add to **Netlify → Site settings → Environment variables**
+
+**Optional but strongly recommended** — without a key, book search will fail after the first few requests per day.
+
+---
+
 ## 2. Spotify (Music) — Free
 
 1. Go to [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard) and log in
