@@ -124,7 +124,7 @@ export default function Dashboard() {
   // Determine CTA
   let cta = { to: '/catalog', label: 'Add Something to Catalog', icon: Plus }
   if (isProfileEmpty()) {
-    cta = { to: '/profile', label: 'Build Your Taste Profile', icon: Sparkles }
+    cta = { to: '/me?tab=taste', label: 'Build Your Taste Profile', icon: Sparkles }
   } else if (!currentDump) {
     cta = { to: '/weekly', label: "Write This Week's Liner Notes", icon: BookMarked }
   } else if (radar) {
@@ -293,7 +293,7 @@ export default function Dashboard() {
               <div className="text-center py-8">
                 <Radar size={24} className="mx-auto text-text-muted/30 mb-2" />
                 <p className="text-text-muted text-sm mb-3">Set up your taste profile for recommendations</p>
-                <Link to="/profile" className="inline-flex items-center gap-1 text-sm text-accent-primary hover:underline">
+                <Link to="/me?tab=taste" className="inline-flex items-center gap-1 text-sm text-accent-primary hover:underline">
                   Build profile <ArrowRight size={14} />
                 </Link>
               </div>

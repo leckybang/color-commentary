@@ -5,13 +5,11 @@ import { usePublicProfile } from '../../hooks/usePublicProfile'
 
 const NAV_ITEMS = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/me', icon: User, label: 'My Profile' },
-  { to: '/calibrate', icon: SlidersHorizontal, label: 'Calibrator' },
-  { to: '/weekly', icon: BookMarked, label: 'Liner Notes' },
-  { to: '/catalog', icon: Library, label: 'Catalog' },
+  { to: '/weekly', icon: BookMarked, label: 'Liner Notes', mobile: 'Liner' },
   { to: '/radar', icon: Radar, label: 'Radar' },
-  { to: '/friends', icon: Users, label: 'Friends' },
-  { to: '/group-chat', icon: MessageCircle, label: 'Group Chat' },
+  { to: '/catalog', icon: Library, label: 'Catalog' },
+  { to: '/people', icon: Users, label: 'People' },
+  { to: '/me', icon: User, label: 'Profile' },
 ]
 
 export default function Sidebar() {
@@ -75,19 +73,19 @@ export default function Sidebar() {
       </aside>
 
       {/* Mobile bottom nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-bg-secondary border-t border-border z-40 px-2 py-1 flex justify-around">
-        {NAV_ITEMS.map(({ to, icon: Icon, label }) => (
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-bg-secondary border-t border-border z-40 px-1 py-1 flex justify-around">
+        {NAV_ITEMS.map(({ to, icon: Icon, label, mobile }) => (
           <NavLink
             key={to}
             to={to}
             className={({ isActive }) =>
-              `flex flex-col items-center gap-0.5 px-3 py-2 text-xs font-medium transition-colors ${
+              `flex flex-col items-center gap-0.5 px-2 py-2 text-[10px] font-medium transition-colors flex-1 ${
                 isActive ? 'text-accent-primary' : 'text-text-muted'
               }`
             }
           >
-            <Icon size={20} />
-            <span>{label.split(' ')[0]}</span>
+            <Icon size={18} />
+            <span>{mobile || label}</span>
           </NavLink>
         ))}
       </nav>

@@ -125,7 +125,7 @@ export default function PublicProfile({ isSelf }) {
 
         {isOwnProfile && (
           <div className="flex items-center justify-center gap-4 mt-4">
-            <Link to="/calibrate" className="text-xs text-accent-primary hover:underline flex items-center gap-1">
+            <Link to="/me?tab=taste" className="text-xs text-accent-primary hover:underline flex items-center gap-1">
               <Settings size={12} /> Edit Taste Calibrator
             </Link>
           </div>
@@ -172,7 +172,7 @@ export default function PublicProfile({ isSelf }) {
               <div className="text-center py-6 text-text-muted">
                 <p className="text-sm">Nothing in rotation yet.</p>
                 {isOwnProfile && (
-                  <Link to="/calibrate" className="text-xs text-accent-primary hover:underline mt-1 inline-block">
+                  <Link to="/me?tab=taste" className="text-xs text-accent-primary hover:underline mt-1 inline-block">
                     Set up your Current Favorites in the Calibrator
                   </Link>
                 )}

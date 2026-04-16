@@ -5,13 +5,12 @@ import Layout from './components/layout/Layout'
 import Login from './pages/Login'
 import Onboarding from './pages/Onboarding'
 import Dashboard from './pages/Dashboard'
-import Profile from './pages/Profile'
 import Weekly from './pages/Weekly'
 import Catalog from './pages/Catalog'
 import Radar from './pages/Radar'
 import Moodboard from './pages/Moodboard'
-import Friends from './pages/Friends'
-import Together from './pages/Together'
+import MyProfile from './pages/MyProfile'
+import People from './pages/People'
 import PublicProfile from './pages/PublicProfile'
 import CookieConsent from './components/common/CookieConsent'
 
@@ -61,14 +60,17 @@ function AppRoutes() {
       <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
       <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route path="/" element={<Dashboard />} />
-        <Route path="/me" element={<PublicProfile isSelf />} />
-        <Route path="/calibrate" element={<Profile />} />
-        <Route path="/profile" element={<Profile />} />
+        <Route path="/me" element={<MyProfile />} />
         <Route path="/weekly" element={<Weekly />} />
         <Route path="/catalog" element={<Catalog />} />
         <Route path="/radar" element={<Radar />} />
-        <Route path="/friends" element={<Friends />} />
-        <Route path="/group-chat" element={<Together />} />
+        <Route path="/people" element={<People />} />
+
+        {/* Legacy redirects */}
+        <Route path="/profile" element={<Navigate to="/me" replace />} />
+        <Route path="/calibrate" element={<Navigate to="/me?tab=taste" replace />} />
+        <Route path="/friends" element={<Navigate to="/people?tab=friends" replace />} />
+        <Route path="/group-chat" element={<Navigate to="/people?tab=chat" replace />} />
       </Route>
       <Route path="/u/:username" element={<PublicProfile />} />
       <Route path="/moodboard" element={<Moodboard />} />

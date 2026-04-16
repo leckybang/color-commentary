@@ -95,7 +95,7 @@ function getWeeklySpectrums() {
   ]
 }
 
-export default function Profile() {
+export default function Profile({ hidePublicProfile = false, hideHeader = false } = {}) {
   const { profile, addTag, removeTag, isProfileEmpty, getSpectrum, setSpectrum } = useTasteProfile()
   const { themeIndex, setTheme, themes } = useTheme()
   const { itemIds, addToRotation, removeFromRotation, reorder } = useHeavyRotation()
@@ -135,12 +135,14 @@ export default function Profile() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-text-primary mb-2">Taste Calibrator</h1>
-        <p className="text-text-secondary">
-          Tune the dials on your taste. The more you tell us, the better your radar gets.
-        </p>
-      </div>
+      {!hideHeader && (
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-text-primary mb-2">Taste Calibrator</h1>
+          <p className="text-text-secondary">
+            Tune the dials on your taste. The more you tell us, the better your radar gets.
+          </p>
+        </div>
+      )}
 
       {/* ─── Theme Picker ─── */}
       <div className="bg-bg-secondary border border-border rounded-2xl p-6 mb-6">
@@ -256,6 +258,7 @@ export default function Profile() {
       </Modal>
 
       {/* ─── Public Profile Settings ─── */}
+      {!hidePublicProfile && (
       <div className="bg-bg-secondary border border-border rounded-2xl p-6 mb-6">
         <div className="flex items-center gap-2 mb-4">
           <Globe size={20} className="text-accent-primary" />
@@ -368,6 +371,7 @@ export default function Profile() {
           </div>
         </div>
       </div>
+      )}
 
       {/* ─── Taste Spectrums ─── */}
       <div className="bg-bg-secondary border border-border rounded-2xl p-6 mb-6">
