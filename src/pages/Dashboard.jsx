@@ -411,11 +411,16 @@ export default function Dashboard() {
                     </div>
                     {(currentDump[key] || []).length > 0 ? (
                       <div className="flex flex-wrap gap-1">
-                        {currentDump[key].map((item) => (
-                          <span key={item} className="text-xs px-2 py-0.5 rounded-full bg-bg-tertiary text-text-secondary">
-                            {item}
-                          </span>
-                        ))}
+                        {currentDump[key].map((item, i) => {
+                          // Tags may be legacy strings or new object shape { kind, title, ... }
+                          const label = typeof item === 'string' ? item : (item?.title || '')
+                          const tagKey = typeof item === 'string' ? item : (item?.externalId || item?.title || i)
+                          return (
+                            <span key={`${tagKey}-${i}`} className="text-xs px-2 py-0.5 rounded-full bg-bg-tertiary text-text-secondary">
+                              {label}
+                            </span>
+                          )
+                        })}
                       </div>
                     ) : (
                       <p className="text-xs text-text-muted italic">—</p>
