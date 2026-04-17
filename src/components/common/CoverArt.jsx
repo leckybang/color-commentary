@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Music, Film, Tv, BookOpen } from 'lucide-react'
 import { getMediaColor } from '../../utils/filterUtils'
 
@@ -38,7 +39,8 @@ function getPattern(title) {
   return patterns[hash % patterns.length]
 }
 
-export default function CoverArt({ title, type, creator, size = 'md', className = '' }) {
+export default function CoverArt({ title, type, creator, coverUrl, size = 'md', className = '' }) {
+  const [imgFailed, setImgFailed] = useState(false)
   const Icon = TYPE_ICONS[type] || Music
   const color = getMediaColor(type)
   const gradient = getGradient(title || '', type)
@@ -51,6 +53,27 @@ export default function CoverArt({ title, type, creator, size = 'md', className 
     radar: { wrapper: 'w-16 h-20 rounded-lg', icon: 16, text: true },
   }
   const s = sizes[size] || sizes.md
+
+  // If we have a real cover URL from the media API, render it. Fall back to
+  // the synthetic gradient if the image fails to load (broken link, blocked).
+  if (coverUrl && !imgFailed) {
+    return (
+      <div className={`${s.wrapper} ${className} relative overflow-hidden shrink-0 bg-bg-tertiary`}>
+        <img
+          src={coverUrl}
+          alt={title || ''}
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          onError={() => setImgFailed(true)}
+          className="w-full h-full object-cover"
+        />
+        <div
+          className="absolute inset-0 rounded-[inherit] border pointer-events-none"
+          style={{ borderColor: `color-mix(in srgb, ${color} 20%, transparent)` }}
+        />
+      </div>
+    )
+  }
 
   return (
     <div

@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Plus, LayoutGrid, List, Music, Film, Tv, BookOpen, Trash2, Pin, PinOff, GripVertical, ArrowUp, ArrowDown, Sparkles, Target, Library, Play, Check, X } from 'lucide-react'
 import { useCatalog } from '../hooks/useCatalog'
 import { useNextUp } from '../hooks/useNextUp'
@@ -30,6 +31,7 @@ const STATUS_SECTIONS = [
 export default function Catalog() {
   const { items, addItem, updateItem, deleteItem } = useCatalog()
   const { itemIds: nextUpIds, addToNextUp, removeFromNextUp, reorder: reorderNextUp, isInNextUp, isFull: nextUpFull, MAX_NEXT_UP } = useNextUp()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [filters, setFilters] = useState({})
   const [sortBy, setSortBy] = useState('dateAdded')
   const [viewMode, setViewMode] = useState('grid')
@@ -38,6 +40,21 @@ export default function Catalog() {
   const [formData, setFormData] = useState(EMPTY_ITEM)
   const [saveAttempted, setSaveAttempted] = useState(false)
   const [dragIndex, setDragIndex] = useState(null)
+
+  // Auto-open the Add modal when navigated here with ?add=1 (e.g. Dashboard's Log Media button)
+  useEffect(() => {
+    if (searchParams.get('add') === '1') {
+      setFormData(EMPTY_ITEM)
+      setEditItem(null)
+      setSaveAttempted(false)
+      setShowAddModal(true)
+      // Clean up so refreshes don't re-open
+      const next = new URLSearchParams(searchParams)
+      next.delete('add')
+      setSearchParams(next, { replace: true })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const filtered = sortCatalog(filterCatalog(items, filters), sortBy)
   const hasActiveFilters = !!(filters.type && filters.type !== 'all') ||
@@ -247,32 +264,47 @@ export default function Catalog() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-start justify-between mb-4">
         <div>
           <h1 className="text-2xl font-bold text-text-primary">Catalog</h1>
           <p className="text-text-secondary text-sm mt-1">{items.length} items in your library</p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
-            className="p-2 bg-bg-secondary border border-border rounded-lg text-text-muted hover:text-text-primary hover:bg-bg-hover transition-colors"
-            title={viewMode === 'grid' ? 'Switch to list view' : 'Switch to grid view'}
-          >
-            {viewMode === 'grid' ? <List size={18} /> : <LayoutGrid size={18} />}
-          </button>
-          <button
-            onClick={openAdd}
-            className="flex items-center gap-2 bg-accent-primary hover:bg-accent-hover text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors"
-          >
-            <Plus size={16} />
-            Add Media
-          </button>
-        </div>
+        <button
+          onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+          className="p-2 bg-bg-secondary border border-border rounded-lg text-text-muted hover:text-text-primary hover:bg-bg-hover transition-colors shrink-0"
+          title={viewMode === 'grid' ? 'Switch to list view' : 'Switch to grid view'}
+        >
+          {viewMode === 'grid' ? <List size={18} /> : <LayoutGrid size={18} />}
+        </button>
       </div>
 
-      <div className="mb-6">
-        <FilterBar filters={filters} onChange={setFilters} sortBy={sortBy} onSortChange={setSortBy} />
-      </div>
+      {/* Primary action: Add Media. Big and unmistakable. */}
+      <button
+        onClick={openAdd}
+        className="group w-full mb-4 bg-gradient-to-r from-accent-primary to-accent-hover text-white rounded-2xl p-5 hover:shadow-lg hover:shadow-accent-primary/20 transition-all flex items-center gap-4"
+      >
+        <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+          <Plus size={24} strokeWidth={2.5} />
+        </div>
+        <div className="flex-1 min-w-0 text-left">
+          <p className="font-semibold text-base">Add Media</p>
+          <p className="text-xs text-white/80 mt-0.5">Log something you watched, read, or listened to.</p>
+        </div>
+      </button>
+
+      {/* Secondary: filter / search existing items. Demoted under the primary action. */}
+      <details className="mb-6 group">
+        <summary className="cursor-pointer list-none flex items-center justify-between text-xs text-text-muted hover:text-text-secondary transition-colors px-1 py-1.5 select-none">
+          <span className="flex items-center gap-1.5">
+            <List size={12} />
+            Filter or search what's already here
+          </span>
+          <span className="text-text-muted/60 group-open:rotate-180 transition-transform">▾</span>
+        </summary>
+        <div className="mt-2">
+          <FilterBar filters={filters} onChange={setFilters} sortBy={sortBy} onSortChange={setSortBy} />
+        </div>
+      </details>
 
       {filtered.length === 0 ? (
         <div className="text-center py-16 bg-bg-secondary border border-border rounded-2xl">

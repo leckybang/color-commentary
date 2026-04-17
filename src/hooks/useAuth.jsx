@@ -24,22 +24,23 @@ function mapSupabaseUser(supaUser) {
   }
 }
 
-// Create a profile row in Supabase if one doesn't exist
+// Ensure a profiles row exists for the authed user.
+// Idempotent via UPSERT — safe to call on every session restoration.
+// Uses `ignoreDuplicates: true` so it's a no-op if the row already exists.
 async function ensureProfile(supaUser) {
   if (!supabase || !supaUser) return
-  const { data } = await supabase
+  const { error } = await supabase
     .from('profiles')
-    .select('id')
-    .eq('id', supaUser.id)
-    .single()
-  if (!data) {
-    await supabase.from('profiles').insert({
-      id: supaUser.id,
-      display_name: supaUser.user_metadata?.full_name || supaUser.email?.split('@')[0] || 'User',
-      email: supaUser.email,
-      avatar_url: supaUser.user_metadata?.avatar_url || '',
-    })
-  }
+    .upsert(
+      {
+        id: supaUser.id,
+        display_name: supaUser.user_metadata?.full_name || supaUser.email?.split('@')[0] || 'User',
+        email: supaUser.email,
+        avatar_url: supaUser.user_metadata?.avatar_url || '',
+      },
+      { onConflict: 'id', ignoreDuplicates: true }
+    )
+  if (error) console.error('ensureProfile failed:', error.message)
 }
 
 export function AuthProvider({ children }) {
@@ -54,12 +55,11 @@ export function AuthProvider({ children }) {
       const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
         const mapped = session ? mapSupabaseUser(session.user) : null
         setUser(mapped)
-        if (mapped) {
+        if (mapped && session) {
           localStorage.setItem('cc_user', JSON.stringify(mapped))
-          // Ensure a profile row exists in Supabase (since we removed the trigger)
-          if (_event === 'SIGNED_IN') {
-            ensureProfile(session.user).catch(console.error)
-          }
+          // Ensure a profile row exists — on every session (including restorations
+          // on fresh devices), not just fresh sign-ins. Idempotent via UPSERT.
+          ensureProfile(session.user).catch(console.error)
         } else if (!hasOAuthTokens) {
           localStorage.removeItem('cc_user')
         }
@@ -77,6 +77,10 @@ export function AuthProvider({ children }) {
           const mapped = session ? mapSupabaseUser(session.user) : null
           setUser(mapped)
           setLoading(false)
+          // Also ensure the profile row on initial session load
+          if (session) {
+            ensureProfile(session.user).catch(console.error)
+          }
         })
       }
 

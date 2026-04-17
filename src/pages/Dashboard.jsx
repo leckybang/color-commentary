@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { Music, Film, Tv, BookOpen, Calendar, Radar, Star, TrendingUp, Plus, ArrowRight, Sparkles, Library, MessageCircle, X, Send, Lightbulb, BookMarked } from 'lucide-react'
+import { Music, Film, Tv, BookOpen, Calendar, Radar, Star, TrendingUp, Plus, ArrowRight, Sparkles, Library, MessageCircle, X, Send, Lightbulb, BookMarked, Headphones, Eye } from 'lucide-react'
 import { useCatalog } from '../hooks/useCatalog'
 import { useTasteProfile } from '../hooks/useTasteProfile'
 import { useWeeklyDumps } from '../hooks/useWeeklyDumps'
@@ -11,7 +11,22 @@ import { getMediaColor, MEDIA_TYPES } from '../utils/filterUtils'
 import { formatDate } from '../utils/dateUtils'
 import CoverArt from '../components/common/CoverArt'
 import MediaPickerInput from '../components/common/MediaPickerInput'
+import MediaSearchInput from '../components/common/MediaSearchInput'
 import { generateWeeklyLetter } from '../utils/weeklyLetter'
+
+// Liner Notes section configs (mirrors Weekly.jsx)
+const LINER_SECTIONS = [
+  { key: 'listening', label: 'Listening to', icon: Headphones, color: 'var(--color-accent-music)', placeholder: 'Add an album, artist, or track...', preferredTypes: ['music'] },
+  { key: 'watching',  label: 'Watching',     icon: Eye,        color: 'var(--color-accent-movies)', placeholder: 'Add a movie or show...', preferredTypes: ['movie', 'tv'] },
+  { key: 'reading',   label: 'Reading',      icon: BookOpen,   color: 'var(--color-accent-books)',  placeholder: 'Add a book...', preferredTypes: ['book'] },
+  { key: 'discovered',label: 'Discovered',   icon: Sparkles,   color: 'var(--color-accent-primary)', placeholder: 'Anything new...', preferredTypes: ['music', 'movie', 'tv', 'book'] },
+]
+
+function linerTagKey(tag) {
+  if (typeof tag === 'string') return `text:${tag.toLowerCase()}`
+  if (tag.provider && tag.externalId) return `${tag.provider}:${tag.externalId}`
+  return `text:${(tag.title || '').toLowerCase()}`
+}
 
 const SCRATCHPAD_TYPE_TO_SEARCH = {
   music: ['music'],
@@ -98,7 +113,7 @@ export default function Dashboard() {
   const { user } = useAuth()
   const { items, getStats } = useCatalog()
   const { profile, isProfileEmpty } = useTasteProfile()
-  const { dumps, getStreak, getCurrentWeekDump } = useWeeklyDumps()
+  const { dumps, getStreak, getCurrentWeekDump, saveDump } = useWeeklyDumps()
   const { notes, addNote, deleteNote } = useScratchpad()
   const [noteText, setNoteText] = useState('')
   const [noteType, setNoteType] = useState('movie')
@@ -107,6 +122,40 @@ export default function Dashboard() {
   const stats = getStats()
   const streak = getStreak()
   const currentDump = getCurrentWeekDump()
+
+  // Inline editing of the current week's Liner Notes from the Dashboard.
+  // Mirrors the Weekly page form, but compact. Auto-saves on each change.
+  const blankLiner = { listening: [], watching: [], reading: [], discovered: [] }
+  const [liner, setLiner] = useState(blankLiner)
+  const linerHydrated = useRef(false)
+
+  useEffect(() => {
+    setLiner({
+      listening: currentDump?.listening || [],
+      watching: currentDump?.watching || [],
+      reading: currentDump?.reading || [],
+      discovered: currentDump?.discovered || [],
+    })
+    linerHydrated.current = true
+    // Re-hydrate when the underlying dump changes (e.g. cross-device sync arrives)
+  }, [currentDump?.weekId, currentDump?.updatedAt])
+
+  const persistLiner = (next) => {
+    setLiner(next)
+    saveDump({ ...next, notes: currentDump?.notes || '' })
+  }
+
+  const addLinerTag = (section, value) => {
+    const current = liner[section] || []
+    const newKey = linerTagKey(value)
+    if (current.some((t) => linerTagKey(t) === newKey)) return
+    persistLiner({ ...liner, [section]: [...current, value] })
+  }
+
+  const removeLinerTag = (section, value) => {
+    const removeKey = linerTagKey(value)
+    persistLiner({ ...liner, [section]: liner[section].filter((v) => linerTagKey(v) !== removeKey) })
+  }
 
   const radar = useMemo(() => {
     if (isProfileEmpty()) return null
@@ -174,19 +223,43 @@ export default function Dashboard() {
   return (
     <div>
       {/* ─── Hero Greeting ─── */}
-      <div className="mb-8">
+      <div className="mb-6">
         <h1 className="text-2xl md:text-3xl font-bold text-text-primary mb-2">
           {getGreeting(user?.displayName)}
         </h1>
-        <p className="text-text-secondary mb-4">Here's the vibe check on your media universe.</p>
-        <Link
-          to={cta.to}
-          className="inline-flex items-center gap-2 bg-accent-primary hover:bg-accent-hover text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-colors"
-        >
-          <cta.icon size={16} />
-          {cta.label}
-        </Link>
+        <p className="text-text-secondary">Here's the vibe check on your media universe.</p>
       </div>
+
+      {/* ─── Log Media (always-available primary entry point) ─── */}
+      <Link
+        to="/catalog?add=1"
+        className="group block mb-4 bg-gradient-to-r from-accent-primary to-accent-hover text-white rounded-2xl p-5 hover:shadow-lg hover:shadow-accent-primary/20 transition-all"
+      >
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+            <Plus size={24} strokeWidth={2.5} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-base">Log Media</p>
+            <p className="text-xs text-white/80 mt-0.5">Just watched, read, or listened to something? Capture it now.</p>
+          </div>
+          <ArrowRight size={18} className="opacity-70 group-hover:translate-x-0.5 transition-transform shrink-0" />
+        </div>
+      </Link>
+
+      {/* Secondary contextual CTA */}
+      {cta.to !== '/catalog' && (
+        <div className="mb-8">
+          <Link
+            to={cta.to}
+            className="inline-flex items-center gap-2 text-sm text-accent-primary hover:underline"
+          >
+            <cta.icon size={14} />
+            {cta.label}
+          </Link>
+        </div>
+      )}
+      {cta.to === '/catalog' && <div className="mb-8" />}
 
       {/* ─── Stats Row ─── */}
       <div className="grid grid-cols-4 gap-3 mb-8">
@@ -366,7 +439,7 @@ export default function Dashboard() {
                   const color = getMediaColor(item.type)
                   return (
                     <Link to="/radar" key={i} className="flex items-center gap-3 p-2 rounded-lg hover:bg-bg-hover transition-colors">
-                      <CoverArt title={item.title} type={item.type} size="sm" />
+                      <CoverArt title={item.title} type={item.type} coverUrl={item.coverUrl} size="sm" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-text-primary truncate">{item.title}</p>
                         <p className="text-xs text-text-muted truncate">{item.creator}</p>
@@ -387,54 +460,38 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* The Liner Notes */}
+          {/* The Liner Notes — inline editable, auto-saves to current week, shows on public profile */}
           <div className="bg-bg-secondary border border-border rounded-2xl p-5">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="font-semibold text-text-primary">The Liner Notes</h2>
-              <Link to="/weekly" className="text-sm text-accent-primary hover:underline flex items-center gap-1">
-                {currentDump ? 'Edit' : 'Write'} <ArrowRight size={14} />
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="font-semibold text-text-primary">Right Now</h2>
+              <Link to="/weekly" className="text-xs text-accent-primary hover:underline flex items-center gap-1">
+                Open Liner Notes <ArrowRight size={12} />
               </Link>
             </div>
-            <p className="text-xs text-text-muted mb-4">Your weekly field notes on what you're into. Think of it as a diary, but cooler.</p>
-            {currentDump ? (
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { key: 'listening', label: 'Listening', icon: Music, color: 'var(--color-accent-music)' },
-                  { key: 'watching', label: 'Watching', icon: Film, color: 'var(--color-accent-movies)' },
-                  { key: 'reading', label: 'Reading', icon: BookOpen, color: 'var(--color-accent-books)' },
-                  { key: 'discovered', label: 'Discovered', icon: Sparkles, color: 'var(--color-accent-primary)' },
-                ].map(({ key, label, icon: Icon, color }) => (
-                  <div key={key}>
-                    <div className="flex items-center gap-1.5 mb-1.5">
-                      <Icon size={13} style={{ color }} />
-                      <span className="text-xs font-medium text-text-muted">{label}</span>
-                    </div>
-                    {(currentDump[key] || []).length > 0 ? (
-                      <div className="flex flex-wrap gap-1">
-                        {currentDump[key].map((item, i) => {
-                          // Tags may be legacy strings or new object shape { kind, title, ... }
-                          const label = typeof item === 'string' ? item : (item?.title || '')
-                          const tagKey = typeof item === 'string' ? item : (item?.externalId || item?.title || i)
-                          return (
-                            <span key={`${tagKey}-${i}`} className="text-xs px-2 py-0.5 rounded-full bg-bg-tertiary text-text-secondary">
-                              {label}
-                            </span>
-                          )
-                        })}
-                      </div>
-                    ) : (
-                      <p className="text-xs text-text-muted italic">—</p>
+            <p className="text-xs text-text-muted mb-4">What you're into this week. Updates here also show on your public profile.</p>
+            <div className="space-y-4">
+              {LINER_SECTIONS.map(({ key, label, icon: Icon, color, placeholder, preferredTypes }) => (
+                <div key={key}>
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <Icon size={13} style={{ color }} />
+                    <span className="text-xs font-medium text-text-muted">{label}</span>
+                    {liner[key].length > 0 && (
+                      <span className="text-[10px] px-1.5 rounded-full" style={{ backgroundColor: `color-mix(in srgb, ${color} 15%, transparent)`, color }}>
+                        {liner[key].length}
+                      </span>
                     )}
                   </div>
-                ))}
-              </div>
-            ) : (
-              <Link to="/weekly" className="block text-center py-6 rounded-xl bg-bg-tertiary hover:bg-bg-hover transition-colors">
-                <BookMarked size={28} className="mx-auto text-accent-primary mb-2" />
-                <p className="text-sm font-medium text-text-primary mb-1">What's in your ears, eyes, and hands this week?</p>
-                <p className="text-xs text-text-muted">Drop your weekly recs, hot takes, and questionable discoveries. No judgment (mostly).</p>
-              </Link>
-            )}
+                  <MediaSearchInput
+                    tags={liner[key]}
+                    onAdd={(val) => addLinerTag(key, val)}
+                    onRemove={(val) => removeLinerTag(key, val)}
+                    placeholder={placeholder}
+                    color={color}
+                    preferredTypes={preferredTypes}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -453,7 +510,7 @@ export default function Dashboard() {
               const color = getMediaColor(item.type)
               return (
                 <Link to="/catalog" key={item.id} className="flex items-center gap-3 p-3 rounded-xl bg-bg-tertiary hover:bg-bg-hover transition-colors">
-                  <CoverArt title={item.title} type={item.type} size="sm" />
+                  <CoverArt title={item.title} type={item.type} coverUrl={item.coverUrl} size="sm" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-text-primary truncate">{item.title}</p>
                     <p className="text-xs text-text-muted truncate">{item.creator}</p>

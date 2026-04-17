@@ -23,13 +23,14 @@ export function usePublicProfile() {
     const saved = localStorage.getItem(storageKey)
     if (saved) setSettings({ ...DEFAULT_PUBLIC_PROFILE, ...JSON.parse(saved) })
 
-    // Also hydrate from Supabase if configured
+    // Also hydrate from Supabase if configured. Use maybeSingle so a missing
+    // row doesn't throw — ensureProfile in useAuth will (re)create it.
     if (isSupabaseConfigured && user?.uid && !user.uid.startsWith('demo') && !user.uid.startsWith('user-')) {
       supabase
         .from('profiles')
         .select('username, bio, is_public, avatar_emoji, email_radar')
         .eq('id', user.uid)
-        .single()
+        .maybeSingle()
         .then(({ data }) => {
           if (data) {
             const merged = {
@@ -50,20 +51,24 @@ export function usePublicProfile() {
     setSettings(updated)
     if (storageKey) localStorage.setItem(storageKey, JSON.stringify(updated))
 
-    // Sync to Supabase (fire and forget)
+    // Sync to Supabase (fire and forget). Use UPSERT so the row is created if
+    // it's missing (e.g. profile trigger never fired) — `update` would silently
+    // affect zero rows and the change would never make it across devices.
     if (isSupabaseConfigured && user?.uid && !user.uid.startsWith('demo') && !user.uid.startsWith('user-')) {
       setSaving(true)
       try {
         const { error } = await supabase
           .from('profiles')
-          .update({
+          .upsert({
+            id: user.uid,
+            display_name: user.displayName || user.email?.split('@')[0] || 'User',
+            email: user.email || null,
             username: updated.username || null,
             bio: updated.bio || '',
             is_public: updated.isPublic,
             avatar_emoji: updated.avatarEmoji || null,
             email_radar: updated.emailRadar || false,
-          })
-          .eq('id', user.uid)
+          }, { onConflict: 'id' })
         if (error) console.error('Profile sync error:', error.message)
         setLastSaved(Date.now())
       } finally {

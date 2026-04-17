@@ -200,7 +200,7 @@ export default function Profile({ hidePublicProfile = false, hideHeader = false 
           <div className="grid grid-cols-4 gap-3">
             {rotationItems.map((item, idx) => (
               <div key={item.id} className="text-center group relative">
-                <CoverArt title={item.title} type={item.type} size="md" className="mx-auto" />
+                <CoverArt title={item.title} type={item.type} coverUrl={item.coverUrl} size="md" className="mx-auto" />
                 <p className="text-xs font-medium text-text-primary mt-1.5 truncate">{item.title}</p>
                 <p className="text-xs text-text-muted truncate">{item.creator}</p>
                 <button
@@ -243,7 +243,7 @@ export default function Profile({ hidePublicProfile = false, hideHeader = false 
                 }}
                 className="w-full flex items-center gap-3 p-3 rounded-lg bg-bg-tertiary hover:bg-bg-hover transition-colors text-left"
               >
-                <CoverArt title={item.title} type={item.type} size="sm" />
+                <CoverArt title={item.title} type={item.type} coverUrl={item.coverUrl} size="sm" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-text-primary truncate">{item.title}</p>
                   <p className="text-xs text-text-muted truncate">{item.creator}</p>

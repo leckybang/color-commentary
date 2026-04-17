@@ -1,15 +1,23 @@
 import { useParams, Link } from 'react-router-dom'
-import { Music, Film, Tv, BookOpen, Lock, Globe, Settings, Star, UserPlus } from 'lucide-react'
+import { Music, Film, Tv, BookOpen, Lock, Globe, Settings, Star, UserPlus, Headphones, Eye, Sparkles } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { useTasteProfile } from '../hooks/useTasteProfile'
 import { usePublicProfile } from '../hooks/usePublicProfile'
 import { usePublicProfileByUsername } from '../hooks/usePublicProfileByUsername'
 import { useHeavyRotation } from '../hooks/useHeavyRotation'
 import { useCatalog } from '../hooks/useCatalog'
+import { useWeeklyDumps } from '../hooks/useWeeklyDumps'
 import { determineArchetype } from '../utils/archetypes'
 import CoverArt from '../components/common/CoverArt'
 import SpectrumSlider from '../components/common/SpectrumSlider'
 import { isSupabaseConfigured } from '../lib/supabase'
+
+const RIGHT_NOW_SECTIONS = [
+  { key: 'listening', label: 'Listening to', icon: Headphones, color: 'var(--color-accent-music)' },
+  { key: 'watching',  label: 'Watching',     icon: Eye,        color: 'var(--color-accent-movies)' },
+  { key: 'reading',   label: 'Reading',      icon: BookOpen,   color: 'var(--color-accent-books)' },
+  { key: 'discovered',label: 'Discovered',   icon: Sparkles,   color: 'var(--color-accent-primary)' },
+]
 
 const SPECTRUMS = [
   { key: 'mainstream-obscure', leftLabel: 'Mainstream', rightLabel: 'Obscure' },
@@ -23,6 +31,7 @@ export default function PublicProfile({ isSelf }) {
   const myProfile = usePublicProfile()
   const { itemIds } = useHeavyRotation()
   const { items, getStats } = useCatalog()
+  const { getCurrentWeekDump } = useWeeklyDumps()
 
   // Fetch a Supabase profile when viewing someone else's slug
   const isViewingBySlug = !isSelf && !!username
@@ -91,6 +100,10 @@ export default function PublicProfile({ isSelf }) {
   const archetype = showFullData ? determineArchetype(profile) : null
   const rotationItems = showFullData ? itemIds.map((id) => items.find((i) => i.id === id)).filter(Boolean) : []
   const stats = showFullData ? getStats() : null
+  const currentDump = showFullData ? getCurrentWeekDump() : null
+  const rightNowHasAny =
+    !!currentDump &&
+    RIGHT_NOW_SECTIONS.some(({ key }) => Array.isArray(currentDump[key]) && currentDump[key].length > 0)
 
   const showSelfWrapper = !isSelf // wrap in its own layout if /u/:username; /me uses app Layout
   const content = (
@@ -156,7 +169,7 @@ export default function PublicProfile({ isSelf }) {
               <div className="grid grid-cols-4 gap-3">
                 {rotationItems.map((item) => (
                   <div key={item.id} className="text-center">
-                    <CoverArt title={item.title} type={item.type} creator={item.creator} size="lg" className="mx-auto" />
+                    <CoverArt title={item.title} type={item.type} creator={item.creator} coverUrl={item.coverUrl} size="lg" className="mx-auto" />
                     <p className="text-xs font-medium text-text-primary mt-2 truncate">{item.title}</p>
                     <p className="text-xs text-text-muted truncate">{item.creator}</p>
                     {item.rating > 0 && (
@@ -174,6 +187,60 @@ export default function PublicProfile({ isSelf }) {
                 {isOwnProfile && (
                   <Link to="/me?tab=taste" className="text-xs text-accent-primary hover:underline mt-1 inline-block">
                     Set up your Current Favorites in the Calibrator
+                  </Link>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Right Now — current week's Liner Notes */}
+          <div className="bg-bg-secondary border border-border rounded-2xl p-6 mb-6">
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="text-lg font-bold text-text-primary">Right Now</h2>
+              {isOwnProfile && (
+                <Link to="/" className="text-xs text-accent-primary hover:underline">Update on Dashboard</Link>
+              )}
+            </div>
+            <p className="text-xs text-text-muted mb-4">What I'm into this week</p>
+            {rightNowHasAny ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {RIGHT_NOW_SECTIONS.map(({ key, label, icon: Icon, color }) => {
+                  const items = currentDump[key] || []
+                  if (items.length === 0) return null
+                  return (
+                    <div key={key}>
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <Icon size={13} style={{ color }} />
+                        <span className="text-xs font-medium text-text-muted">{label}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {items.map((tag, i) => {
+                          const title = typeof tag === 'string' ? tag : (tag?.title || '')
+                          const k = typeof tag === 'string' ? `${tag}-${i}` : (tag?.externalId || `${title}-${i}`)
+                          return (
+                            <span
+                              key={k}
+                              className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-full"
+                              style={{ backgroundColor: `color-mix(in srgb, ${color} 15%, transparent)`, color }}
+                            >
+                              {tag?.coverUrl && (
+                                <img src={tag.coverUrl} alt="" className="w-4 h-4 rounded object-cover" loading="lazy" referrerPolicy="no-referrer" />
+                              )}
+                              {title}
+                            </span>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-4 text-text-muted">
+                <p className="text-sm">Nothing logged this week yet.</p>
+                {isOwnProfile && (
+                  <Link to="/" className="text-xs text-accent-primary hover:underline mt-1 inline-block">
+                    Add what you're into on the Dashboard
                   </Link>
                 )}
               </div>

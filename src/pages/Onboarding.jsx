@@ -399,7 +399,7 @@ export default function Onboarding() {
                           className="bg-bg-secondary/80 border border-border rounded-xl p-3 transition-all"
                         >
                           <div className="flex items-center gap-3">
-                            <CoverArt title={item.title} type={item.type} creator={item.creator} size="sm" />
+                            <CoverArt title={item.title} type={item.type} creator={item.creator} coverUrl={item.coverUrl} size="sm" />
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium text-text-primary truncate">{item.title}</p>
                               <p className="text-xs text-text-muted truncate">{item.creator}</p>

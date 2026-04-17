@@ -29,7 +29,7 @@ function RadarCard({ item, onAdd, onDismiss, isAdded }) {
         onClick={() => setExpanded(!expanded)}
       >
         <div className="flex items-start gap-3">
-          <CoverArt title={item.title} type={item.type} creator={item.creator} size="radar" />
+          <CoverArt title={item.title} type={item.type} creator={item.creator} coverUrl={item.coverUrl} size="radar" />
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-text-primary text-sm">{item.title}</h3>
             <p className="text-xs text-text-secondary mt-0.5">{item.creator}</p>

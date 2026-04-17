@@ -10,7 +10,7 @@ export default function FilterBar({ filters, onChange, sortBy, onSortChange }) {
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
         <input
           type="text"
-          placeholder="Search titles, creators..."
+          placeholder="Filter your catalog..."
           value={filters.search || ''}
           onChange={(e) => update('search', e.target.value)}
           className="w-full bg-bg-tertiary border border-border rounded-lg pl-9 pr-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-primary transition-colors"
