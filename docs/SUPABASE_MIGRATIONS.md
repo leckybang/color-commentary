@@ -98,3 +98,28 @@ ALTER TABLE scratchpad_notes
 ```
 
 After running, new scratchpad notes will persist type + cover art across devices. Existing plain-text notes continue to work unchanged.
+
+---
+
+## 2026-04 — Next Up (Top 3 prioritized Want to Try)
+
+Run this so the new "Next Up" section on the Catalog page can sync your pinned/reordered top 3 items across devices:
+
+```sql
+CREATE TABLE IF NOT EXISTS next_up_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  catalog_item_id UUID REFERENCES catalog_items(id) ON DELETE CASCADE NOT NULL,
+  position INTEGER NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(user_id, catalog_item_id)
+);
+
+ALTER TABLE next_up_items ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can manage own next_up"
+  ON next_up_items FOR ALL
+  USING (auth.uid() = user_id);
+```
+
+This mirrors the `heavy_rotation_items` table — a simple ordered list of catalog item IDs with the user's custom priority order. The `ON DELETE CASCADE` means if you delete a catalog item, it's automatically removed from Next Up.
