@@ -82,3 +82,19 @@ After running, the app syncs:
 - **Heavy Rotation / Current Favorites** — bulk replace on every change
 - **Follows / Friends** — per-row insert/delete, async user search via public profiles
 - **Group Chat / Together sessions** — full multi-table sync (sessions + participants + notes)
+
+---
+
+## 2026-04 — Scratchpad notes can capture media metadata
+
+Run this so "Someone Told Me About..." can store the media type, creator, year, and cover URL when the user picks a real match from the search API:
+
+```sql
+ALTER TABLE scratchpad_notes
+  ADD COLUMN IF NOT EXISTS type TEXT CHECK (type IN ('music', 'movie', 'tv', 'book')),
+  ADD COLUMN IF NOT EXISTS creator TEXT,
+  ADD COLUMN IF NOT EXISTS year TEXT,
+  ADD COLUMN IF NOT EXISTS cover_url TEXT;
+```
+
+After running, new scratchpad notes will persist type + cover art across devices. Existing plain-text notes continue to work unchanged.

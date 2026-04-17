@@ -7,10 +7,18 @@ import { useWeeklyDumps } from '../hooks/useWeeklyDumps'
 import { useScratchpad } from '../hooks/useScratchpad'
 import { useAuth } from '../hooks/useAuth'
 import { getWeeklyRadar } from '../services/mockData'
-import { getMediaColor } from '../utils/filterUtils'
+import { getMediaColor, MEDIA_TYPES } from '../utils/filterUtils'
 import { formatDate } from '../utils/dateUtils'
 import CoverArt from '../components/common/CoverArt'
+import MediaPickerInput from '../components/common/MediaPickerInput'
 import { generateWeeklyLetter } from '../utils/weeklyLetter'
+
+const SCRATCHPAD_TYPE_TO_SEARCH = {
+  music: ['music'],
+  movie: ['movie'],
+  tv: ['tv'],
+  book: ['book'],
+}
 
 const TYPE_ICONS = { music: Music, movie: Film, tv: Tv, book: BookOpen }
 
@@ -93,6 +101,8 @@ export default function Dashboard() {
   const { dumps, getStreak, getCurrentWeekDump } = useWeeklyDumps()
   const { notes, addNote, deleteNote } = useScratchpad()
   const [noteText, setNoteText] = useState('')
+  const [noteType, setNoteType] = useState('movie')
+  const [noteMeta, setNoteMeta] = useState(null) // from picked search result
 
   const stats = getStats()
   const streak = getStreak()
@@ -132,9 +142,32 @@ export default function Dashboard() {
   }
 
   const handleAddNote = () => {
-    if (noteText.trim()) {
-      addNote(noteText)
-      setNoteText('')
+    if (!noteText.trim()) return
+    // If user picked a match from the search, save the enriched metadata.
+    // Otherwise, save just the text with the selected type so the note still
+    // knows whether it's a book / movie / etc.
+    const payload = noteMeta
+      ? {
+          text: noteMeta.title,
+          type: noteMeta.type,
+          creator: noteMeta.creator || '',
+          year: noteMeta.year || '',
+          coverUrl: noteMeta.coverUrl || '',
+        }
+      : { text: noteText, type: noteType }
+    addNote(payload)
+    setNoteText('')
+    setNoteMeta(null)
+  }
+
+  const handlePick = (result) => {
+    if (result.kind === 'text') {
+      // Free text — keep whatever type the user has selected
+      setNoteMeta(null)
+      setNoteText(result.title)
+    } else {
+      setNoteMeta(result)
+      setNoteText(result.title)
     }
   }
 
@@ -211,20 +244,51 @@ export default function Dashboard() {
             </div>
             <p className="text-xs text-text-muted mb-3">For when someone says "you HAVE to watch this" and you need to write it down before your brain deletes it.</p>
 
-            {/* Input */}
+            {/* Type toggle — determines which API to search */}
+            <div className="flex gap-1 mb-3">
+              {MEDIA_TYPES.map((t) => (
+                <button
+                  key={t.value}
+                  type="button"
+                  onClick={() => {
+                    setNoteType(t.value)
+                    // Clear any prior picked meta since type changed
+                    setNoteMeta(null)
+                  }}
+                  className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                    noteType === t.value
+                      ? 'border-transparent'
+                      : 'bg-bg-tertiary border-border text-text-muted hover:bg-bg-hover'
+                  }`}
+                  style={noteType === t.value ? {
+                    backgroundColor: `color-mix(in srgb, ${t.color} 20%, transparent)`,
+                    color: t.color,
+                  } : {}}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Search input (auto-populates from real APIs) */}
             <div className="flex gap-2 mb-4">
-              <input
-                type="text"
-                value={noteText}
-                onChange={(e) => setNoteText(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleAddNote()}
-                placeholder="e.g. My coworker said to watch Shogun..."
-                className="flex-1 bg-bg-tertiary border border-border rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-primary transition-colors"
-              />
+              <div className="flex-1">
+                <MediaPickerInput
+                  value={noteText}
+                  onChange={(v) => {
+                    setNoteText(v)
+                    if (noteMeta && v !== noteMeta.title) setNoteMeta(null)
+                  }}
+                  onPick={handlePick}
+                  placeholder={`Search ${noteType === 'music' ? 'Spotify' : noteType === 'book' ? 'books' : noteType === 'tv' ? 'TV shows' : 'movies'}...`}
+                  preferredTypes={SCRATCHPAD_TYPE_TO_SEARCH[noteType] || ['movie']}
+                />
+              </div>
               <button
                 onClick={handleAddNote}
                 disabled={!noteText.trim()}
-                className="p-2 bg-accent-primary/10 text-accent-primary rounded-lg hover:bg-accent-primary/20 transition-colors disabled:opacity-30"
+                className="p-2 bg-accent-primary/10 text-accent-primary rounded-lg hover:bg-accent-primary/20 transition-colors disabled:opacity-30 self-start"
+                title="Save note"
               >
                 <Send size={16} />
               </button>
@@ -233,20 +297,43 @@ export default function Dashboard() {
             {/* Notes list */}
             {notes.length > 0 ? (
               <div className="space-y-2 max-h-[240px] overflow-y-auto">
-                {notes.map((note) => (
-                  <div key={note.id} className="flex items-start gap-2 group p-2 rounded-lg hover:bg-bg-tertiary transition-colors">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-text-primary">{note.text}</p>
-                      <p className="text-xs text-text-muted mt-0.5">{formatDate(note.createdAt)}</p>
+                {notes.map((note) => {
+                  const TypeIcon = note.type ? TYPE_ICONS[note.type] : null
+                  const typeColor = note.type ? getMediaColor(note.type) : null
+                  return (
+                    <div key={note.id} className="flex items-center gap-3 group p-2 rounded-lg hover:bg-bg-tertiary transition-colors">
+                      {note.coverUrl ? (
+                        <img
+                          src={note.coverUrl}
+                          alt=""
+                          className="w-8 h-10 rounded object-cover shrink-0"
+                          loading="lazy"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : TypeIcon ? (
+                        <div
+                          className="w-8 h-10 rounded flex items-center justify-center shrink-0"
+                          style={{ backgroundColor: `color-mix(in srgb, ${typeColor} 15%, transparent)` }}
+                        >
+                          <TypeIcon size={14} style={{ color: typeColor }} />
+                        </div>
+                      ) : null}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-text-primary truncate">{note.text}</p>
+                        <p className="text-xs text-text-muted mt-0.5 truncate">
+                          {note.creator && <span>{note.creator}{note.year ? ` · ${note.year}` : ''} · </span>}
+                          {formatDate(note.createdAt)}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => deleteNote(note.id)}
+                        className="p-1 rounded text-text-muted/0 group-hover:text-text-muted hover:text-accent-movies transition-colors shrink-0"
+                      >
+                        <X size={14} />
+                      </button>
                     </div>
-                    <button
-                      onClick={() => deleteNote(note.id)}
-                      className="p-1 rounded text-text-muted/0 group-hover:text-text-muted hover:text-accent-movies transition-colors shrink-0"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             ) : (
               <p className="text-xs text-text-muted italic text-center py-4">Empty. For now. Next time someone corners you at a party with a rec, this is your escape plan.</p>

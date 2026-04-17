@@ -1,13 +1,18 @@
 import { useState, useEffect } from 'react'
-import { CalendarDays, ChevronLeft, ChevronRight, Save, Headphones, Eye, BookOpen, Sparkles, MessageCircle, ArrowUpRight, X, Wand2 } from 'lucide-react'
+import { CalendarDays, ChevronLeft, ChevronRight, Save, Headphones, Eye, BookOpen, Sparkles, MessageCircle, ArrowUpRight, X, Wand2, Music, Film, Tv } from 'lucide-react'
 import { useWeeklyDumps } from '../hooks/useWeeklyDumps'
 import { useCatalog } from '../hooks/useCatalog'
 import { useScratchpad } from '../hooks/useScratchpad'
 import { getWeekId, getWeekRange, formatWeekRange } from '../utils/dateUtils'
 import { formatDate } from '../utils/dateUtils'
+import { getMediaColor } from '../utils/filterUtils'
 import MediaSearchInput from '../components/common/MediaSearchInput'
 import ParseWithAIButton from '../components/weekly/ParseWithAIButton'
 import AIParseModal from '../components/weekly/AIParseModal'
+
+const NOTE_TYPE_ICONS = { music: Music, movie: Film, tv: Tv, book: BookOpen }
+// Route a scratchpad note's type to the correct Liner Notes section
+const TYPE_TO_SECTION = { music: 'listening', movie: 'watching', tv: 'watching', book: 'reading' }
 
 const SECTIONS = [
   { key: 'listening', label: 'Listening To', icon: Headphones, color: 'var(--color-accent-music)', placeholder: 'Search Spotify for an album, artist, or track...', preferredTypes: ['music'] },
@@ -221,39 +226,79 @@ export default function Weekly() {
                 </button>
               )}
             </div>
-            <p className="text-xs text-text-muted mb-3">Things people told you about. Tap ✨ to let AI parse and add to your sections.</p>
+            <p className="text-xs text-text-muted mb-3">Things people told you about. Tap ↗ to add to the right section, or ✨ to parse with AI.</p>
             <div className="space-y-2">
-              {scratchpadNotes.map((note) => (
-                <div key={note.id} className="flex items-center gap-2 p-2.5 bg-bg-tertiary rounded-lg group">
-                  <p className="flex-1 text-sm text-text-primary">{note.text}</p>
-                  <span className="text-xs text-text-muted shrink-0">{formatDate(note.createdAt)}</span>
-                  <button
-                    onClick={() => openAIModal(note.text, note.id)}
-                    className="flex items-center gap-1 px-2 py-1 rounded text-accent-primary hover:bg-accent-primary/10 transition-colors shrink-0"
-                    title="Parse with AI and add to a section"
-                  >
-                    <Sparkles size={13} />
-                    <span className="text-xs font-medium">Add with AI</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      addTagToSection('discovered', { kind: 'text', title: note.text })
-                      deleteNote(note.id)
-                    }}
-                    className="p-1 rounded text-text-muted hover:text-accent-primary transition-colors shrink-0"
-                    title="Add as plain text to Discovered"
-                  >
-                    <ArrowUpRight size={14} />
-                  </button>
-                  <button
-                    onClick={() => deleteNote(note.id)}
-                    className="p-1 rounded text-text-muted hover:text-accent-movies transition-colors shrink-0"
-                    title="Dismiss"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-              ))}
+              {scratchpadNotes.map((note) => {
+                const TypeIcon = note.type ? NOTE_TYPE_ICONS[note.type] : null
+                const typeColor = note.type ? getMediaColor(note.type) : null
+                const targetSection = note.type ? TYPE_TO_SECTION[note.type] : 'discovered'
+                return (
+                  <div key={note.id} className="flex items-center gap-2 p-2.5 bg-bg-tertiary rounded-lg group">
+                    {note.coverUrl ? (
+                      <img
+                        src={note.coverUrl}
+                        alt=""
+                        className="w-8 h-10 rounded object-cover shrink-0"
+                        loading="lazy"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : TypeIcon ? (
+                      <div
+                        className="w-8 h-10 rounded flex items-center justify-center shrink-0"
+                        style={{ backgroundColor: `color-mix(in srgb, ${typeColor} 15%, transparent)` }}
+                      >
+                        <TypeIcon size={14} style={{ color: typeColor }} />
+                      </div>
+                    ) : null}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-text-primary truncate">{note.text}</p>
+                      {(note.creator || note.createdAt) && (
+                        <p className="text-xs text-text-muted mt-0.5 truncate">
+                          {note.creator && <span>{note.creator}{note.year ? ` · ${note.year}` : ''} · </span>}
+                          {formatDate(note.createdAt)}
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => openAIModal(note.text, note.id)}
+                      className="flex items-center gap-1 px-2 py-1 rounded text-accent-primary hover:bg-accent-primary/10 transition-colors shrink-0"
+                      title="Parse with AI and add to a section"
+                    >
+                      <Sparkles size={13} />
+                      <span className="text-xs font-medium hidden sm:inline">Add with AI</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        const tag = note.type
+                          ? {
+                              kind: 'media',
+                              title: note.text,
+                              creator: note.creator || '',
+                              year: note.year || '',
+                              type: note.type,
+                              coverUrl: note.coverUrl || '',
+                              provider: 'scratchpad',
+                              externalId: note.id,
+                            }
+                          : { kind: 'text', title: note.text }
+                        addTagToSection(targetSection, tag)
+                        deleteNote(note.id)
+                      }}
+                      className="p-1 rounded text-text-muted hover:text-accent-primary transition-colors shrink-0"
+                      title={`Add to ${targetSection}`}
+                    >
+                      <ArrowUpRight size={14} />
+                    </button>
+                    <button
+                      onClick={() => deleteNote(note.id)}
+                      className="p-1 rounded text-text-muted hover:text-accent-movies transition-colors shrink-0"
+                      title="Dismiss"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}

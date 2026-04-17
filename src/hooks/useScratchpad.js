@@ -5,6 +5,10 @@ import { supabase, shouldSync, isRealUuid } from '../lib/syncToSupabase'
 /**
  * Scratchpad notes — syncs to Supabase's scratchpad_notes table for real users;
  * falls back to localStorage for demo/offline mode.
+ *
+ * Note shape (all optional except id, text, createdAt):
+ *   { id, text, type?, creator?, year?, coverUrl?, createdAt }
+ *
  * Conflict resolution: last-write-wins (no merging).
  */
 export function useScratchpad() {
@@ -24,7 +28,7 @@ export function useScratchpad() {
     if (canSync) {
       supabase
         .from('scratchpad_notes')
-        .select('id, text, created_at')
+        .select('id, text, type, creator, year, cover_url, created_at')
         .eq('user_id', user.uid)
         .order('created_at', { ascending: false })
         .then(({ data, error }) => {
@@ -36,6 +40,10 @@ export function useScratchpad() {
             const mapped = data.map((n) => ({
               id: n.id,
               text: n.text,
+              type: n.type || null,
+              creator: n.creator || '',
+              year: n.year || '',
+              coverUrl: n.cover_url || '',
               createdAt: n.created_at,
             }))
             setNotes(mapped)
@@ -50,11 +58,23 @@ export function useScratchpad() {
     if (storageKey) localStorage.setItem(storageKey, JSON.stringify(updated))
   }
 
-  const addNote = (text) => {
-    if (!text.trim()) return
+  /**
+   * Add a scratchpad note.
+   * @param {string | object} input - either the text string (legacy) or an object
+   *   with `{ text, type?, creator?, year?, coverUrl? }`.
+   */
+  const addNote = (input) => {
+    const payload = typeof input === 'string' ? { text: input } : input
+    const text = (payload.text || '').trim()
+    if (!text) return
+
     const note = {
       id: canSync ? crypto.randomUUID() : `note-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      text: text.trim(),
+      text,
+      type: payload.type || null,
+      creator: payload.creator || '',
+      year: payload.year || '',
+      coverUrl: payload.coverUrl || '',
       createdAt: new Date().toISOString(),
     }
     saveLocal([note, ...notes])
@@ -66,6 +86,10 @@ export function useScratchpad() {
           id: note.id,
           user_id: user.uid,
           text: note.text,
+          type: note.type,
+          creator: note.creator || null,
+          year: note.year || null,
+          cover_url: note.coverUrl || null,
           created_at: note.createdAt,
         })
         .then(({ error }) => {
