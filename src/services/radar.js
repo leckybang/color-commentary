@@ -211,6 +211,11 @@ async function buildRealRadar(profile, catalogItems, { signal } = {}) {
   }
 }
 
+// In-flight request dedupe: if the hook fires multiple times in quick
+// succession (React re-renders, nav transitions), we don't want to kick off
+// parallel API storms. Concurrent callers share the same Promise.
+const inflight = new Map()
+
 /**
  * Public entrypoint. Returns the same shape `mockData.getWeeklyRadar` used to
  * return, plus an `isDemo` flag so the UI can show the parody caveat.
@@ -228,9 +233,20 @@ export async function getWeeklyRadar(user, profile, catalogItems = [], opts = {}
     if (cached) return cached
   }
 
-  const fresh = await buildRealRadar(profile, catalogItems, opts)
-  writeCache(uid, fresh)
-  return fresh
+  const key = `${uid}_${weekKey()}_${opts.forceRefresh ? 'refresh' : 'normal'}`
+  if (inflight.has(key)) return inflight.get(key)
+
+  const promise = buildRealRadar(profile, catalogItems, opts)
+    .then((fresh) => {
+      writeCache(uid, fresh)
+      return fresh
+    })
+    .finally(() => {
+      inflight.delete(key)
+    })
+
+  inflight.set(key, promise)
+  return promise
 }
 
 /**
