@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react'
-import { Radar as RadarIcon, Sparkles, Calendar, Plus, X, Music, Film, Tv, BookOpen, RefreshCw, ChevronDown, ChevronUp, Check, User, Bookmark, Mail } from 'lucide-react'
+import { Radar as RadarIcon, Sparkles, Calendar, Plus, X, Music, Film, Tv, BookOpen, RefreshCw, ChevronDown, ChevronUp, Check, User, Bookmark, Mail, Info, Loader2 } from 'lucide-react'
 import CoverArt from '../components/common/CoverArt'
 import ExternalLinks from '../components/common/ExternalLinks'
 import { useTasteProfile } from '../hooks/useTasteProfile'
 import { useCatalog } from '../hooks/useCatalog'
-import { getWeeklyRadar } from '../services/mockData'
+import { useWeeklyRadar } from '../hooks/useWeeklyRadar'
 import { getMediaColor } from '../utils/filterUtils'
 import { formatDate } from '../utils/dateUtils'
 import { generateWeeklyLetter } from '../utils/weeklyLetter'
@@ -140,21 +140,17 @@ function RadarCard({ item, onAdd, onDismiss, isAdded }) {
 
 export default function Radar() {
   const { profile, isProfileEmpty } = useTasteProfile()
-  const { items: catalogItems, addItem } = useCatalog()
+  const { addItem } = useCatalog()
+  const { radar, loading, error, refresh, isDemo } = useWeeklyRadar()
   const [dismissed, setDismissed] = useState(new Set())
   const [addedItems, setAddedItems] = useState(new Set())
-  const [refreshKey, setRefreshKey] = useState(0)
   const [activeTab, setActiveTab] = useState('releases')
   const [letterOpen, setLetterOpen] = useState(true)
 
-  const radar = useMemo(() => {
-    return getWeeklyRadar(profile, catalogItems)
-  }, [profile, catalogItems, refreshKey])
-
   const letter = useMemo(() => {
-    if (isProfileEmpty()) return null
+    if (isProfileEmpty() || !radar) return null
     return generateWeeklyLetter(profile, radar)
-  }, [profile, radar])
+  }, [profile, radar, isProfileEmpty])
 
   const handleAdd = (item) => {
     addItem({
@@ -171,8 +167,8 @@ export default function Radar() {
     setDismissed((prev) => new Set([...prev, item.title]))
   }
 
-  const visibleReleases = radar.newReleases.filter((r) => !dismissed.has(r.title))
-  const visibleDiscoveries = radar.discoveries.filter((d) => !dismissed.has(d.title))
+  const visibleReleases = (radar?.newReleases || []).filter((r) => !dismissed.has(r.title))
+  const visibleDiscoveries = (radar?.discoveries || []).filter((d) => !dismissed.has(d.title))
 
   if (isProfileEmpty()) {
     return (
@@ -200,16 +196,50 @@ export default function Radar() {
       <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-text-primary mb-1">Weekly Radar</h1>
-          <p className="text-text-secondary text-sm">New releases and discoveries based on your tastes</p>
+          <p className="text-text-secondary text-sm">
+            {isDemo
+              ? 'A sample dispatch — fictional picks, real vibes.'
+              : 'New releases and discoveries based on your tastes'}
+          </p>
         </div>
         <button
-          onClick={() => setRefreshKey((k) => k + 1)}
-          className="flex items-center gap-2 px-3 py-2 bg-bg-secondary border border-border rounded-lg text-sm text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors"
+          onClick={refresh}
+          disabled={loading}
+          className="flex items-center gap-2 px-3 py-2 bg-bg-secondary border border-border rounded-lg text-sm text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors disabled:opacity-50"
         >
-          <RefreshCw size={14} />
-          Refresh
+          {loading ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+          {loading ? 'Refreshing' : 'Refresh'}
         </button>
       </div>
+
+      {/* Demo-mode caveat */}
+      {isDemo && (
+        <div className="mb-6 flex items-start gap-2 p-3 bg-accent-primary/5 border border-accent-primary/20 rounded-xl">
+          <Info size={16} className="text-accent-primary mt-0.5 shrink-0" />
+          <p className="text-xs text-text-secondary leading-relaxed">
+            <span className="font-medium text-accent-primary">Affectionately fictional.</span>{' '}
+            Demo Weekly Radar uses parody titles and made-up release dates so you can poke around without a taste profile. Sign in to swap this for real new releases from Spotify, TMDB, and OpenLibrary.
+          </p>
+        </div>
+      )}
+
+      {/* Loading state for real-user fetch */}
+      {!isDemo && loading && !radar && (
+        <div className="mb-6 flex items-center gap-2 text-sm text-text-muted">
+          <Loader2 size={14} className="animate-spin" />
+          Pulling this week's releases from Spotify, TMDB, and OpenLibrary…
+        </div>
+      )}
+
+      {/* Error state */}
+      {!isDemo && error && (
+        <div className="mb-6 flex items-start gap-2 p-3 bg-accent-movies/5 border border-accent-movies/20 rounded-xl">
+          <Info size={16} className="text-accent-movies mt-0.5 shrink-0" />
+          <p className="text-xs text-text-secondary leading-relaxed">
+            Couldn't reach one of the media APIs. Try refreshing in a minute.
+          </p>
+        </div>
+      )}
 
       {/* Weekly Letter */}
       {letter && (
@@ -311,7 +341,9 @@ export default function Radar() {
           ) : (
             <div className="text-center py-12 bg-bg-secondary border border-border rounded-2xl">
               <Calendar size={32} className="mx-auto text-text-muted/30 mb-3" />
-              <p className="text-text-secondary">No new releases this week. Check back soon!</p>
+              <p className="text-text-secondary">
+                {loading ? 'Loading this week\'s releases…' : 'No new releases this week. Check back soon!'}
+              </p>
             </div>
           )}
         </div>

@@ -9,7 +9,7 @@ import { useCatalog } from '../hooks/useCatalog'
 import ChipSelector from '../components/common/ChipSelector'
 import TagInput from '../components/common/TagInput'
 import { GENRE_OPTIONS, SUGGESTION_MAP, SUGGESTION_FIELD, SUGGESTION_LABEL, getSuggestionsForGenres } from '../data/onboardingSuggestions'
-import { getWeeklyRadar } from '../services/mockData'
+import { getDemoRadar } from '../services/radar'
 import { determineArchetype } from '../utils/archetypes'
 import { getMediaColor } from '../utils/filterUtils'
 
@@ -84,8 +84,11 @@ export default function Onboarding() {
 
   const archetype = useMemo(() => determineArchetype(profile), [profile])
 
+  // Onboarding runs before the user has any catalog data — show the parody
+  // sample deck so the "your first recommendations" screen has something to
+  // render. We caveat it below so it's clear these are illustrative picks.
   const radar = useMemo(() => {
-    return getWeeklyRadar(profile, [])
+    return getDemoRadar(profile, [])
   }, [profile])
 
   const next = () => {
@@ -384,10 +387,13 @@ export default function Onboarding() {
               {(radar.newReleases.length > 0 || radar.discoveries.length > 0) && (
                 <div className="mb-8">
                   <h2 className="text-lg font-semibold text-text-primary text-center mb-1">
-                    Your first recommendations
+                    A taste of your Weekly Radar
                   </h2>
-                  <p className="text-sm text-text-muted text-center mb-4">
+                  <p className="text-sm text-text-muted text-center mb-1">
                     Save what you want to check out, or rate things you've already tried.
+                  </p>
+                  <p className="text-xs text-text-muted/80 text-center italic mb-4">
+                    (Sample picks — affectionately fictional. Real releases show up once you're in.)
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[420px] overflow-y-auto pr-1">
                     {[...radar.newReleases.slice(0, 4), ...radar.discoveries.slice(0, 4)].map((item, i) => {

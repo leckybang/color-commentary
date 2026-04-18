@@ -6,7 +6,7 @@ import { useTasteProfile } from '../hooks/useTasteProfile'
 import { useWeeklyDumps } from '../hooks/useWeeklyDumps'
 import { useScratchpad } from '../hooks/useScratchpad'
 import { useAuth } from '../hooks/useAuth'
-import { getWeeklyRadar } from '../services/mockData'
+import { useWeeklyRadar } from '../hooks/useWeeklyRadar'
 import { getMediaColor, MEDIA_TYPES } from '../utils/filterUtils'
 import { formatDate } from '../utils/dateUtils'
 import CoverArt from '../components/common/CoverArt'
@@ -113,6 +113,7 @@ export default function Dashboard() {
   const { user } = useAuth()
   const { items, getStats } = useCatalog()
   const { profile, isProfileEmpty } = useTasteProfile()
+  const { radar, loading: radarLoading, isDemo: radarIsDemo } = useWeeklyRadar()
   const { dumps, getStreak, getCurrentWeekDump, saveDump } = useWeeklyDumps()
   const { notes, addNote, deleteNote } = useScratchpad()
   const [noteText, setNoteText] = useState('')
@@ -156,11 +157,6 @@ export default function Dashboard() {
     const removeKey = linerTagKey(value)
     persistLiner({ ...liner, [section]: liner[section].filter((v) => linerTagKey(v) !== removeKey) })
   }
-
-  const radar = useMemo(() => {
-    if (isProfileEmpty()) return null
-    return getWeeklyRadar(profile, items)
-  }, [profile, items])
 
   const recentItems = items.slice(0, 5)
   const tidbits = generateTidbits(stats, profile, streak)
@@ -418,12 +414,17 @@ export default function Dashboard() {
         <div className="space-y-6">
           {/* Radar preview */}
           <div className="bg-bg-secondary border border-border rounded-2xl p-5">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-3">
               <h2 className="font-semibold text-text-primary">Weekly Radar</h2>
               <Link to="/radar" className="text-sm text-accent-primary hover:underline flex items-center gap-1">
                 Read the full letter <ArrowRight size={14} />
               </Link>
             </div>
+            {radarIsDemo && radar && (
+              <p className="text-xs text-text-muted mb-3 italic">
+                Demo picks — affectionately fictional. Sign in for real releases.
+              </p>
+            )}
             {radar ? (
               <div className="space-y-3">
                 {/* Teaser */}
@@ -436,7 +437,6 @@ export default function Dashboard() {
                   </Link>
                 )}
                 {radar.newReleases.slice(0, 3).map((item, i) => {
-                  const color = getMediaColor(item.type)
                   return (
                     <Link to="/radar" key={i} className="flex items-center gap-3 p-2 rounded-lg hover:bg-bg-hover transition-colors">
                       <CoverArt title={item.title} type={item.type} coverUrl={item.coverUrl} size="sm" />
@@ -444,10 +444,17 @@ export default function Dashboard() {
                         <p className="text-sm font-medium text-text-primary truncate">{item.title}</p>
                         <p className="text-xs text-text-muted truncate">{item.creator}</p>
                       </div>
-                      <span className="text-xs text-text-muted shrink-0">{formatDate(item.releaseDate)}</span>
+                      {item.releaseDate && (
+                        <span className="text-xs text-text-muted shrink-0">{formatDate(item.releaseDate)}</span>
+                      )}
                     </Link>
                   )
                 })}
+              </div>
+            ) : radarLoading ? (
+              <div className="text-center py-8">
+                <Radar size={24} className="mx-auto text-text-muted/30 mb-2 animate-pulse" />
+                <p className="text-text-muted text-sm">Pulling this week's picks…</p>
               </div>
             ) : (
               <div className="text-center py-8">

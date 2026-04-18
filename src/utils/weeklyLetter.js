@@ -32,6 +32,24 @@ function dateSeed() {
   return d.getFullYear() * 1000 + d.getMonth() * 50 + Math.floor(d.getDate() / 7)
 }
 
+// Safely compare an item's creator against a user's follow list.
+// Real API data (esp. TMDB list endpoints) often returns no creator, so we
+// defend against undefined/empty values before calling .toLowerCase.
+function creatorMatches(creator, followList = []) {
+  if (!creator || !followList?.length) return false
+  const c = String(creator).toLowerCase()
+  return followList.some((a) => a && c.includes(String(a).toLowerCase()))
+}
+
+// "by Creator" segment, omitted when creator is unknown.
+function byLine(creator) {
+  return creator ? ` by **${creator}**` : ''
+}
+
+function fromLine(creator) {
+  return creator ? ` from **${creator}**` : ''
+}
+
 function buildMusicSection(releases, discoveries, profile) {
   const musicReleases = releases.filter(r => r.type === 'music')
   const musicDiscoveries = discoveries.filter(d => d.type === 'music')
@@ -41,21 +59,25 @@ function buildMusicSection(releases, discoveries, profile) {
 
   if (musicReleases.length > 0) {
     const r = musicReleases[0]
-    const hasArtist = profile.music?.artists?.some(a => r.creator.toLowerCase().includes(a.toLowerCase()))
+    const hasArtist = creatorMatches(r.creator, profile.music?.artists)
     if (hasArtist) {
       lines.push(`**${r.creator}** is back with *${r.title}*, and yes, it sounds exactly like what you need right now. ${r.description || ''}`)
     } else {
-      lines.push(`On the music front, keep an eye on *${r.title}* by **${r.creator}**. ${r.description || ''}`)
+      lines.push(`On the music front, keep an eye on *${r.title}*${byLine(r.creator)}. ${r.description || ''}`)
     }
     if (musicReleases.length > 1) {
-      const others = musicReleases.slice(1).map(r => `*${r.title}* (${r.creator})`).join(', ')
+      const others = musicReleases.slice(1).map(r => r.creator ? `*${r.title}* (${r.creator})` : `*${r.title}*`).join(', ')
       lines.push(`Also dropping this week: ${others}.`)
     }
   }
 
   if (musicDiscoveries.length > 0) {
     const d = musicDiscoveries[0]
-    lines.push(`And if you haven't heard **${d.creator}** yet — fix that. *${d.title}* is ${d.reason?.toLowerCase() || 'right in your wheelhouse'}.`)
+    if (d.creator) {
+      lines.push(`And if you haven't heard **${d.creator}** yet — fix that. *${d.title}* is ${d.reason?.toLowerCase() || 'right in your wheelhouse'}.`)
+    } else {
+      lines.push(`Worth a listen: *${d.title}* — ${d.reason?.toLowerCase() || 'right in your wheelhouse'}.`)
+    }
   }
 
   return { title: 'On the Turntable', emoji: '🎵', body: lines.join(' ') }
@@ -70,21 +92,22 @@ function buildMovieSection(releases, discoveries, profile) {
 
   if (movieReleases.length > 0) {
     const r = movieReleases[0]
-    const hasDirector = profile.movies?.directors?.some(d => r.creator.toLowerCase().includes(d.toLowerCase()))
+    const hasDirector = creatorMatches(r.creator, profile.movies?.directors)
     if (hasDirector) {
-      lines.push(`Your favorite director **${r.creator}** has a new one. *${r.title}* — ${r.description || `a new ${r.genre} film`}. Clear your evening.`)
+      lines.push(`Your favorite director **${r.creator}** has a new one. *${r.title}* — ${r.description || `a new ${r.genre || ''} film`}. Clear your evening.`)
     } else {
-      lines.push(`In theaters: *${r.title}* from **${r.creator}**. ${r.description || ''} Worth your time if you're into ${r.genre?.toLowerCase() || 'good films'}.`)
+      lines.push(`In theaters: *${r.title}*${fromLine(r.creator)}. ${r.description || ''} Worth your time if you're into ${r.genre?.toLowerCase() || 'good films'}.`)
     }
     if (movieReleases.length > 1) {
-      const others = movieReleases.slice(1).map(r => `*${r.title}* (${r.creator})`).join(', ')
+      const others = movieReleases.slice(1).map(r => r.creator ? `*${r.title}* (${r.creator})` : `*${r.title}*`).join(', ')
       lines.push(`Also on our radar: ${others}.`)
     }
   }
 
   if (movieDiscoveries.length > 0) {
     const d = movieDiscoveries[0]
-    lines.push(`Discovery pick: **${d.creator}**'s *${d.title}*. ${d.description || ''} ${d.creatorNote ? d.creatorNote : ''}`)
+    const lead = d.creator ? `**${d.creator}**'s *${d.title}*` : `*${d.title}*`
+    lines.push(`Discovery pick: ${lead}. ${d.description || ''} ${d.creatorNote || ''}`.trim())
   }
 
   return { title: 'At the Movies', emoji: '🎬', body: lines.join(' ') }
@@ -99,16 +122,18 @@ function buildTVSection(releases, discoveries) {
 
   if (tvReleases.length > 0) {
     const r = tvReleases[0]
-    lines.push(`Streaming-wise, *${r.title}* lands on **${r.creator}** this week. ${r.description || ''} ${r.creatorNote ? r.creatorNote : ''}`)
+    const network = r.creator ? ` on **${r.creator}**` : ''
+    lines.push(`Streaming-wise, *${r.title}* lands${network} this week. ${r.description || ''} ${r.creatorNote || ''}`.trim())
     if (tvReleases.length > 1) {
-      const others = tvReleases.slice(1).map(r => `*${r.title}* (${r.creator})`).join(', ')
+      const others = tvReleases.slice(1).map(r => r.creator ? `*${r.title}* (${r.creator})` : `*${r.title}*`).join(', ')
       lines.push(`Also premiering: ${others}.`)
     }
   }
 
   if (tvDiscoveries.length > 0) {
     const d = tvDiscoveries[0]
-    lines.push(`Sleeper pick: *${d.title}* on ${d.creator}. ${d.description || ''} Trust us on this one.`)
+    const where = d.creator ? ` on ${d.creator}` : ''
+    lines.push(`Sleeper pick: *${d.title}*${where}. ${d.description || ''} Trust us on this one.`)
   }
 
   return { title: 'On the Small Screen', emoji: '📺', body: lines.join(' ') }
@@ -123,27 +148,32 @@ function buildBookSection(releases, discoveries, profile) {
 
   if (bookReleases.length > 0) {
     const r = bookReleases[0]
-    const hasAuthor = profile.books?.authors?.some(a => r.creator.toLowerCase().includes(a.toLowerCase()))
+    const hasAuthor = creatorMatches(r.creator, profile.books?.authors)
     if (hasAuthor) {
-      lines.push(`**${r.creator}** has a new book and you should probably pre-order it immediately. *${r.title}* — ${r.description || ''} ${r.creatorNote ? r.creatorNote : ''}`)
+      lines.push(`**${r.creator}** has a new book and you should probably pre-order it immediately. *${r.title}* — ${r.description || ''} ${r.creatorNote || ''}`.trim())
     } else {
-      lines.push(`On the nightstand: *${r.title}* by **${r.creator}**. ${r.description || ''} Hits shelves soon.`)
+      lines.push(`On the nightstand: *${r.title}*${byLine(r.creator)}. ${r.description || ''} Hits shelves soon.`)
     }
     if (bookReleases.length > 1) {
-      const others = bookReleases.slice(1).map(r => `*${r.title}* (${r.creator})`).join(', ')
+      const others = bookReleases.slice(1).map(r => r.creator ? `*${r.title}* (${r.creator})` : `*${r.title}*`).join(', ')
       lines.push(`Also out: ${others}.`)
     }
   }
 
   if (bookDiscoveries.length > 0) {
     const d = bookDiscoveries[0]
-    lines.push(`And for your discovery shelf: *${d.title}* by **${d.creator}**. ${d.reason || ''}.`)
+    const lead = d.creator ? `*${d.title}* by **${d.creator}**` : `*${d.title}*`
+    lines.push(`And for your discovery shelf: ${lead}. ${d.reason || ''}.`)
   }
 
   return { title: 'On the Nightstand', emoji: '📚', body: lines.join(' ') }
 }
 
 export function generateWeeklyLetter(profile, radar) {
+  if (!radar) return null
+  const newReleases = radar.newReleases || []
+  const discoveries = radar.discoveries || []
+
   const seed = dateSeed()
   const { start, end } = getWeekRange()
   const weekLabel = formatWeekRange(start, end)
@@ -171,10 +201,10 @@ export function generateWeeklyLetter(profile, radar) {
   }
 
   const sections = [
-    buildMusicSection(radar.newReleases, radar.discoveries, profile),
-    buildMovieSection(radar.newReleases, radar.discoveries, profile),
-    buildTVSection(radar.newReleases, radar.discoveries),
-    buildBookSection(radar.newReleases, radar.discoveries, profile),
+    buildMusicSection(newReleases, discoveries, profile),
+    buildMovieSection(newReleases, discoveries, profile),
+    buildTVSection(newReleases, discoveries),
+    buildBookSection(newReleases, discoveries, profile),
   ].filter(Boolean)
 
   return {
