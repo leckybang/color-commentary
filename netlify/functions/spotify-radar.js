@@ -1,6 +1,11 @@
 /**
  * Spotify Radar — server-side fetch of new album releases.
- * Returns normalized album objects matching the client radar item shape.
+ *
+ * Note: we can't use `/browse/new-releases` because Spotify deprecated that
+ * endpoint for apps created after Nov 27, 2024. Instead we hit `/search`
+ * with a `year:<current>` filter, which is still supported and gives us
+ * everything released in the current calendar year.
+ *
  * Env vars required: SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET
  */
 
@@ -36,24 +41,33 @@ export async function handler(event) {
   }
 
   const limit = Math.min(parseInt(event.queryStringParameters?.limit || '20', 10) || 20, 50)
+  const year = new Date().getFullYear()
 
   try {
     const token = await getSpotifyToken()
-    const res = await fetch(
-      `https://api.spotify.com/v1/browse/new-releases?limit=${limit}&country=US`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    )
+    const searchUrl =
+      `https://api.spotify.com/v1/search` +
+      `?q=${encodeURIComponent(`year:${year}`)}` +
+      `&type=album&limit=${limit}&market=US`
+    const res = await fetch(searchUrl, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
 
     if (!res.ok) {
+      const body = await res.text().catch(() => '')
+      console.error('spotify-radar upstream failure', res.status, body.slice(0, 200))
       return {
         statusCode: 502,
         headers: corsHeaders(origin),
-        body: JSON.stringify({ error: 'Spotify new-releases failed' }),
+        body: JSON.stringify({ error: 'Spotify search failed', status: res.status }),
       }
     }
 
     const data = await res.json()
-    const items = (data.albums?.items || []).map(normalizeAlbum)
+    // Sort newest-first within the year so the radar surfaces actual fresh drops.
+    const items = (data.albums?.items || [])
+      .map(normalizeAlbum)
+      .sort((a, b) => (b.releaseDate || '').localeCompare(a.releaseDate || ''))
 
     return {
       statusCode: 200,
