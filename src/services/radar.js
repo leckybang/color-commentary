@@ -102,6 +102,50 @@ function rankScore(item, profile) {
   return matchScore(item, profile) + recencyScore(item.releaseDate) + popularityScore(item)
 }
 
+const RADAR_TYPES = ['music', 'movie', 'tv', 'book']
+
+/**
+ * Pick `total` items with a minimum floor per type. Items are assumed to
+ * already be sorted best-first globally. We first take `minPerType` from
+ * each category (skipping any that don't have enough), then fill the
+ * remaining slots from whatever's leftover in the global ranking.
+ *
+ * This guarantees music/books aren't crowded out by TMDB's popularity-rich
+ * movie/TV results.
+ */
+function pickWithQuotas(items, total, minPerType) {
+  const byType = new Map(RADAR_TYPES.map((t) => [t, []]))
+  for (const item of items) {
+    const bucket = byType.get(item.type)
+    if (bucket) bucket.push(item)
+  }
+
+  const picked = []
+  const pickedIds = new Set()
+  const markPicked = (item) => {
+    picked.push(item)
+    pickedIds.add(item.externalId || item.title)
+  }
+
+  // Pass 1: floor per type, best-ranked item(s) from each.
+  for (const type of RADAR_TYPES) {
+    const bucket = byType.get(type) || []
+    for (let i = 0; i < minPerType && i < bucket.length && picked.length < total; i++) {
+      markPicked(bucket[i])
+    }
+  }
+
+  // Pass 2: fill remaining slots from the global ranking.
+  for (const item of items) {
+    if (picked.length >= total) break
+    const id = item.externalId || item.title
+    if (pickedIds.has(id)) continue
+    markPicked(item)
+  }
+
+  return picked
+}
+
 async function fetchSpotifyNewReleases({ signal } = {}) {
   try {
     const res = await fetch('/.netlify/functions/spotify-radar?limit=20', { signal })
@@ -146,12 +190,18 @@ async function buildRealRadar(profile, catalogItems, { signal } = {}) {
 
   const deduped = dedupeByTitle(allReleases, catalogTitles)
 
-  const newReleases = deduped.slice(0, MAX_RELEASES)
+  // Per-type quotas: guarantee each of music / movie / tv / book is
+  // represented before any one category hoards all the slots. TMDB items
+  // carry a popularity bonus that Spotify/NYT don't, so a pure global
+  // top-N sort otherwise drowns out music and books.
+  const newReleases = pickWithQuotas(deduped, MAX_RELEASES, 2)
   const takenIds = new Set(newReleases.map((r) => r.externalId || r.title))
-  const discoveries = deduped
-    .filter((r) => !takenIds.has(r.externalId || r.title))
-    .slice(0, MAX_DISCOVERIES)
-    .map((item) => ({ ...item, isDiscovery: true, isNewRelease: false }))
+  const remaining = deduped.filter((r) => !takenIds.has(r.externalId || r.title))
+  const discoveries = pickWithQuotas(remaining, MAX_DISCOVERIES, 2).map((item) => ({
+    ...item,
+    isDiscovery: true,
+    isNewRelease: false,
+  }))
 
   return {
     newReleases,
