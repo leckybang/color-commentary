@@ -146,20 +146,37 @@ function pickWithQuotas(items, total, minPerType) {
   return picked
 }
 
-async function fetchSpotifyNewReleases({ signal } = {}) {
-  try {
-    const res = await fetch('/.netlify/functions/spotify-radar?limit=20', { signal })
-    if (!res.ok) return []
-    // When running `vite dev` without `netlify dev`, the function route falls
-    // through to index.html — guard against HTML masquerading as JSON.
-    const ct = res.headers.get('content-type') || ''
-    if (!ct.includes('application/json')) return []
-    const data = await res.json()
-    return data.items || []
-  } catch (err) {
-    if (err.name !== 'AbortError') console.error('spotify-radar fetch failed', err)
-    return []
-  }
+// Module-scope dedupe for the spotify-radar function. If multiple callers
+// invoke fetchSpotifyNewReleases in quick succession, they all share the
+// same in-flight Promise (and therefore the same browser fetch).
+let spotifyInflight = null
+
+async function fetchSpotifyNewReleases() {
+  if (spotifyInflight) return spotifyInflight
+
+  spotifyInflight = (async () => {
+    try {
+      const res = await fetch('/.netlify/functions/spotify-radar?limit=20')
+      if (!res.ok) return []
+      // When running `vite dev` without `netlify dev`, the function route
+      // falls through to index.html — guard against HTML masquerading as
+      // JSON.
+      const ct = res.headers.get('content-type') || ''
+      if (!ct.includes('application/json')) return []
+      const data = await res.json()
+      return data.items || []
+    } catch (err) {
+      if (err.name !== 'AbortError') console.error('spotify-radar fetch failed', err)
+      return []
+    } finally {
+      // Hold the cache for 30s so back-to-back renders definitely share
+      // the same response, but clear eventually so a manual refresh can
+      // force a new fetch.
+      setTimeout(() => { spotifyInflight = null }, 30_000)
+    }
+  })()
+
+  return spotifyInflight
 }
 
 /**
