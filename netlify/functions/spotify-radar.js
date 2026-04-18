@@ -10,7 +10,7 @@
  */
 
 import { corsHeaders, handleOptions } from './_shared/cors.js'
-import { getSpotifyToken } from './_shared/spotifyAuth.js'
+import { getSpotifyToken, invalidateSpotifyToken } from './_shared/spotifyAuth.js'
 
 function normalizeAlbum(album) {
   return {
@@ -42,24 +42,36 @@ export async function handler(event) {
 
   const limit = Math.min(parseInt(event.queryStringParameters?.limit || '20', 10) || 20, 50)
   const year = new Date().getFullYear()
+  const searchUrl =
+    `https://api.spotify.com/v1/search` +
+    `?q=${encodeURIComponent(`year:${year}`)}` +
+    `&type=album&limit=${limit}&market=US`
+
+  async function runSearch(forceRefreshToken = false) {
+    const token = await getSpotifyToken({ forceRefresh: forceRefreshToken })
+    return fetch(searchUrl, { headers: { Authorization: `Bearer ${token}` } })
+  }
 
   try {
-    const token = await getSpotifyToken()
-    const searchUrl =
-      `https://api.spotify.com/v1/search` +
-      `?q=${encodeURIComponent(`year:${year}`)}` +
-      `&type=album&limit=${limit}&market=US`
-    const res = await fetch(searchUrl, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    let res = await runSearch()
+
+    // If the cached token has been invalidated upstream (rare, but happens
+    // when Spotify rotates credentials or a warm Lambda instance holds an
+    // expired token), retry once with a fresh token before giving up.
+    if (res.status === 401) {
+      invalidateSpotifyToken()
+      res = await runSearch(true)
+    }
 
     if (!res.ok) {
       const body = await res.text().catch(() => '')
       console.error('spotify-radar upstream failure', res.status, body.slice(0, 200))
+      // Return an empty item list with 200 so the client radar can still
+      // render movies/TV/books; a Spotify hiccup shouldn't wipe the page.
       return {
-        statusCode: 502,
+        statusCode: 200,
         headers: corsHeaders(origin),
-        body: JSON.stringify({ error: 'Spotify search failed', status: res.status }),
+        body: JSON.stringify({ items: [], error: 'Spotify search failed', status: res.status }),
       }
     }
 
@@ -77,9 +89,9 @@ export async function handler(event) {
   } catch (err) {
     console.error('spotify-radar error', err.message)
     return {
-      statusCode: 500,
+      statusCode: 200,
       headers: corsHeaders(origin),
-      body: JSON.stringify({ error: 'Internal error' }),
+      body: JSON.stringify({ items: [], error: 'Internal error' }),
     }
   }
 }

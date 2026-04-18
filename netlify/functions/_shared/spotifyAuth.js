@@ -5,9 +5,9 @@
 
 let tokenCache = { access_token: null, expires_at: 0 }
 
-export async function getSpotifyToken() {
+export async function getSpotifyToken({ forceRefresh = false } = {}) {
   const now = Date.now()
-  if (tokenCache.access_token && tokenCache.expires_at > now + 60000) {
+  if (!forceRefresh && tokenCache.access_token && tokenCache.expires_at > now + 60000) {
     return tokenCache.access_token
   }
 
@@ -34,4 +34,9 @@ export async function getSpotifyToken() {
     expires_at: now + (data.expires_in || 3600) * 1000,
   }
   return tokenCache.access_token
+}
+
+/** Force the next getSpotifyToken() call to refetch from Spotify. */
+export function invalidateSpotifyToken() {
+  tokenCache = { access_token: null, expires_at: 0 }
 }
