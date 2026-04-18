@@ -9,7 +9,7 @@ const BASE = 'https://api.nytimes.com/svc/books/v3'
 
 export const isNYTConfigured = !!API_KEY
 
-function normalize(book) {
+function normalize(book, publishedDate) {
   if (!book) return null
   return {
     type: 'book',
@@ -18,7 +18,10 @@ function normalize(book) {
     title: book.title || '',
     creator: book.author || '',
     genre: '',
-    releaseDate: '', // NYT bestseller entries don't carry a clean publish date
+    // Use the bestseller-list publication date as the "release date" so these
+    // books get the recency boost in the radar ranking — they are literally
+    // buzzy this week.
+    releaseDate: publishedDate || '',
     coverUrl: book.book_image || '',
     description: book.description || '',
     isNewRelease: true,
@@ -40,6 +43,7 @@ export async function fetchNYTBestsellers(limit = 10, { signal } = {}) {
       return []
     }
     const data = await res.json()
+    const publishedDate = data.results?.published_date || ''
     const lists = data.results?.lists || []
 
     // Take the top 2 books from each list, interleaved, so we get variety
@@ -49,7 +53,7 @@ export async function fetchNYTBestsellers(limit = 10, { signal } = {}) {
     for (let i = 0; i < perList; i++) {
       for (const list of lists) {
         const book = list.books?.[i]
-        if (book) picks.push(normalize(book))
+        if (book) picks.push(normalize(book, publishedDate))
       }
     }
 

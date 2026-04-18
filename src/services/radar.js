@@ -12,10 +12,7 @@
 import { getWeeklyRadar as getMockRadar } from './mockData'
 import { matchScore } from '../utils/matchScore'
 import { fetchTMDBNewMovies, fetchTMDBNewTV } from './providers/tmdb'
-import {
-  fetchOpenLibraryNewReleases,
-  fetchOpenLibraryByAuthors,
-} from './providers/openLibrary'
+import { fetchOpenLibraryByAuthors } from './providers/openLibrary'
 import { fetchNYTBestsellers } from './providers/nytBooks'
 
 const CACHE_TTL_MS = 30 * 60 * 1000 // 30 minutes
@@ -72,6 +69,39 @@ function dedupeByTitle(items, existingTitles = new Set()) {
   return out
 }
 
+/**
+ * Recency score — items released this month get the biggest boost, trailing
+ * off over ~6 months. Items without a release date get a small penalty so
+ * they fall below anything with real recency data. The intent: "buzzy this
+ * week" should beat "old show that still airs."
+ */
+function recencyScore(releaseDate) {
+  if (!releaseDate) return -2
+  const ts = Date.parse(releaseDate)
+  if (Number.isNaN(ts)) return -2
+  const daysFromNow = Math.abs(Date.now() - ts) / 86400000
+  if (daysFromNow <= 14) return 20 // last two weeks — strongest boost
+  if (daysFromNow <= 45) return 12
+  if (daysFromNow <= 90) return 6
+  if (daysFromNow <= 180) return 2
+  return -5 // older than 6 months: actively demoted
+}
+
+/**
+ * Popularity bonus for items that carry a TMDB popularity score. Normalized
+ * so even the most popular items add at most ~4 points — enough to break
+ * ties within a recency tier without drowning out taste matches.
+ */
+function popularityScore(item) {
+  const p = item.popularity
+  if (!p || p <= 0) return 0
+  return Math.min(4, Math.log10(p + 1) * 2)
+}
+
+function rankScore(item, profile) {
+  return matchScore(item, profile) + recencyScore(item.releaseDate) + popularityScore(item)
+}
+
 async function fetchSpotifyNewReleases({ signal } = {}) {
   try {
     const res = await fetch('/.netlify/functions/spotify-radar?limit=20', { signal })
@@ -98,17 +128,20 @@ async function buildRealRadar(profile, catalogItems, { signal } = {}) {
   )
   const favAuthors = profile?.books?.authors || []
 
-  const [music, movies, tv, booksNew, booksByAuthor, booksNYT] = await Promise.all([
+  // Book sources: NYT bestsellers for curated picks + OpenLibrary scoped to
+  // favorite authors. We intentionally skip OpenLibrary's generic "new
+  // releases" stream because it's flooded with low-quality self-published
+  // entries with placeholder dates.
+  const [music, movies, tv, booksByAuthor, booksNYT] = await Promise.all([
     fetchSpotifyNewReleases({ signal }),
     fetchTMDBNewMovies(12, { signal }),
     fetchTMDBNewTV(12, { signal }),
-    fetchOpenLibraryNewReleases(10, { signal }),
     fetchOpenLibraryByAuthors(favAuthors, 2, { signal }),
     fetchNYTBestsellers(10, { signal }),
   ])
 
-  const allReleases = [...music, ...movies, ...tv, ...booksNew, ...booksByAuthor, ...booksNYT]
-    .map((item) => ({ ...item, score: matchScore(item, profile || {}) }))
+  const allReleases = [...music, ...movies, ...tv, ...booksByAuthor, ...booksNYT]
+    .map((item) => ({ ...item, score: rankScore(item, profile || {}) }))
     .sort((a, b) => b.score - a.score)
 
   const deduped = dedupeByTitle(allReleases, catalogTitles)

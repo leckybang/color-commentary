@@ -61,6 +61,7 @@ function normalizeListItem(item, type) {
     releaseDate: rawDate,
     coverUrl: item.poster_path ? `${IMG_BASE}${item.poster_path}` : '',
     description: item.overview || '',
+    popularity: item.popularity || 0,
     isNewRelease: true,
   }
 }
@@ -79,33 +80,58 @@ async function fetchTMDBList(path, type, { signal } = {}) {
   }
 }
 
-/**
- * Recent + upcoming movies. Merges `now_playing` and `upcoming` so users see
- * both what's in theaters and what's landing soon.
- */
-export async function fetchTMDBNewMovies(limit = 10, { signal } = {}) {
-  const [nowPlaying, upcoming] = await Promise.all([
-    fetchTMDBList('/movie/now_playing', 'movie', { signal }),
-    fetchTMDBList('/movie/upcoming', 'movie', { signal }),
-  ])
-  const byId = new Map()
-  for (const item of [...nowPlaying, ...upcoming]) {
-    if (!byId.has(item.externalId)) byId.set(item.externalId, item)
-  }
-  return Array.from(byId.values()).slice(0, limit)
+function toISODate(d) {
+  return d.toISOString().slice(0, 10)
+}
+
+function daysAgo(days) {
+  const d = new Date()
+  d.setDate(d.getDate() - days)
+  return toISODate(d)
+}
+
+function daysFromNow(days) {
+  const d = new Date()
+  d.setDate(d.getDate() + days)
+  return toISODate(d)
 }
 
 /**
- * Currently-airing TV plus popular/upcoming discoveries.
+ * Buzzy new movies — released in the last ~45 days or landing in the next
+ * ~30. Filtered by vote count so we skip obscure/amateur uploads and sorted
+ * by popularity so the biggest recent drops float to the top.
+ */
+export async function fetchTMDBNewMovies(limit = 10, { signal } = {}) {
+  const from = daysAgo(45)
+  const to = daysFromNow(30)
+  const path =
+    `/discover/movie` +
+    `?primary_release_date.gte=${from}` +
+    `&primary_release_date.lte=${to}` +
+    `&sort_by=popularity.desc` +
+    `&vote_count.gte=20` +
+    `&with_release_type=2|3` + // theatrical + theatrical-limited
+    `&region=US`
+  const results = await fetchTMDBList(path, 'movie', { signal })
+  return results.slice(0, limit)
+}
+
+/**
+ * Buzzy new TV — shows whose series premiered within the last ~120 days.
+ *
+ * We intentionally avoid `/tv/on_the_air` because it includes decades-old
+ * warhorses (Law & Order, NCIS) that are still airing new episodes. Filtering
+ * on `first_air_date` means we only surface actual new series this season.
  */
 export async function fetchTMDBNewTV(limit = 10, { signal } = {}) {
-  const [onAir, discover] = await Promise.all([
-    fetchTMDBList('/tv/on_the_air', 'tv', { signal }),
-    fetchTMDBList('/discover/tv?sort_by=first_air_date.desc&first_air_date.lte=' + new Date().toISOString().slice(0, 10), 'tv', { signal }),
-  ])
-  const byId = new Map()
-  for (const item of [...onAir, ...discover]) {
-    if (!byId.has(item.externalId)) byId.set(item.externalId, item)
-  }
-  return Array.from(byId.values()).slice(0, limit)
+  const from = daysAgo(120)
+  const to = toISODate(new Date())
+  const path =
+    `/discover/tv` +
+    `?first_air_date.gte=${from}` +
+    `&first_air_date.lte=${to}` +
+    `&sort_by=popularity.desc` +
+    `&vote_count.gte=10`
+  const results = await fetchTMDBList(path, 'tv', { signal })
+  return results.slice(0, limit)
 }
