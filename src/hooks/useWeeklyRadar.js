@@ -24,11 +24,13 @@ export function useWeeklyRadar() {
   const [refreshKey, setRefreshKey] = useState(0)
 
   const profileEmpty = isProfileEmpty()
-  const abortRef = useRef(null)
+  // `staleRef` lets the effect ignore results from a superseded render without
+  // aborting the underlying network requests. Aborting the fetches caused
+  // empty radar payloads to get written to the cache whenever the hook
+  // re-fired during auth/profile hydration.
+  const staleRef = useRef({ id: 0 })
 
   useEffect(() => {
-    if (abortRef.current) abortRef.current.abort()
-
     // No profile — nothing to render.
     if (profileEmpty) {
       setRadar(null)
@@ -45,28 +47,27 @@ export function useWeeklyRadar() {
       return
     }
 
-    const controller = new AbortController()
-    abortRef.current = controller
+    const runId = staleRef.current.id + 1
+    staleRef.current.id = runId
     setLoading(true)
     setError(null)
 
     getWeeklyRadar(user, profile, items, {
-      signal: controller.signal,
       forceRefresh: refreshKey > 0,
     })
       .then((result) => {
-        if (controller.signal.aborted) return
+        // Only apply results if this is still the most recent run; otherwise
+        // the fetch was for a prior render that's been superseded.
+        if (staleRef.current.id !== runId) return
         setRadar(result)
         setLoading(false)
       })
       .catch((err) => {
-        if (controller.signal.aborted) return
+        if (staleRef.current.id !== runId) return
         console.error('useWeeklyRadar fetch failed', err)
         setError(err)
         setLoading(false)
       })
-
-    return () => controller.abort()
     // `items` change (e.g. user adds something) shouldn't re-trigger an API
     // round-trip; we rely on the 30-min cache and manual refresh.
     // eslint-disable-next-line react-hooks/exhaustive-deps
