@@ -2,9 +2,10 @@ import { useState, useMemo } from 'react'
 import { Radar as RadarIcon, Sparkles, Calendar, Plus, X, Music, Film, Tv, BookOpen, RefreshCw, ChevronDown, ChevronUp, Check, User, Bookmark, Mail } from 'lucide-react'
 import CoverArt from '../components/common/CoverArt'
 import ExternalLinks from '../components/common/ExternalLinks'
+import { useAuth } from '../hooks/useAuth'
 import { useTasteProfile } from '../hooks/useTasteProfile'
 import { useCatalog } from '../hooks/useCatalog'
-import { getWeeklyRadar } from '../services/mockData'
+import { useWeeklyRadar } from '../hooks/useWeeklyRadar'
 import { getMediaColor } from '../utils/filterUtils'
 import { formatDate } from '../utils/dateUtils'
 import { generateWeeklyLetter } from '../utils/weeklyLetter'
@@ -139,22 +140,21 @@ function RadarCard({ item, onAdd, onDismiss, isAdded }) {
 }
 
 export default function Radar() {
+  const { isDemo } = useAuth()
   const { profile, isProfileEmpty } = useTasteProfile()
   const { items: catalogItems, addItem } = useCatalog()
   const [dismissed, setDismissed] = useState(new Set())
   const [addedItems, setAddedItems] = useState(new Set())
-  const [refreshKey, setRefreshKey] = useState(0)
   const [activeTab, setActiveTab] = useState('releases')
   const [letterOpen, setLetterOpen] = useState(true)
-
-  const radar = useMemo(() => {
-    return getWeeklyRadar(profile, catalogItems)
-  }, [profile, catalogItems, refreshKey])
+  const profileEmpty = isProfileEmpty()
+  const { radar, loading: radarLoading, refresh: refreshRadar } = useWeeklyRadar(profile, catalogItems, { skip: profileEmpty })
 
   const letter = useMemo(() => {
-    if (isProfileEmpty()) return null
+    if (profileEmpty) return null
+    if (!radar.newReleases.length && !radar.discoveries.length) return null
     return generateWeeklyLetter(profile, radar)
-  }, [profile, radar])
+  }, [profile, radar, profileEmpty])
 
   const handleAdd = (item) => {
     addItem({
@@ -174,7 +174,7 @@ export default function Radar() {
   const visibleReleases = radar.newReleases.filter((r) => !dismissed.has(r.title))
   const visibleDiscoveries = radar.discoveries.filter((d) => !dismissed.has(d.title))
 
-  if (isProfileEmpty()) {
+  if (profileEmpty) {
     return (
       <div>
         <h1 className="text-2xl font-bold text-text-primary mb-2">Weekly Radar</h1>
@@ -203,13 +203,24 @@ export default function Radar() {
           <p className="text-text-secondary text-sm">New releases and discoveries based on your tastes</p>
         </div>
         <button
-          onClick={() => setRefreshKey((k) => k + 1)}
-          className="flex items-center gap-2 px-3 py-2 bg-bg-secondary border border-border rounded-lg text-sm text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors"
+          onClick={refreshRadar}
+          disabled={radarLoading}
+          className="flex items-center gap-2 px-3 py-2 bg-bg-secondary border border-border rounded-lg text-sm text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors disabled:opacity-50"
         >
-          <RefreshCw size={14} />
-          Refresh
+          <RefreshCw size={14} className={radarLoading ? 'animate-spin' : ''} />
+          {radarLoading ? 'Loading' : 'Refresh'}
         </button>
       </div>
+
+      {isDemo && (
+        <div className="mb-6 flex items-start gap-3 rounded-xl border border-accent-primary/20 bg-accent-primary/5 px-4 py-3">
+          <Sparkles size={16} className="mt-0.5 shrink-0 text-accent-primary" />
+          <p className="text-xs leading-relaxed text-text-secondary">
+            <span className="font-medium text-text-primary">A note from the demo:</span>{' '}
+            every title on this radar is <em>affectionately fictional</em> — parody releases dreamt up to show off the experience. Sign in to see real new releases pulled from Spotify, TMDB, and OpenLibrary.
+          </p>
+        </div>
+      )}
 
       {/* Weekly Letter */}
       {letter && (
@@ -296,7 +307,12 @@ export default function Radar() {
       {/* Content */}
       {activeTab === 'releases' && (
         <div>
-          {visibleReleases.length > 0 ? (
+          {radarLoading && visibleReleases.length === 0 ? (
+            <div className="text-center py-12 bg-bg-secondary border border-border rounded-2xl">
+              <RefreshCw size={24} className="mx-auto text-text-muted/40 mb-3 animate-spin" />
+              <p className="text-text-secondary text-sm">Tuning the radar…</p>
+            </div>
+          ) : visibleReleases.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {visibleReleases.map((item, i) => (
                 <RadarCard
@@ -322,7 +338,12 @@ export default function Radar() {
           <p className="text-sm text-text-muted mb-4">
             Based on your taste profile, you might enjoy these artists and titles you haven't cataloged yet.
           </p>
-          {visibleDiscoveries.length > 0 ? (
+          {radarLoading && visibleDiscoveries.length === 0 ? (
+            <div className="text-center py-12 bg-bg-secondary border border-border rounded-2xl">
+              <RefreshCw size={24} className="mx-auto text-text-muted/40 mb-3 animate-spin" />
+              <p className="text-text-secondary text-sm">Finding discoveries…</p>
+            </div>
+          ) : visibleDiscoveries.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {visibleDiscoveries.map((item, i) => (
                 <RadarCard

@@ -1,3 +1,5 @@
+import { matchScore } from '../utils/matchScore'
+
 const MOCK_RELEASES = {
   music: [
     { title: 'Midnight Frequencies', creator: 'Glass Animals', genre: 'Indie/Electronic', releaseDate: '2026-04-18',
@@ -190,31 +192,6 @@ const DISCOVERY_POOL = {
       creatorNote: 'The voice of millennial fiction — Normal People and Beautiful World made her a phenomenon.',
       relatedWorks: ['Normal People', 'Beautiful World, Where Are You', 'Conversations with Friends'] },
   ],
-}
-
-function matchScore(item, tasteProfile) {
-  let score = 0
-  const allArtists = [
-    ...(tasteProfile.music?.artists || []),
-    ...(tasteProfile.movies?.directors || []),
-    ...(tasteProfile.movies?.actors || []),
-    ...(tasteProfile.tv?.creators || []),
-    ...(tasteProfile.books?.authors || []),
-  ].map((a) => a.toLowerCase())
-
-  const allGenres = [
-    ...(tasteProfile.music?.genres || []),
-    ...(tasteProfile.movies?.genres || []),
-    ...(tasteProfile.tv?.genres || []),
-    ...(tasteProfile.books?.genres || []),
-  ].map((g) => g.toLowerCase())
-
-  if (allArtists.some((a) => item.creator.toLowerCase().includes(a))) score += 10
-  if (item.genre && allGenres.some((g) => item.genre.toLowerCase().includes(g))) score += 5
-
-  score += Math.random() * 3
-
-  return score
 }
 
 export function getNewReleases(tasteProfile, catalogItems = []) {

@@ -6,7 +6,7 @@ import { useTasteProfile } from '../hooks/useTasteProfile'
 import { useWeeklyDumps } from '../hooks/useWeeklyDumps'
 import { useScratchpad } from '../hooks/useScratchpad'
 import { useAuth } from '../hooks/useAuth'
-import { getWeeklyRadar } from '../services/mockData'
+import { useWeeklyRadar } from '../hooks/useWeeklyRadar'
 import { getMediaColor, MEDIA_TYPES } from '../utils/filterUtils'
 import { formatDate } from '../utils/dateUtils'
 import CoverArt from '../components/common/CoverArt'
@@ -110,7 +110,7 @@ function getGreeting(name) {
 }
 
 export default function Dashboard() {
-  const { user } = useAuth()
+  const { user, isDemo } = useAuth()
   const { items, getStats } = useCatalog()
   const { profile, isProfileEmpty } = useTasteProfile()
   const { dumps, getStreak, getCurrentWeekDump, saveDump } = useWeeklyDumps()
@@ -157,16 +157,16 @@ export default function Dashboard() {
     persistLiner({ ...liner, [section]: liner[section].filter((v) => linerTagKey(v) !== removeKey) })
   }
 
-  const radar = useMemo(() => {
-    if (isProfileEmpty()) return null
-    return getWeeklyRadar(profile, items)
-  }, [profile, items])
+  const profileEmpty = isProfileEmpty()
+  const { radar: liveRadar } = useWeeklyRadar(profile, items, { skip: profileEmpty })
+  const radar = profileEmpty ? null : liveRadar
 
   const recentItems = items.slice(0, 5)
   const tidbits = generateTidbits(stats, profile, streak)
 
   const letter = useMemo(() => {
     if (!radar) return null
+    if (!radar.newReleases.length && !radar.discoveries.length) return null
     return generateWeeklyLetter(profile, radar)
   }, [profile, radar])
 
@@ -426,6 +426,11 @@ export default function Dashboard() {
             </div>
             {radar ? (
               <div className="space-y-3">
+                {isDemo && (
+                  <p className="text-[11px] italic leading-relaxed text-text-muted">
+                    Demo radar — titles are playful fictions. Sign in for the real feed.
+                  </p>
+                )}
                 {/* Teaser */}
                 {radarTeaser && (
                   <Link to="/radar" className="block p-3 bg-bg-tertiary rounded-xl hover:bg-bg-hover transition-colors">

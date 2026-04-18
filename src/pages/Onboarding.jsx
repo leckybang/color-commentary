@@ -9,7 +9,7 @@ import { useCatalog } from '../hooks/useCatalog'
 import ChipSelector from '../components/common/ChipSelector'
 import TagInput from '../components/common/TagInput'
 import { GENRE_OPTIONS, SUGGESTION_MAP, SUGGESTION_FIELD, SUGGESTION_LABEL, getSuggestionsForGenres } from '../data/onboardingSuggestions'
-import { getWeeklyRadar } from '../services/mockData'
+import { useWeeklyRadar } from '../hooks/useWeeklyRadar'
 import { determineArchetype } from '../utils/archetypes'
 import { getMediaColor } from '../utils/filterUtils'
 
@@ -84,9 +84,7 @@ export default function Onboarding() {
 
   const archetype = useMemo(() => determineArchetype(profile), [profile])
 
-  const radar = useMemo(() => {
-    return getWeeklyRadar(profile, [])
-  }, [profile])
+  const { radar } = useWeeklyRadar(profile, [], { skip: current.key !== 'done' })
 
   const next = () => {
     if (isLast) {

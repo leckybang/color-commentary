@@ -5,38 +5,7 @@
  */
 
 import { corsHeaders, handleOptions } from './_shared/cors.js'
-
-// Module-scope token cache (survives warm invocations)
-let tokenCache = { access_token: null, expires_at: 0 }
-
-async function getToken() {
-  const now = Date.now()
-  if (tokenCache.access_token && tokenCache.expires_at > now + 60000) {
-    return tokenCache.access_token
-  }
-
-  const clientId = process.env.SPOTIFY_CLIENT_ID
-  const clientSecret = process.env.SPOTIFY_CLIENT_SECRET
-  if (!clientId || !clientSecret) throw new Error('Spotify credentials not configured')
-
-  const auth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
-  const res = await fetch('https://accounts.spotify.com/api/token', {
-    method: 'POST',
-    headers: {
-      Authorization: `Basic ${auth}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: 'grant_type=client_credentials',
-  })
-
-  if (!res.ok) throw new Error(`Spotify token request failed: ${res.status}`)
-  const data = await res.json()
-  tokenCache = {
-    access_token: data.access_token,
-    expires_at: now + (data.expires_in || 3600) * 1000,
-  }
-  return tokenCache.access_token
-}
+import { getSpotifyToken } from './_shared/spotifyAuth.js'
 
 function normalizeAlbum(album) {
   return {
@@ -97,7 +66,7 @@ export async function handler(event) {
   }
 
   try {
-    const token = await getToken()
+    const token = await getSpotifyToken()
     const searchUrl = `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=album,track,artist&limit=4`
     const res = await fetch(searchUrl, {
       headers: { Authorization: `Bearer ${token}` },

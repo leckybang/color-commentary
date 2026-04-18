@@ -70,21 +70,27 @@ function buildMovieSection(releases, discoveries, profile) {
 
   if (movieReleases.length > 0) {
     const r = movieReleases[0]
-    const hasDirector = profile.movies?.directors?.some(d => r.creator.toLowerCase().includes(d.toLowerCase()))
+    const hasDirector = r.creator && profile.movies?.directors?.some(d => r.creator.toLowerCase().includes(d.toLowerCase()))
     if (hasDirector) {
       lines.push(`Your favorite director **${r.creator}** has a new one. *${r.title}* — ${r.description || `a new ${r.genre} film`}. Clear your evening.`)
-    } else {
+    } else if (r.creator) {
       lines.push(`In theaters: *${r.title}* from **${r.creator}**. ${r.description || ''} Worth your time if you're into ${r.genre?.toLowerCase() || 'good films'}.`)
+    } else {
+      lines.push(`In theaters: *${r.title}*. ${r.description || ''} Worth your time if you're into ${r.genre?.toLowerCase() || 'good films'}.`)
     }
     if (movieReleases.length > 1) {
-      const others = movieReleases.slice(1).map(r => `*${r.title}* (${r.creator})`).join(', ')
+      const others = movieReleases.slice(1).map(r => r.creator ? `*${r.title}* (${r.creator})` : `*${r.title}*`).join(', ')
       lines.push(`Also on our radar: ${others}.`)
     }
   }
 
   if (movieDiscoveries.length > 0) {
     const d = movieDiscoveries[0]
-    lines.push(`Discovery pick: **${d.creator}**'s *${d.title}*. ${d.description || ''} ${d.creatorNote ? d.creatorNote : ''}`)
+    if (d.creator) {
+      lines.push(`Discovery pick: **${d.creator}**'s *${d.title}*. ${d.description || ''} ${d.creatorNote ? d.creatorNote : ''}`)
+    } else {
+      lines.push(`Discovery pick: *${d.title}*. ${d.description || ''} ${d.creatorNote ? d.creatorNote : ''}`)
+    }
   }
 
   return { title: 'At the Movies', emoji: '🎬', body: lines.join(' ') }
@@ -99,16 +105,24 @@ function buildTVSection(releases, discoveries) {
 
   if (tvReleases.length > 0) {
     const r = tvReleases[0]
-    lines.push(`Streaming-wise, *${r.title}* lands on **${r.creator}** this week. ${r.description || ''} ${r.creatorNote ? r.creatorNote : ''}`)
+    if (r.creator) {
+      lines.push(`Streaming-wise, *${r.title}* lands on **${r.creator}** this week. ${r.description || ''} ${r.creatorNote ? r.creatorNote : ''}`)
+    } else {
+      lines.push(`Streaming-wise, *${r.title}* is premiering this week. ${r.description || ''} ${r.creatorNote ? r.creatorNote : ''}`)
+    }
     if (tvReleases.length > 1) {
-      const others = tvReleases.slice(1).map(r => `*${r.title}* (${r.creator})`).join(', ')
+      const others = tvReleases.slice(1).map(r => r.creator ? `*${r.title}* (${r.creator})` : `*${r.title}*`).join(', ')
       lines.push(`Also premiering: ${others}.`)
     }
   }
 
   if (tvDiscoveries.length > 0) {
     const d = tvDiscoveries[0]
-    lines.push(`Sleeper pick: *${d.title}* on ${d.creator}. ${d.description || ''} Trust us on this one.`)
+    if (d.creator) {
+      lines.push(`Sleeper pick: *${d.title}* on ${d.creator}. ${d.description || ''} Trust us on this one.`)
+    } else {
+      lines.push(`Sleeper pick: *${d.title}*. ${d.description || ''} Trust us on this one.`)
+    }
   }
 
   return { title: 'On the Small Screen', emoji: '📺', body: lines.join(' ') }

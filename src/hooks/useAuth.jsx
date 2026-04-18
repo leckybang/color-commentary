@@ -156,9 +156,10 @@ export function AuthProvider({ children }) {
   }
 
   const needsOnboarding = user && !user.onboardingComplete
+  const isDemo = !!user?.uid?.startsWith('demo')
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, loginWithGoogle, loginDemo, logout, updateProfile, completeOnboarding, needsOnboarding }}>
+    <AuthContext.Provider value={{ user, loading, login, loginWithGoogle, loginDemo, logout, updateProfile, completeOnboarding, needsOnboarding, isDemo }}>
       {children}
     </AuthContext.Provider>
   )
