@@ -16,6 +16,7 @@ import {
   fetchOpenLibraryNewReleases,
   fetchOpenLibraryByAuthors,
 } from './providers/openLibrary'
+import { fetchNYTBestsellers } from './providers/nytBooks'
 
 const CACHE_TTL_MS = 30 * 60 * 1000 // 30 minutes
 const MAX_RELEASES = 8
@@ -75,6 +76,10 @@ async function fetchSpotifyNewReleases({ signal } = {}) {
   try {
     const res = await fetch('/.netlify/functions/spotify-radar?limit=20', { signal })
     if (!res.ok) return []
+    // When running `vite dev` without `netlify dev`, the function route falls
+    // through to index.html — guard against HTML masquerading as JSON.
+    const ct = res.headers.get('content-type') || ''
+    if (!ct.includes('application/json')) return []
     const data = await res.json()
     return data.items || []
   } catch (err) {
@@ -93,15 +98,16 @@ async function buildRealRadar(profile, catalogItems, { signal } = {}) {
   )
   const favAuthors = profile?.books?.authors || []
 
-  const [music, movies, tv, booksNew, booksByAuthor] = await Promise.all([
+  const [music, movies, tv, booksNew, booksByAuthor, booksNYT] = await Promise.all([
     fetchSpotifyNewReleases({ signal }),
     fetchTMDBNewMovies(12, { signal }),
     fetchTMDBNewTV(12, { signal }),
     fetchOpenLibraryNewReleases(10, { signal }),
     fetchOpenLibraryByAuthors(favAuthors, 2, { signal }),
+    fetchNYTBestsellers(10, { signal }),
   ])
 
-  const allReleases = [...music, ...movies, ...tv, ...booksNew, ...booksByAuthor]
+  const allReleases = [...music, ...movies, ...tv, ...booksNew, ...booksByAuthor, ...booksNYT]
     .map((item) => ({ ...item, score: matchScore(item, profile || {}) }))
     .sort((a, b) => b.score - a.score)
 
