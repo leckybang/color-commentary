@@ -5,7 +5,7 @@
  */
 
 import { corsHeaders, handleOptions } from './_shared/cors.js'
-import { getSpotifyToken } from './_shared/spotifyAuth.js'
+import { getSpotifyToken, invalidateSpotifyToken } from './_shared/spotifyAuth.js'
 
 function normalizeAlbum(album) {
   return {
@@ -66,11 +66,20 @@ export async function handler(event) {
   }
 
   try {
-    const token = await getSpotifyToken()
     const searchUrl = `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=album,track,artist&limit=4`
-    const res = await fetch(searchUrl, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+
+    async function runSearch(forceRefreshToken = false) {
+      const token = await getSpotifyToken({ forceRefresh: forceRefreshToken })
+      return fetch(searchUrl, { headers: { Authorization: `Bearer ${token}` } })
+    }
+
+    let res = await runSearch()
+
+    // Expired token: invalidate the cache and retry once with a fresh one.
+    if (res.status === 401) {
+      invalidateSpotifyToken()
+      res = await runSearch(true)
+    }
 
     if (!res.ok) {
       return { statusCode: 502, headers: corsHeaders(origin), body: JSON.stringify({ error: 'Spotify search failed' }) }

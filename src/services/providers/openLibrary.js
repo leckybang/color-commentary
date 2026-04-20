@@ -10,9 +10,13 @@
 const BASE = 'https://openlibrary.org'
 const COVER_BASE = 'https://covers.openlibrary.org/b/id'
 
-function coverUrl(coverId) {
-  if (!coverId) return ''
-  return `${COVER_BASE}/${coverId}-M.jpg`
+function coverUrl(doc) {
+  // cover_i (integer ID) is the most reliable source; fall back to the first
+  // ISBN if it's missing — covers.openlibrary.org supports both lookup keys.
+  if (doc.cover_i) return `${COVER_BASE}/${doc.cover_i}-M.jpg`
+  const isbn = Array.isArray(doc.isbn) ? doc.isbn[0] : doc.isbn
+  if (isbn) return `https://covers.openlibrary.org/b/isbn/${isbn}-M.jpg`
+  return ''
 }
 
 function normalizeDoc(doc) {
@@ -29,7 +33,7 @@ function normalizeDoc(doc) {
     creator: authors.join(', '),
     genre: (doc.subject || [])[0] || '',
     releaseDate: year ? String(year) : '',
-    coverUrl: coverUrl(doc.cover_i),
+    coverUrl: coverUrl(doc),
     description: '',
     isNewRelease: true,
   }
@@ -60,7 +64,7 @@ export async function fetchOpenLibraryNewReleases(limit = 10, { signal } = {}) {
       q: `first_publish_year:${year}`,
       sort: 'new',
       limit: String(limit),
-      fields: 'key,title,author_name,first_publish_year,cover_i,subject',
+      fields: 'key,title,author_name,first_publish_year,cover_i,isbn,subject',
     },
     { signal }
   )
@@ -82,7 +86,7 @@ export async function fetchOpenLibraryByAuthors(authors = [], perAuthor = 2, { s
           author: author,
           sort: 'new',
           limit: String(perAuthor),
-          fields: 'key,title,author_name,first_publish_year,cover_i,subject',
+          fields: 'key,title,author_name,first_publish_year,cover_i,isbn,subject',
         },
         { signal }
       )
