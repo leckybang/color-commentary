@@ -1,13 +1,14 @@
-import { useState, useMemo } from 'react'
-import { Radar as RadarIcon, Sparkles, Calendar, Plus, X, Music, Film, Tv, BookOpen, RefreshCw, ChevronDown, ChevronUp, Check, User, Bookmark, Mail, Info, Loader2 } from 'lucide-react'
+import { useState } from 'react'
+import { Radar as RadarIcon, Sparkles, Calendar, Loader2, RefreshCw, ChevronDown, ChevronUp, Check, Bookmark, Mail, Info, Music, Film, Tv, BookOpen } from 'lucide-react'
 import CoverArt from '../components/common/CoverArt'
 import ExternalLinks from '../components/common/ExternalLinks'
 import { useTasteProfile } from '../hooks/useTasteProfile'
 import { useCatalog } from '../hooks/useCatalog'
 import { useWeeklyRadar } from '../hooks/useWeeklyRadar'
+import { useWeeklyLetter } from '../hooks/useWeeklyLetter'
+import { useAuth } from '../hooks/useAuth'
 import { getMediaColor } from '../utils/filterUtils'
 import { formatDate } from '../utils/dateUtils'
-import { generateWeeklyLetter } from '../utils/weeklyLetter'
 
 const TYPE_ICONS = { music: Music, movie: Film, tv: Tv, book: BookOpen }
 const TYPE_LABELS = { music: 'Music', movie: 'Movie', tv: 'TV', book: 'Book' }
@@ -23,11 +24,8 @@ function RadarCard({ item, onAdd, onDismiss, isAdded }) {
         expanded ? 'border-accent-primary/30 shadow-lg shadow-accent-primary/5' : 'border-border hover:border-accent-primary/15'
       }`}
     >
-      {/* Collapsed header — always visible */}
-      <div
-        className="p-4 cursor-pointer"
-        onClick={() => setExpanded(!expanded)}
-      >
+      {/* Collapsed header */}
+      <div className="p-4 cursor-pointer" onClick={() => setExpanded(!expanded)}>
         <div className="flex items-start gap-3">
           <CoverArt title={item.title} type={item.type} creator={item.creator} coverUrl={item.coverUrl} size="radar" />
           <div className="flex-1 min-w-0">
@@ -51,7 +49,6 @@ function RadarCard({ item, onAdd, onDismiss, isAdded }) {
         {!expanded && item.description && (
           <p className="text-xs text-text-muted mt-2 line-clamp-2 leading-relaxed">{item.description}</p>
         )}
-
         {!expanded && item.releaseDate && (
           <div className="flex items-center gap-1 mt-2 text-xs text-text-muted">
             <Calendar size={12} />
@@ -63,53 +60,22 @@ function RadarCard({ item, onAdd, onDismiss, isAdded }) {
       {/* Expanded detail */}
       {expanded && (
         <div className="px-4 pb-4 space-y-3">
-          {/* Description */}
           {item.description && (
             <p className="text-sm text-text-secondary leading-relaxed">{item.description}</p>
           )}
-
-          {/* Release date */}
           {item.releaseDate && (
             <div className="flex items-center gap-1.5 text-xs text-text-muted">
               <Calendar size={13} />
               <span>Releases {formatDate(item.releaseDate)}</span>
             </div>
           )}
-
-          {/* Creator note */}
-          {item.creatorNote && (
-            <div className="flex items-start gap-2 bg-bg-tertiary rounded-lg p-3">
-              <User size={14} className="text-text-muted mt-0.5 shrink-0" />
-              <p className="text-xs text-text-secondary italic leading-relaxed">{item.creatorNote}</p>
-            </div>
-          )}
-
-          {/* Related works */}
-          {item.relatedWorks && item.relatedWorks.length > 0 && (
-            <div>
-              <p className="text-xs font-medium text-text-muted mb-1.5">Also by {item.creator}:</p>
-              <div className="flex flex-wrap gap-1.5">
-                {item.relatedWorks.map((work) => (
-                  <span key={work} className="text-xs px-2.5 py-1 rounded-full bg-bg-tertiary text-text-secondary">
-                    {work}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Why this? (discoveries) */}
           {item.reason && (
             <div className="flex items-center gap-1.5 text-xs">
               <Sparkles size={12} className="text-accent-primary shrink-0" />
               <span className="text-accent-primary/80">{item.reason}</span>
             </div>
           )}
-
-          {/* External links */}
           <ExternalLinks type={item.type} title={item.title} creator={item.creator} />
-
-          {/* Actions */}
           <div className="flex gap-2 pt-2 border-t border-border">
             {isAdded ? (
               <div className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium text-accent-books">
@@ -118,7 +84,7 @@ function RadarCard({ item, onAdd, onDismiss, isAdded }) {
               </div>
             ) : (
               <button
-                onClick={(e) => { e.stopPropagation(); onAdd(item); }}
+                onClick={(e) => { e.stopPropagation(); onAdd(item) }}
                 className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium bg-accent-primary/10 text-accent-primary hover:bg-accent-primary/20 transition-colors"
               >
                 <Bookmark size={14} />
@@ -126,7 +92,7 @@ function RadarCard({ item, onAdd, onDismiss, isAdded }) {
               </button>
             )}
             <button
-              onClick={(e) => { e.stopPropagation(); onDismiss(item); }}
+              onClick={(e) => { e.stopPropagation(); onDismiss(item) }}
               className="px-3 py-2 rounded-lg text-xs text-text-muted hover:text-text-secondary hover:bg-bg-hover transition-colors"
             >
               Not for me
@@ -139,27 +105,30 @@ function RadarCard({ item, onAdd, onDismiss, isAdded }) {
 }
 
 export default function Radar() {
+  const { user } = useAuth()
   const { profile, isProfileEmpty } = useTasteProfile()
-  const { addItem } = useCatalog()
-  const { radar, loading, error, refresh, isDemo } = useWeeklyRadar()
+  const { items: catalogItems, addItem } = useCatalog()
+  const { radar, loading, error, refresh: refreshRadar, isDemo } = useWeeklyRadar()
+  const { letter, letterLoading, refreshLetter } = useWeeklyLetter({
+    user,
+    isDemo,
+    profile,
+    catalogItems,
+    radar,
+  })
+
   const [dismissed, setDismissed] = useState(new Set())
   const [addedItems, setAddedItems] = useState(new Set())
   const [activeTab, setActiveTab] = useState('releases')
   const [letterOpen, setLetterOpen] = useState(true)
 
-  const letter = useMemo(() => {
-    if (isProfileEmpty() || !radar) return null
-    return generateWeeklyLetter(profile, radar)
-  }, [profile, radar, isProfileEmpty])
+  const handleRefresh = () => {
+    refreshRadar()
+    refreshLetter()
+  }
 
   const handleAdd = (item) => {
-    addItem({
-      title: item.title,
-      creator: item.creator,
-      type: item.type,
-      genre: item.genre || '',
-      status: 'want',
-    })
+    addItem({ title: item.title, creator: item.creator, type: item.type, genre: item.genre || '', status: 'want' })
     setAddedItems((prev) => new Set([...prev, item.title]))
   }
 
@@ -203,12 +172,12 @@ export default function Radar() {
           </p>
         </div>
         <button
-          onClick={refresh}
-          disabled={loading}
+          onClick={handleRefresh}
+          disabled={loading || letterLoading}
           className="flex items-center gap-2 px-3 py-2 bg-bg-secondary border border-border rounded-lg text-sm text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors disabled:opacity-50"
         >
-          {loading ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
-          {loading ? 'Refreshing' : 'Refresh'}
+          {loading || letterLoading ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+          {loading || letterLoading ? 'Refreshing' : 'Refresh'}
         </button>
       </div>
 
@@ -218,12 +187,12 @@ export default function Radar() {
           <Info size={16} className="text-accent-primary mt-0.5 shrink-0" />
           <p className="text-xs text-text-secondary leading-relaxed">
             <span className="font-medium text-accent-primary">Affectionately fictional.</span>{' '}
-            Demo Weekly Radar uses parody titles and made-up release dates so you can poke around without a taste profile. Sign in to swap this for real new releases from Spotify, TMDB, and OpenLibrary.
+            Demo Weekly Radar uses parody titles and made-up release dates. Sign in to swap this for real new releases from Spotify, TMDB, and OpenLibrary.
           </p>
         </div>
       )}
 
-      {/* Loading state for real-user fetch */}
+      {/* Loading state */}
       {!isDemo && loading && !radar && (
         <div className="mb-6 flex items-center gap-2 text-sm text-text-muted">
           <Loader2 size={14} className="animate-spin" />
@@ -242,7 +211,7 @@ export default function Radar() {
       )}
 
       {/* Weekly Letter */}
-      {letter && (
+      {(letter || letterLoading) && (
         <div className="mb-6">
           <button
             onClick={() => setLetterOpen(!letterOpen)}
@@ -255,43 +224,51 @@ export default function Radar() {
 
           {letterOpen && (
             <div className="bg-bg-secondary border border-border rounded-2xl p-6 md:p-8 space-y-4">
-              {/* Header */}
-              <div className="border-b border-border pb-4">
-                <p className="text-xs font-medium text-text-muted tracking-widest uppercase mb-1">
-                  The Weekly Radar — {letter.weekLabel}
-                </p>
-                <p className="text-lg md:text-xl font-bold text-text-primary" style={{ fontFamily: "'Libre Baskerville', serif" }}>
-                  {letter.greeting}
-                </p>
-              </div>
-
-              {/* Intro */}
-              <p className="text-text-secondary leading-relaxed">{letter.intro}</p>
-
-              {/* Sections */}
-              {letter.sections.map((section, i) => (
-                <div key={i} className="space-y-2">
-                  <h3 className="text-sm font-semibold text-text-primary flex items-center gap-2" style={{ fontFamily: "'Libre Baskerville', serif" }}>
-                    <span>{section.emoji}</span>
-                    {section.title}
-                  </h3>
-                  <p className="text-text-secondary text-sm leading-relaxed"
-                    dangerouslySetInnerHTML={{
-                      __html: section.body
-                        .replace(/\*\*(.+?)\*\*/g, '<strong style="color: var(--color-text-primary)">$1</strong>')
-                        .replace(/\*(.+?)\*/g, '<em>$1</em>')
-                    }}
-                  />
+              {letterLoading && !letter ? (
+                <div className="flex items-center gap-2 py-4 text-sm text-text-muted">
+                  <Loader2 size={14} className="animate-spin" />
+                  Composing your weekly dispatch…
                 </div>
-              ))}
+              ) : letter ? (
+                <>
+                  {/* Header */}
+                  <div className="border-b border-border pb-4">
+                    <p className="text-xs font-medium text-text-muted tracking-widest uppercase mb-1">
+                      The Weekly Radar{letter.weekLabel ? ` — ${letter.weekLabel}` : ''}
+                    </p>
+                    <p
+                      className="text-lg md:text-xl font-bold text-text-primary"
+                      style={{ fontFamily: "'Libre Baskerville', serif" }}
+                    >
+                      {letter.greeting}
+                    </p>
+                  </div>
 
-              {/* Closing */}
-              <div className="border-t border-border pt-4 mt-4">
-                <p className="text-text-secondary text-sm italic">{letter.closing}</p>
-                <p className="text-text-muted text-xs mt-2" style={{ fontFamily: "'Libre Baskerville', serif" }}>
-                  {letter.signoff}
-                </p>
-              </div>
+                  {/* Paragraphs */}
+                  {(letter.paragraphs || []).map((para, i) => (
+                    <p
+                      key={i}
+                      className="text-text-secondary leading-relaxed"
+                      dangerouslySetInnerHTML={{
+                        __html: para
+                          .replace(/\*\*(.+?)\*\*/g, '<strong style="color: var(--color-text-primary)">$1</strong>')
+                          .replace(/\*(.+?)\*/g, '<em>$1</em>'),
+                      }}
+                    />
+                  ))}
+
+                  {/* Closing */}
+                  <div className="border-t border-border pt-4 mt-4">
+                    <p className="text-text-secondary text-sm italic">{letter.closing}</p>
+                    <p
+                      className="text-text-muted text-xs mt-2"
+                      style={{ fontFamily: "'Libre Baskerville', serif" }}
+                    >
+                      {letter.signoff || '— Your Color Commentary Radar'}
+                    </p>
+                  </div>
+                </>
+              ) : null}
             </div>
           )}
         </div>
@@ -308,7 +285,7 @@ export default function Radar() {
           }`}
         >
           <Calendar size={16} />
-          New Releases ({visibleReleases.length})
+          Notable Releases ({visibleReleases.length})
         </button>
         <button
           onClick={() => setActiveTab('discoveries')}
@@ -323,7 +300,7 @@ export default function Radar() {
         </button>
       </div>
 
-      {/* Content */}
+      {/* Tab content */}
       {activeTab === 'releases' && (
         <div>
           {visibleReleases.length > 0 ? (
@@ -342,7 +319,7 @@ export default function Radar() {
             <div className="text-center py-12 bg-bg-secondary border border-border rounded-2xl">
               <Calendar size={32} className="mx-auto text-text-muted/30 mb-3" />
               <p className="text-text-secondary">
-                {loading ? 'Loading this week\'s releases…' : 'No new releases this week. Check back soon!'}
+                {loading ? "Loading this week's releases…" : 'No new releases this week. Check back soon!'}
               </p>
             </div>
           )}
