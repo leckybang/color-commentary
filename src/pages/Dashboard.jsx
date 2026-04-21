@@ -126,7 +126,7 @@ export default function Dashboard() {
   // Onboarding: show once when profile is empty and user hasn't gone through it yet
   const onboardingKey = user ? `cc_onboarding_done_${user.uid}` : null
   const [showOnboarding, setShowOnboarding] = useState(
-    () => !!(onboardingKey && !localStorage.getItem(onboardingKey) && isProfileEmpty())
+    () => !!(onboardingKey && !localStorage.getItem(onboardingKey))
   )
 
   const handleOnboardingComplete = (selections) => {
