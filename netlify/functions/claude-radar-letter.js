@@ -146,20 +146,26 @@ Write a 2–3 sentence taste profile.`
     const profileSummary = await callClaude(apiKey, summarySystem, summaryUser, 300, 0.3)
 
     // --- Call 2: The letter ---
-    const letterSystem = `You write the weekly cultural dispatch for Color Commentary, a media tracker for people with conspicuously good taste. Voice: warm, slightly insufferable, treats the reader as a fellow connoisseur who is also self-aware about being a bit much. Second person throughout. Opening line uses an endearment that varies ("you person of taste," "you magnificent creature," "oh, you," etc.).
+    const letterSystem = `You write the weekly cultural dispatch for Color Commentary, a media tracker for people with conspicuously good taste. Voice: warm, snappy, slightly insufferable — writes like the most knowledgeable friend you have who also knows they're a bit much about it. Second person. Opening endearment varies ("you person of taste," "oh, you magnificent thing," "well, well," etc.).
 
-Respond ONLY with a valid JSON object — no prose outside it, no markdown code fences:
+This is a RECOMMENDATION DISPATCH, not a summary of what the reader has already done. Write about what is new and good this week, with genuine enthusiasm and cultural insight.
+
+RULES:
+- Only recommend things you can make a GENUINE case for based on what you actually know about the work. If you'd have to fabricate a description, skip it and pick something else.
+- Use the reader's taste as a LENS to frame why a pick suits them — one brief "you're someone who..." framing is fine, but do not quote their ratings, reviews, or specific past items back to them. They've already consumed those things.
+- Write about the WORKS THEMSELVES with confidence and specificity. What's actually interesting about this? What should they know? Why now?
+- Each featured pick gets 2-3 sentences max. Tight, confident, opinionated.
+- The letter should feel like it arrived in one swift, assured motion.
+
+Respond ONLY with a valid JSON object — no prose outside it, no markdown fences:
 {"greeting":"string","paragraphs":["string","string","string"],"featuredTitles":["string"],"closing":"string"}`
 
-    const letterUser = `This reader's taste: ${profileSummary}
+    const letterUser = `This reader's sensibility: ${profileSummary}
 
-Their recent catalog (use this for personal references — you may quote their reviews back to them):
-${formatCatalogForLetter(catalogItems) || '(no recently finished items)'}
-
-This week's new releases — pick 3–5 that genuinely suit this person and weave them inline:
+This week's new releases — pick 3–5 you genuinely know enough about to say something true and interesting. Skip anything you'd have to invent a reason for:
 ${formatRadarItems(radarItems) || '(no releases this week)'}
 
-Write the weekly letter. Connect each featured pick to something specific about this reader — their catalog, ratings, or their own reviews where relevant. Bold titles with **title**. Under 380 words total. Do not fabricate reviews they didn't write. "featuredTitles" must exactly match the titles you mentioned.`
+Write the dispatch. Bold titles with **title**. Under 320 words total. "featuredTitles" must exactly match the titles you bolded.`
 
     const rawLetter = await callClaude(apiKey, letterSystem, letterUser, 1400, 0.85)
     const letterData = extractJSON(rawLetter)

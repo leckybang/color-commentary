@@ -22,11 +22,11 @@ const STATUS_LABELS = { want: 'Want to Try', watching: 'In Progress', finished: 
 const TABS = [
   { id: 'deeper', label: 'Deeper', Icon: Layers, description: 'Context, influences, companion works' },
   { id: 'further', label: 'Further', Icon: Compass, description: 'Same vibe, different world' },
-  { id: 'fresher', label: 'Fresher', Icon: Zap, description: 'A push outside your comfort zone' },
+  { id: 'fresher', label: 'Wild Cards', Icon: Zap, description: 'Surprising lateral moves — the real connection is there' },
 ]
 
 function dffCacheKey(itemId) {
-  return `cc_dff_${itemId}`
+  return `cc_dff_v2_${itemId}`
 }
 
 function readDffCache(itemId) {

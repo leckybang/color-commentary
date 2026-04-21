@@ -27,7 +27,7 @@ function weekKey() {
 }
 
 function letterCacheKey(uid) {
-  return `cc_letter_${uid}_${weekKey()}`
+  return `cc_letter_v2_${uid}_${weekKey()}`
 }
 
 function readLetterCache(uid) {

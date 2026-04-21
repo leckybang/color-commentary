@@ -257,6 +257,34 @@ export default function Radar() {
                     />
                   ))}
 
+                  {/* Featured items — find them on */}
+                  {(letter.featuredTitles || []).length > 0 && (() => {
+                    const allRadarItems = [...(radar?.newReleases || []), ...(radar?.discoveries || [])]
+                    const matched = (letter.featuredTitles || []).flatMap((title) => {
+                      const t = title.toLowerCase()
+                      const found = allRadarItems.find(
+                        (r) => r.title.toLowerCase() === t ||
+                               r.title.toLowerCase().includes(t) ||
+                               t.includes(r.title.toLowerCase())
+                      )
+                      return found ? [found] : []
+                    })
+                    if (!matched.length) return null
+                    return (
+                      <div className="border-t border-border pt-4 space-y-3">
+                        <p className="text-xs font-medium text-text-muted tracking-wide uppercase">
+                          Find this week's picks
+                        </p>
+                        {matched.map((item, i) => (
+                          <div key={i} className="space-y-1.5">
+                            <p className="text-xs font-medium text-text-secondary">{item.title}</p>
+                            <ExternalLinks type={item.type} title={item.title} creator={item.creator || ''} />
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  })()}
+
                   {/* Closing */}
                   <div className="border-t border-border pt-4 mt-4">
                     <p className="text-text-secondary text-sm italic">{letter.closing}</p>
