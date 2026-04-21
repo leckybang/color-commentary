@@ -229,17 +229,17 @@ export default function Dashboard() {
       {/* ─── Log Media (always-available primary entry point) ─── */}
       <Link
         to="/catalog?add=1"
-        className="group block mb-4 bg-gradient-to-r from-accent-primary to-accent-hover text-white rounded-2xl p-5 hover:shadow-lg hover:shadow-accent-primary/20 transition-all"
+        className="group w-full block mb-4 bg-gradient-to-r from-accent-primary to-accent-hover text-white rounded-2xl p-5 shadow-lg shadow-accent-primary/30 hover:shadow-xl hover:shadow-accent-primary/40 border border-white/10 transition-all"
       >
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+          <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
             <Plus size={24} strokeWidth={2.5} />
           </div>
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-base">Log Media</p>
-            <p className="text-xs text-white/80 mt-0.5">Just watched, read, or listened to something? Capture it now.</p>
+            <p className="text-xs text-white/90 mt-0.5">Just watched, read, or listened to something? Capture it now.</p>
           </div>
-          <ArrowRight size={18} className="opacity-70 group-hover:translate-x-0.5 transition-transform shrink-0" />
+          <ArrowRight size={18} className="opacity-80 group-hover:translate-x-0.5 transition-transform shrink-0" />
         </div>
       </Link>
 

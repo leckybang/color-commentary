@@ -26,7 +26,7 @@ const TABS = [
 ]
 
 function dffCacheKey(itemId) {
-  return `cc_dff_v2_${itemId}`
+  return `cc_dff_v3_${itemId}`
 }
 
 function readDffCache(itemId) {

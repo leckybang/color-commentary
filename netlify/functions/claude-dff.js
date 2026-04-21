@@ -28,6 +28,8 @@ RULES:
 3. Do NOT recommend something just because it's well-known or popular in the same category.
 4. Cross-media jumps are often the best recommendations. A novel that shares the same obsessions. A record that sounds like the film feels. A film that illuminates why you love a book.
 5. The reason must state the ACTUAL CONNECTION — something specific and true about both works.
+6. Do NOT default to the usual touchstones (Bluets, Parable of the Sower, Brokeback Mountain, The Road, etc.). If you find yourself reaching for a title you'd give everyone, stop — you are defaulting to a shortlist. Think specifically about THIS work.
+7. Every item must be a fresh choice made for THIS specific title. If you catch yourself recommending the same work you'd suggest for a different item, replace it.
 
 deeper (3 items): Trace the real creative lineage. The director's earlier film that established their style. The book or album the creator has cited as an influence. The movement or era this belongs to. The work that this one is in conversation with.
 
