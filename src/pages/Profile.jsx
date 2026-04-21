@@ -456,9 +456,9 @@ export default function Profile({ hidePublicProfile = false, hideHeader = false 
                   color={activeCat.color}
                 />
                 {calibrationQ && (
-                  <div className="mt-3">
-                    <p className="text-xs text-text-muted mb-2">Quick picks — click to add:</p>
-                    <div className="flex flex-wrap gap-1.5">
+                  <div className="mt-4 pt-4 border-t border-border">
+                    <p className="text-xs font-medium text-text-muted mb-3 tracking-wide uppercase">Or pick from our list</p>
+                    <div className="flex flex-wrap gap-2">
                       {calibrationQ.options.map((opt) => {
                         const isAdded = currentValues.includes(opt)
                         return (
@@ -466,14 +466,14 @@ export default function Profile({ hidePublicProfile = false, hideHeader = false 
                             key={opt}
                             onClick={() => !isAdded && addTag(activeCat.key, field.key, opt)}
                             disabled={isAdded}
-                            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs border transition-all"
+                            className="px-3 py-1.5 rounded-full text-sm font-medium border transition-all"
                             style={
                               isAdded
                                 ? {
-                                    backgroundColor: `color-mix(in srgb, ${activeCat.color} 15%, transparent)`,
+                                    backgroundColor: `color-mix(in srgb, ${activeCat.color} 20%, transparent)`,
                                     color: activeCat.color,
-                                    borderColor: `color-mix(in srgb, ${activeCat.color} 40%, transparent)`,
-                                    opacity: 0.6,
+                                    borderColor: `color-mix(in srgb, ${activeCat.color} 50%, transparent)`,
+                                    opacity: 0.65,
                                   }
                                 : {
                                     borderColor: 'var(--color-border)',
@@ -482,7 +482,7 @@ export default function Profile({ hidePublicProfile = false, hideHeader = false 
                                   }
                             }
                           >
-                            {isAdded ? <Check size={10} /> : <Plus size={10} />}
+                            {isAdded && <Check size={11} className="inline mr-1 -mt-0.5" />}
                             {opt}
                           </button>
                         )

@@ -290,6 +290,11 @@ export default function Dashboard() {
       )}
       {cta.to === '/catalog' && <div className="mb-8" />}
 
+      {/* ─── Daily Taste Calibration ─── */}
+      {user && !user.uid?.startsWith('demo') && (
+        <CalibrationWidget user={user} addTag={addTag} />
+      )}
+
       {/* ─── Stats Row ─── */}
       <div className="grid grid-cols-4 gap-3 mb-8">
         {[
@@ -316,11 +321,6 @@ export default function Dashboard() {
           )
         })}
       </div>
-
-      {/* ─── Daily Taste Calibration ─── */}
-      {user && !user.uid?.startsWith('demo') && (
-        <CalibrationWidget user={user} addTag={addTag} />
-      )}
 
       {/* ─── Main Grid ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
