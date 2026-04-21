@@ -6,6 +6,7 @@ import CoverArt from '../components/common/CoverArt'
 import Modal from '../components/common/Modal'
 import EmojiPicker from '../components/common/EmojiPicker'
 import { useTasteProfile } from '../hooks/useTasteProfile'
+import { CALIBRATION_QUESTIONS } from '../data/calibrationData'
 import { useTheme } from '../hooks/useTheme'
 import { useHeavyRotation } from '../hooks/useHeavyRotation'
 import { usePublicProfile } from '../hooks/usePublicProfile'
@@ -439,18 +440,59 @@ export default function Profile({ hidePublicProfile = false, hideHeader = false 
             <activeCat.icon size={24} style={{ color: activeCat.color }} />
             <h2 className="text-lg font-semibold">{activeCat.label}</h2>
           </div>
-          {activeCat.fields.map((field) => (
-            <div key={field.key}>
-              <label className="block text-sm font-medium text-text-secondary mb-2">{field.label}</label>
-              <TagInput
-                tags={profile[activeCat.key]?.[field.key] || []}
-                onAdd={(val) => addTag(activeCat.key, field.key, val)}
-                onRemove={(val) => removeTag(activeCat.key, field.key, val)}
-                placeholder={field.placeholder}
-                color={activeCat.color}
-              />
-            </div>
-          ))}
+          {activeCat.fields.map((field) => {
+            const calibrationQ = CALIBRATION_QUESTIONS.find(
+              (q) => q.category === activeCat.key && q.field === field.key
+            )
+            const currentValues = profile[activeCat.key]?.[field.key] || []
+            return (
+              <div key={field.key}>
+                <label className="block text-sm font-medium text-text-secondary mb-2">{field.label}</label>
+                <TagInput
+                  tags={currentValues}
+                  onAdd={(val) => addTag(activeCat.key, field.key, val)}
+                  onRemove={(val) => removeTag(activeCat.key, field.key, val)}
+                  placeholder={field.placeholder}
+                  color={activeCat.color}
+                />
+                {calibrationQ && (
+                  <div className="mt-4 pt-4 border-t border-border">
+                    <p className="text-xs font-medium text-text-muted mb-3 tracking-wide uppercase">Or pick from our list</p>
+                    <div className="flex flex-wrap gap-2">
+                      {calibrationQ.options.map((opt) => {
+                        const isAdded = currentValues.includes(opt)
+                        return (
+                          <button
+                            key={opt}
+                            onClick={() => !isAdded && addTag(activeCat.key, field.key, opt)}
+                            disabled={isAdded}
+                            className="px-3 py-1.5 rounded-full text-sm font-medium border transition-all"
+                            style={
+                              isAdded
+                                ? {
+                                    backgroundColor: `color-mix(in srgb, ${activeCat.color} 20%, transparent)`,
+                                    color: activeCat.color,
+                                    borderColor: `color-mix(in srgb, ${activeCat.color} 50%, transparent)`,
+                                    opacity: 0.65,
+                                  }
+                                : {
+                                    borderColor: 'var(--color-border)',
+                                    color: 'var(--color-text-secondary)',
+                                    backgroundColor: 'transparent',
+                                  }
+                            }
+                          >
+                            {isAdded && <Check size={11} className="inline mr-1 -mt-0.5" />}
+                            {opt}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
 

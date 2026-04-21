@@ -26,7 +26,7 @@ const TABS = [
 ]
 
 function dffCacheKey(itemId) {
-  return `cc_dff_v2_${itemId}`
+  return `cc_dff_v3_${itemId}`
 }
 
 function readDffCache(itemId) {
@@ -70,20 +70,18 @@ function StarDisplay({ rating }) {
 }
 
 function SuggestionCard({ suggestion, onOpen }) {
-  const color = getMediaColor(suggestion.type)
-  const Icon = TYPE_ICONS[suggestion.type] || Music
-
   return (
     <button
       onClick={() => onOpen(suggestion)}
       className="w-full text-left flex items-start gap-3 p-3 rounded-xl bg-bg-tertiary border border-border hover:border-accent-primary/30 hover:bg-bg-hover transition-all group"
     >
-      <div
-        className="w-9 h-9 rounded-lg shrink-0 flex items-center justify-center mt-0.5"
-        style={{ backgroundColor: `color-mix(in srgb, ${color} 15%, transparent)` }}
-      >
-        <Icon size={16} style={{ color }} />
-      </div>
+      <CoverArt
+        title={suggestion.title}
+        type={suggestion.type}
+        creator={suggestion.creator}
+        coverUrl={suggestion.coverUrl}
+        size="sm"
+      />
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-text-primary leading-tight group-hover:text-accent-primary transition-colors">
           {suggestion.title}

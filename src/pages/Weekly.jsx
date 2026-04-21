@@ -76,57 +76,54 @@ export default function Weekly() {
   }
 
   const addTagToSection = (section, value) => {
-    setForm((prev) => {
-      const current = prev[section] || []
-      const newKey = tagKey(value)
-      if (current.some((t) => tagKey(t) === newKey)) return prev
-      return { ...prev, [section]: [...current, value] }
-    })
+    const current = form[section] || []
+    const newKey = tagKey(value)
+    if (current.some((t) => tagKey(t) === newKey)) return
+    const newForm = { ...form, [section]: [...current, value] }
+    setForm(newForm)
+    saveDump({ weekId, ...newForm })
   }
 
   const removeTagFromSection = (section, value) => {
     const removeKey = tagKey(value)
-    setForm((prev) => ({ ...prev, [section]: prev[section].filter((v) => tagKey(v) !== removeKey) }))
+    const newForm = { ...form, [section]: form[section].filter((v) => tagKey(v) !== removeKey) }
+    setForm(newForm)
+    saveDump({ weekId, ...newForm })
   }
 
   // Handle batch of AI-parsed items, optionally also adding to catalog
   const handleAIConfirm = (items) => {
-    setForm((prev) => {
-      const next = { ...prev }
-      for (const item of items) {
-        const section = item.section || 'discovered'
-        const tag = {
-          kind: 'media',
+    const next = { ...form }
+    for (const item of items) {
+      const section = item.section || 'discovered'
+      const tag = {
+        kind: 'media',
+        title: item.title,
+        creator: item.creator || '',
+        year: item.year ? String(item.year) : '',
+        type: item.type,
+        provider: 'ai',
+        externalId: `${item.title}-${item.creator || ''}`.toLowerCase(),
+      }
+      const current = next[section] || []
+      const key = tagKey(tag)
+      if (!current.some((t) => tagKey(t) === key)) {
+        next[section] = [...current, tag]
+      }
+      // Also add to catalog if user opted in
+      if (item.addToCatalog) {
+        addItem({
           title: item.title,
           creator: item.creator || '',
-          year: item.year ? String(item.year) : '',
           type: item.type,
-          provider: 'ai',
-          externalId: `${item.title}-${item.creator || ''}`.toLowerCase(),
-        }
-        const current = next[section] || []
-        const key = tagKey(tag)
-        if (!current.some((t) => tagKey(t) === key)) {
-          next[section] = [...current, tag]
-        }
-        // Also add to catalog if user opted in
-        if (item.addToCatalog) {
-          addItem({
-            title: item.title,
-            creator: item.creator || '',
-            type: item.type,
-            rating: item.rating || 0,
-            review: item.notes || '',
-            status: item.rating ? 'finished' : 'want',
-          })
-        }
+          rating: item.rating || 0,
+          review: item.notes || '',
+          status: item.rating ? 'finished' : 'want',
+        })
       }
-      return next
-    })
-    // Auto-save the weekly dump so the items stick
-    setTimeout(() => {
-      saveDump({ weekId, ...form })
-    }, 100)
+    }
+    setForm(next)
+    saveDump({ weekId, ...next })
     // If this was from a scratchpad note, delete it
     if (aiModalSourceNoteId) {
       deleteNote(aiModalSourceNoteId)

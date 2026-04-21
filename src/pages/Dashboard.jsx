@@ -13,6 +13,9 @@ import CoverArt from '../components/common/CoverArt'
 import MediaPickerInput from '../components/common/MediaPickerInput'
 import MediaSearchInput from '../components/common/MediaSearchInput'
 import { generateWeeklyLetter } from '../utils/weeklyLetter'
+import CalibrationOnboarding from '../components/CalibrationOnboarding'
+import CalibrationWidget from '../components/CalibrationWidget'
+import { CALIBRATION_QUESTIONS } from '../data/calibrationData'
 
 // Liner Notes section configs (mirrors Weekly.jsx)
 const LINER_SECTIONS = [
@@ -112,13 +115,33 @@ function getGreeting(name) {
 export default function Dashboard() {
   const { user } = useAuth()
   const { items, getStats } = useCatalog()
-  const { profile, isProfileEmpty } = useTasteProfile()
+  const { profile, isProfileEmpty, addTag, saveProfile } = useTasteProfile()
   const { radar, loading: radarLoading, isDemo: radarIsDemo } = useWeeklyRadar()
   const { dumps, getStreak, getCurrentWeekDump, saveDump } = useWeeklyDumps()
   const { notes, addNote, deleteNote } = useScratchpad()
   const [noteText, setNoteText] = useState('')
   const [noteType, setNoteType] = useState('movie')
   const [noteMeta, setNoteMeta] = useState(null) // from picked search result
+
+  // Onboarding: show once when profile is empty and user hasn't gone through it yet
+  const onboardingKey = user ? `cc_onboarding_done_${user.uid}` : null
+  const [showOnboarding, setShowOnboarding] = useState(
+    () => !!(onboardingKey && !localStorage.getItem(onboardingKey))
+  )
+
+  const handleOnboardingComplete = (selections) => {
+    const updates = { ...profile }
+    for (const [qId, values] of Object.entries(selections)) {
+      const q = CALIBRATION_QUESTIONS.find((cq) => cq.id === qId)
+      if (!q) continue
+      const existing = updates[q.category]?.[q.field] || []
+      const merged = [...new Set([...existing, ...values])]
+      updates[q.category] = { ...(updates[q.category] || {}), [q.field]: merged }
+    }
+    saveProfile(updates)
+    if (onboardingKey) localStorage.setItem(onboardingKey, '1')
+    setShowOnboarding(false)
+  }
 
   const stats = getStats()
   const streak = getStreak()
@@ -218,6 +241,16 @@ export default function Dashboard() {
 
   return (
     <div>
+      {showOnboarding && (
+        <CalibrationOnboarding
+          onComplete={handleOnboardingComplete}
+          onDismiss={() => {
+            if (onboardingKey) localStorage.setItem(onboardingKey, '1')
+            setShowOnboarding(false)
+          }}
+        />
+      )}
+
       {/* ─── Hero Greeting ─── */}
       <div className="mb-6">
         <h1 className="text-2xl md:text-3xl font-bold text-text-primary mb-2">
@@ -229,17 +262,17 @@ export default function Dashboard() {
       {/* ─── Log Media (always-available primary entry point) ─── */}
       <Link
         to="/catalog?add=1"
-        className="group block mb-4 bg-gradient-to-r from-accent-primary to-accent-hover text-white rounded-2xl p-5 hover:shadow-lg hover:shadow-accent-primary/20 transition-all"
+        className="group w-full block mb-4 bg-gradient-to-r from-accent-primary to-accent-hover text-white rounded-2xl p-5 shadow-lg shadow-accent-primary/30 hover:shadow-xl hover:shadow-accent-primary/40 border border-white/10 transition-all"
       >
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+          <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
             <Plus size={24} strokeWidth={2.5} />
           </div>
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-base">Log Media</p>
-            <p className="text-xs text-white/80 mt-0.5">Just watched, read, or listened to something? Capture it now.</p>
+            <p className="text-xs text-white/90 mt-0.5">Just watched, read, or listened to something? Capture it now.</p>
           </div>
-          <ArrowRight size={18} className="opacity-70 group-hover:translate-x-0.5 transition-transform shrink-0" />
+          <ArrowRight size={18} className="opacity-80 group-hover:translate-x-0.5 transition-transform shrink-0" />
         </div>
       </Link>
 
@@ -256,6 +289,11 @@ export default function Dashboard() {
         </div>
       )}
       {cta.to === '/catalog' && <div className="mb-8" />}
+
+      {/* ─── Daily Taste Calibration ─── */}
+      {user && !user.uid?.startsWith('demo') && (
+        <CalibrationWidget user={user} addTag={addTag} />
+      )}
 
       {/* ─── Stats Row ─── */}
       <div className="grid grid-cols-4 gap-3 mb-8">

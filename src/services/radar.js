@@ -127,9 +127,11 @@ function pickWithQuotas(items, total, minPerType) {
     pickedIds.add(item.externalId || item.title)
   }
 
-  // Pass 1: floor per type, best-ranked item(s) from each.
+  // Pass 1: floor per type — only items with a positive taste-match score.
+  // If a type's only available items have zero taste relevance, skip the
+  // forced floor so random filler doesn't crowd out genuinely relevant items.
   for (const type of RADAR_TYPES) {
-    const bucket = byType.get(type) || []
+    const bucket = (byType.get(type) || []).filter((i) => (i.score ?? 0) > 0)
     for (let i = 0; i < minPerType && i < bucket.length && picked.length < total; i++) {
       markPicked(bucket[i])
     }
