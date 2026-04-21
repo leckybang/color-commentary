@@ -13,6 +13,9 @@ import CoverArt from '../components/common/CoverArt'
 import MediaPickerInput from '../components/common/MediaPickerInput'
 import MediaSearchInput from '../components/common/MediaSearchInput'
 import { generateWeeklyLetter } from '../utils/weeklyLetter'
+import CalibrationOnboarding from '../components/CalibrationOnboarding'
+import CalibrationWidget from '../components/CalibrationWidget'
+import { CALIBRATION_QUESTIONS } from '../data/calibrationData'
 
 // Liner Notes section configs (mirrors Weekly.jsx)
 const LINER_SECTIONS = [
@@ -112,13 +115,33 @@ function getGreeting(name) {
 export default function Dashboard() {
   const { user } = useAuth()
   const { items, getStats } = useCatalog()
-  const { profile, isProfileEmpty } = useTasteProfile()
+  const { profile, isProfileEmpty, addTag, saveProfile } = useTasteProfile()
   const { radar, loading: radarLoading, isDemo: radarIsDemo } = useWeeklyRadar()
   const { dumps, getStreak, getCurrentWeekDump, saveDump } = useWeeklyDumps()
   const { notes, addNote, deleteNote } = useScratchpad()
   const [noteText, setNoteText] = useState('')
   const [noteType, setNoteType] = useState('movie')
   const [noteMeta, setNoteMeta] = useState(null) // from picked search result
+
+  // Onboarding: show once when profile is empty and user hasn't gone through it yet
+  const onboardingKey = user ? `cc_onboarding_done_${user.uid}` : null
+  const [showOnboarding, setShowOnboarding] = useState(
+    () => !!(onboardingKey && !localStorage.getItem(onboardingKey) && isProfileEmpty())
+  )
+
+  const handleOnboardingComplete = (selections) => {
+    const updates = { ...profile }
+    for (const [qId, values] of Object.entries(selections)) {
+      const q = CALIBRATION_QUESTIONS.find((cq) => cq.id === qId)
+      if (!q) continue
+      const existing = updates[q.category]?.[q.field] || []
+      const merged = [...new Set([...existing, ...values])]
+      updates[q.category] = { ...(updates[q.category] || {}), [q.field]: merged }
+    }
+    saveProfile(updates)
+    if (onboardingKey) localStorage.setItem(onboardingKey, '1')
+    setShowOnboarding(false)
+  }
 
   const stats = getStats()
   const streak = getStreak()
@@ -218,6 +241,16 @@ export default function Dashboard() {
 
   return (
     <div>
+      {showOnboarding && (
+        <CalibrationOnboarding
+          onComplete={handleOnboardingComplete}
+          onDismiss={() => {
+            if (onboardingKey) localStorage.setItem(onboardingKey, '1')
+            setShowOnboarding(false)
+          }}
+        />
+      )}
+
       {/* ─── Hero Greeting ─── */}
       <div className="mb-6">
         <h1 className="text-2xl md:text-3xl font-bold text-text-primary mb-2">
@@ -283,6 +316,11 @@ export default function Dashboard() {
           )
         })}
       </div>
+
+      {/* ─── Daily Taste Calibration ─── */}
+      {user && !user.uid?.startsWith('demo') && (
+        <CalibrationWidget user={user} addTag={addTag} />
+      )}
 
       {/* ─── Main Grid ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">

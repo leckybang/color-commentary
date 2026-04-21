@@ -69,6 +69,7 @@ export default function SuggestionLightbox({ suggestion, onClose, addItem }) {
               title={suggestion.title}
               type={suggestion.type}
               creator={suggestion.creator}
+              coverUrl={suggestion.coverUrl}
               size="lg"
             />
             <div className="flex-1 min-w-0 pt-1">
