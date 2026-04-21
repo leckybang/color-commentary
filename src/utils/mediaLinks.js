@@ -8,7 +8,7 @@
  * - Spotify: No affiliate program, but drives engagement
  */
 
-const AFFILIATE_TAG = '' // Set your Amazon Associates tag here, e.g. 'colorcommentary-20'
+const AFFILIATE_TAG = import.meta.env.VITE_AMAZON_PA_PARTNER_TAG || ''
 const BOOKSHOP_ID = ''   // Set your Bookshop.org affiliate ID here
 
 function amazonTag() {

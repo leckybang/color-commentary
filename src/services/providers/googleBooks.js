@@ -12,6 +12,18 @@ function normalizeBook(item) {
   if (!item || !item.volumeInfo) return null
   const vi = item.volumeInfo
   const cover = vi.imageLinks?.thumbnail || vi.imageLinks?.smallThumbnail || ''
+
+  // When Google Books has no image, fall back to OpenLibrary's covers API using
+  // the book's ISBN — it has far broader coverage than Google's image index.
+  let coverUrl = cover ? cover.replace(/^http:\/\//, 'https://') : ''
+  if (!coverUrl) {
+    const ids = vi.industryIdentifiers || []
+    const isbn =
+      ids.find((id) => id.type === 'ISBN_13')?.identifier ||
+      ids.find((id) => id.type === 'ISBN_10')?.identifier
+    if (isbn) coverUrl = `https://covers.openlibrary.org/b/isbn/${isbn}-M.jpg`
+  }
+
   return {
     kind: 'media',
     provider: 'googlebooks',
@@ -20,7 +32,7 @@ function normalizeBook(item) {
     title: vi.title || '',
     creator: (vi.authors || []).join(', '),
     year: (vi.publishedDate || '').slice(0, 4),
-    coverUrl: cover ? cover.replace(/^http:\/\//, 'https://') : '',
+    coverUrl,
     overview: vi.description || '',
   }
 }

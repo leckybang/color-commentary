@@ -3,8 +3,12 @@
  *
  * Note: we can't use `/browse/new-releases` because Spotify deprecated that
  * endpoint for apps created after Nov 27, 2024. Instead we hit `/search`
- * with a `year:<current>` filter, which is still supported and gives us
- * everything released in the current calendar year.
+ * with `tag:new`, which is Spotify's documented search tag for albums
+ * released in the last ~2 weeks and works with the Client Credentials flow.
+ *
+ * We previously used `year:<current>` but that filter requires combining
+ * with at least one non-filter search term to return results — on its own
+ * it yields an empty album list.
  *
  * Env vars required: SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET
  */
@@ -41,10 +45,9 @@ export async function handler(event) {
   }
 
   const limit = Math.min(parseInt(event.queryStringParameters?.limit || '20', 10) || 20, 50)
-  const year = new Date().getFullYear()
   const searchUrl =
     `https://api.spotify.com/v1/search` +
-    `?q=${encodeURIComponent(`year:${year}`)}` +
+    `?q=${encodeURIComponent('tag:new')}` +
     `&type=album&limit=${limit}&market=US`
 
   async function runSearch(forceRefreshToken = false) {

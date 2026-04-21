@@ -164,6 +164,11 @@ async function fetchSpotifyNewReleases() {
       const ct = res.headers.get('content-type') || ''
       if (!ct.includes('application/json')) return []
       const data = await res.json()
+      if (data.error) {
+        // Server-side Spotify failure — log with enough detail to diagnose in
+        // the browser console without needing Netlify function logs.
+        console.warn('spotify-radar returned no music:', data.error, data.status ? `(HTTP ${data.status} from Spotify)` : '')
+      }
       return data.items || []
     } catch (err) {
       if (err.name !== 'AbortError') console.error('spotify-radar fetch failed', err)
@@ -255,7 +260,12 @@ export async function getWeeklyRadar(user, profile, catalogItems = [], opts = {}
 
   const promise = buildRealRadar(profile, catalogItems, opts)
     .then((fresh) => {
-      writeCache(uid, fresh)
+      // Don't cache empty results — a failed API fetch (missing env vars, outage)
+      // shouldn't lock the user out for 30 minutes. Leave the cache empty so
+      // the next load (or Refresh click) tries the APIs again.
+      const hasContent =
+        (fresh.newReleases?.length ?? 0) + (fresh.discoveries?.length ?? 0) > 0
+      if (hasContent) writeCache(uid, fresh)
       return fresh
     })
     .finally(() => {

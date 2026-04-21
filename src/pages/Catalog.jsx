@@ -9,6 +9,7 @@ import StarRating from '../components/common/StarRating'
 import Modal from '../components/common/Modal'
 import ExternalLinks from '../components/common/ExternalLinks'
 import MediaPickerInput from '../components/common/MediaPickerInput'
+import ItemLightbox from '../components/ItemLightbox'
 import { filterCatalog, sortCatalog, MEDIA_TYPES, STATUS_OPTIONS, getMediaColor } from '../utils/filterUtils'
 
 const EMPTY_ITEM = { title: '', creator: '', type: null, genre: '', status: 'want', rating: 0, review: '', coverUrl: '', year: '' }
@@ -38,6 +39,7 @@ export default function Catalog() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [editItem, setEditItem] = useState(null)
   const [formData, setFormData] = useState(EMPTY_ITEM)
+  const [lightboxItem, setLightboxItem] = useState(null)
   const [saveAttempted, setSaveAttempted] = useState(false)
   const [dragIndex, setDragIndex] = useState(null)
 
@@ -77,10 +79,15 @@ export default function Catalog() {
   }
 
   const openEdit = (item) => {
+    setLightboxItem(null)
     setFormData(item)
     setEditItem(item)
     setSaveAttempted(false)
     setShowAddModal(true)
+  }
+
+  const openLightbox = (item) => {
+    setLightboxItem(item)
   }
 
   const handleSave = () => {
@@ -210,7 +217,7 @@ export default function Catalog() {
     const pinned = isInNextUp(item.id)
     return (
       <div key={item.id} className="relative group">
-        <MediaCard item={item} onClick={openEdit} />
+        <MediaCard item={item} onClick={openLightbox} />
         {item.status === 'want' && (
           <button
             type="button"
@@ -345,7 +352,7 @@ export default function Catalog() {
               return (
                 <div
                   key={item.id}
-                  onClick={() => openEdit(item)}
+                  onClick={() => openLightbox(item)}
                   className="flex items-center gap-4 bg-bg-secondary border border-border rounded-xl p-3 hover:border-accent-primary/30 cursor-pointer transition-all"
                 >
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `color-mix(in srgb, ${color} 15%, transparent)` }}>
@@ -388,6 +395,15 @@ export default function Catalog() {
           {STATUS_SECTIONS.map(renderStatusSection)}
         </>
       )}
+
+      {/* Item detail + D/F/F lightbox */}
+      <ItemLightbox
+        item={lightboxItem}
+        isOpen={!!lightboxItem}
+        onClose={() => setLightboxItem(null)}
+        onEdit={openEdit}
+        addItem={addItem}
+      />
 
       {/* Add/Edit Modal */}
       <Modal
