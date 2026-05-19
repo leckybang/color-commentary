@@ -140,10 +140,13 @@ export default function Login() {
           <p className="text-xs text-text-muted text-center uppercase tracking-widest mb-2">What you get</p>
           {[
             { icon: Radar, color: 'text-accent-primary', title: 'Weekly Radar', desc: 'A personalized weekly dispatch of new releases and discoveries, written like a dear-reader letter from someone who actually gets your taste.' },
-            { icon: BookMarked, color: 'text-accent-music', title: 'Liner Notes', desc: 'A weekly journal for what you\'re watching, reading, and listening to. Hot takes welcome.' },
+            { icon: BookMarked, color: 'text-accent-music', title: 'Quick Add', desc: 'Capture what you\'re listening to, watching, and reading in one tap — it all lands in your catalog.' },
             { icon: Star, color: 'text-amber-500', title: 'Catalog & Rate', desc: 'Track everything you consume. Rate it, review it, never forget what you thought.' },
             { icon: Users, color: 'text-accent-tv', title: 'Friends & Group Chat', desc: 'Find friends with taste. Start a group chat around a book, album, or movie.' },
-          ].map(({ icon: Icon, color, title, desc }) => (
+          ].map((feat) => {
+            const { color, title, desc } = feat
+            const Icon = feat.icon
+            return (
             <div key={title} className="flex items-start gap-3 bg-bg-secondary/50 border border-border/50 rounded-xl p-3">
               <Icon size={18} className={`${color} mt-0.5 shrink-0`} />
               <div>
@@ -151,7 +154,8 @@ export default function Login() {
                 <p className="text-xs text-text-muted">{desc}</p>
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
       </div>
     </div>

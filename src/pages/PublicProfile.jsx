@@ -1,23 +1,17 @@
 import { useParams, Link } from 'react-router-dom'
-import { Music, Film, Tv, BookOpen, Lock, Globe, Settings, Star, UserPlus, Headphones, Eye, Sparkles } from 'lucide-react'
+import { Music, Film, Tv, BookOpen, Lock, Settings, Star } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { useTasteProfile } from '../hooks/useTasteProfile'
 import { usePublicProfile } from '../hooks/usePublicProfile'
 import { usePublicProfileByUsername } from '../hooks/usePublicProfileByUsername'
 import { useHeavyRotation } from '../hooks/useHeavyRotation'
 import { useCatalog } from '../hooks/useCatalog'
-import { useWeeklyDumps } from '../hooks/useWeeklyDumps'
 import { determineArchetype } from '../utils/archetypes'
+import { getMediaColor } from '../utils/filterUtils'
 import CoverArt from '../components/common/CoverArt'
 import SpectrumSlider from '../components/common/SpectrumSlider'
 import { isSupabaseConfigured } from '../lib/supabase'
 
-const RIGHT_NOW_SECTIONS = [
-  { key: 'listening', label: 'Listening to', icon: Headphones, color: 'var(--color-accent-music)' },
-  { key: 'watching',  label: 'Watching',     icon: Eye,        color: 'var(--color-accent-movies)' },
-  { key: 'reading',   label: 'Reading',      icon: BookOpen,   color: 'var(--color-accent-books)' },
-  { key: 'discovered',label: 'Discovered',   icon: Sparkles,   color: 'var(--color-accent-primary)' },
-]
 
 const SPECTRUMS = [
   { key: 'mainstream-obscure', leftLabel: 'Mainstream', rightLabel: 'Obscure' },
@@ -31,7 +25,6 @@ export default function PublicProfile({ isSelf }) {
   const myProfile = usePublicProfile()
   const { itemIds } = useHeavyRotation()
   const { items, getStats } = useCatalog()
-  const { getCurrentWeekDump } = useWeeklyDumps()
 
   // Fetch a Supabase profile when viewing someone else's slug
   const isViewingBySlug = !isSelf && !!username
@@ -100,10 +93,12 @@ export default function PublicProfile({ isSelf }) {
   const archetype = showFullData ? determineArchetype(profile) : null
   const rotationItems = showFullData ? itemIds.map((id) => items.find((i) => i.id === id)).filter(Boolean) : []
   const stats = showFullData ? getStats() : null
-  const currentDump = showFullData ? getCurrentWeekDump() : null
-  const rightNowHasAny =
-    !!currentDump &&
-    RIGHT_NOW_SECTIONS.some(({ key }) => Array.isArray(currentDump[key]) && currentDump[key].length > 0)
+  // "Right Now" is now driven by the catalog: the most recently added items.
+  const recentlyAdded = showFullData
+    ? [...items]
+        .sort((a, b) => new Date(b.dateAdded || 0) - new Date(a.dateAdded || 0))
+        .slice(0, 6)
+    : []
 
   const showSelfWrapper = !isSelf // wrap in its own layout if /u/:username; /me uses app Layout
   const content = (
@@ -193,54 +188,42 @@ export default function PublicProfile({ isSelf }) {
             )}
           </div>
 
-          {/* Right Now — current week's Liner Notes */}
+          {/* Right Now — most recent catalog additions */}
           <div className="bg-bg-secondary border border-border rounded-2xl p-6 mb-6">
             <div className="flex items-center justify-between mb-1">
               <h2 className="text-lg font-bold text-text-primary">Right Now</h2>
               {isOwnProfile && (
-                <Link to="/" className="text-xs text-accent-primary hover:underline">Update on Dashboard</Link>
+                <Link to="/catalog" className="text-xs text-accent-primary hover:underline">View catalog</Link>
               )}
             </div>
-            <p className="text-xs text-text-muted mb-4">What I'm into this week</p>
-            {rightNowHasAny ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {RIGHT_NOW_SECTIONS.map(({ key, label, icon: Icon, color }) => {
-                  const items = currentDump[key] || []
-                  if (items.length === 0) return null
+            <p className="text-xs text-text-muted mb-4">Most recent in the catalog</p>
+            {recentlyAdded.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {recentlyAdded.map((item) => {
+                  const color = getMediaColor(item.type)
                   return (
-                    <div key={key}>
-                      <div className="flex items-center gap-1.5 mb-2">
-                        <Icon size={13} style={{ color }} />
-                        <span className="text-xs font-medium text-text-muted">{label}</span>
+                    <div key={item.id} className="flex items-center gap-3 p-2 rounded-lg bg-bg-tertiary">
+                      <CoverArt title={item.title} type={item.type} coverUrl={item.coverUrl} size="sm" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-text-primary truncate">{item.title}</p>
+                        <p className="text-xs text-text-muted truncate">{item.creator}</p>
                       </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {items.map((tag, i) => {
-                          const title = typeof tag === 'string' ? tag : (tag?.title || '')
-                          const k = typeof tag === 'string' ? `${tag}-${i}` : (tag?.externalId || `${title}-${i}`)
-                          return (
-                            <span
-                              key={k}
-                              className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-full"
-                              style={{ backgroundColor: `color-mix(in srgb, ${color} 15%, transparent)`, color }}
-                            >
-                              {tag?.coverUrl && (
-                                <img src={tag.coverUrl} alt="" className="w-4 h-4 rounded object-cover" loading="lazy" referrerPolicy="no-referrer" />
-                              )}
-                              {title}
-                            </span>
-                          )
-                        })}
-                      </div>
+                      <span
+                        className="text-[10px] px-1.5 py-0.5 rounded-full shrink-0"
+                        style={{ backgroundColor: `color-mix(in srgb, ${color} 15%, transparent)`, color }}
+                      >
+                        {item.type}
+                      </span>
                     </div>
                   )
                 })}
               </div>
             ) : (
               <div className="text-center py-4 text-text-muted">
-                <p className="text-sm">Nothing logged this week yet.</p>
+                <p className="text-sm">Nothing in the catalog yet.</p>
                 {isOwnProfile && (
                   <Link to="/" className="text-xs text-accent-primary hover:underline mt-1 inline-block">
-                    Add what you're into on the Dashboard
+                    Use Quick Add on the Dashboard
                   </Link>
                 )}
               </div>
@@ -274,7 +257,9 @@ export default function PublicProfile({ isSelf }) {
                 { key: 'movies', label: 'Movies', icon: Film, color: 'var(--color-accent-movies)' },
                 { key: 'tv', label: 'TV', icon: Tv, color: 'var(--color-accent-tv)' },
                 { key: 'books', label: 'Books', icon: BookOpen, color: 'var(--color-accent-books)' },
-              ].map(({ key, label, icon: Icon, color }) => {
+              ].map((cat) => {
+                const { key, label, color } = cat
+                const Icon = cat.icon
                 const genres = profile[key]?.genres || []
                 return (
                   <div key={key}>

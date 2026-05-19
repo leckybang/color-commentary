@@ -137,6 +137,7 @@ export default function Radar() {
   const [addedItems, setAddedItems] = useState(new Set())
   const [activeFilter, setActiveFilter] = useState('all')
   const [letterOpen, setLetterOpen] = useState(true)
+  const [signalsOpen, setSignalsOpen] = useState(false)
 
   const handleRefresh = () => {
     refreshRadar()
@@ -151,6 +152,30 @@ export default function Radar() {
   const handleDismiss = (item) => {
     setDismissed((prev) => new Set([...prev, item.title]))
   }
+
+  // What's actually feeding the recommendations — surfaced so it's clear the
+  // Dashboard Taste Check picks (which write into this same profile) matter.
+  const tasteSignals = useMemo(() => {
+    const p = profile || {}
+    const groups = [
+      { label: 'Artists', values: p.music?.artists || [] },
+      { label: 'Directors', values: p.movies?.directors || [] },
+      { label: 'Actors', values: p.movies?.actors || [] },
+      { label: 'Shows', values: p.tv?.shows || [] },
+      { label: 'Authors', values: p.books?.authors || [] },
+      {
+        label: 'Genres',
+        values: [
+          ...(p.music?.genres || []),
+          ...(p.movies?.genres || []),
+          ...(p.tv?.genres || []),
+          ...(p.books?.genres || []),
+        ],
+      },
+    ]
+    const flat = groups.flatMap((g) => g.values)
+    return { groups: groups.filter((g) => g.values.length > 0), total: flat.length }
+  }, [profile])
 
   // Unified feed: radar.picks if present, else fall back to legacy newReleases + discoveries.
   const allPicks = useMemo(() => {
@@ -253,6 +278,54 @@ export default function Radar() {
         </div>
       )}
 
+      {/* Tuned to your taste — makes it clear the profile + Taste Check picks drive this */}
+      {!isDemo && tasteSignals.total > 0 && (
+        <div className="mb-6 bg-bg-secondary border border-border rounded-xl overflow-hidden">
+          <button
+            onClick={() => setSignalsOpen((v) => !v)}
+            className="w-full flex items-center justify-between p-4 hover:bg-bg-hover/30 transition-colors"
+          >
+            <div className="flex items-center gap-2 text-left">
+              <Sparkles size={15} className="text-accent-primary shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-text-primary">Tuned to your taste</p>
+                <p className="text-xs text-text-muted">
+                  {tasteSignals.total} signals are shaping these picks — including your Taste Check answers.
+                </p>
+              </div>
+            </div>
+            {signalsOpen ? <ChevronUp size={16} className="text-text-muted shrink-0" /> : <ChevronDown size={16} className="text-text-muted shrink-0" />}
+          </button>
+          {signalsOpen && (
+            <div className="px-4 pb-4 space-y-3 border-t border-border pt-3">
+              {tasteSignals.groups.map((g) => (
+                <div key={g.label}>
+                  <p className="text-[11px] font-medium text-text-muted uppercase tracking-wide mb-1.5">{g.label}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {g.values.slice(0, 14).map((v) => (
+                      <span
+                        key={v}
+                        className="text-xs px-2 py-0.5 rounded-full bg-bg-tertiary text-text-secondary border border-border"
+                      >
+                        {v}
+                      </span>
+                    ))}
+                    {g.values.length > 14 && (
+                      <span className="text-xs px-2 py-0.5 text-text-muted">+{g.values.length - 14} more</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+              <p className="text-xs text-text-muted pt-1">
+                Add more on the Dashboard <span className="text-text-secondary">Taste Check</span>, or edit them in{' '}
+                <a href="/me?tab=taste" className="text-accent-primary hover:underline">your profile</a>.
+                Changes apply on the next refresh.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Weekly Letter */}
       {(letter || letterLoading) && (
         <div className="mb-6">
@@ -342,7 +415,9 @@ export default function Radar() {
 
       {/* Filter tabs — segments the unified picks feed */}
       <div className="flex gap-2 mb-6 overflow-x-auto -mx-1 px-1 pb-1">
-        {FILTER_TABS.map(({ value, label, icon: Icon }) => {
+        {FILTER_TABS.map((tab) => {
+          const { value, label } = tab
+          const Icon = tab.icon
           const count = tabCounts[value] ?? 0
           const isActive = activeFilter === value
           if (count === 0 && value !== 'all') return null

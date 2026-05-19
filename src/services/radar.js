@@ -11,9 +11,10 @@
 
 import { getWeeklyRadar as getMockRadar } from './mockData'
 import { matchScore } from '../utils/matchScore'
-import { fetchTMDBNewMovies, fetchTMDBNewTV } from './providers/tmdb'
+import { fetchTMDBNewMovies, fetchTMDBNewTV, searchTMDB } from './providers/tmdb'
 import { fetchOpenLibraryByAuthors } from './providers/openLibrary'
 import { fetchNYTBestsellers } from './providers/nytBooks'
+import { searchGoogleBooks } from './providers/googleBooks'
 
 const CACHE_TTL_MS = 30 * 60 * 1000 // 30 minutes
 const MAX_PICKS = 14 // unified feed (releases + tastemaker buzz merged)
@@ -204,6 +205,55 @@ async function fetchTastemakers(profile, catalogItems) {
   }
 }
 
+// Tastemaker picks come from Claude, which can't supply real cover art.
+// Look each one up in the same media APIs the rest of the radar uses so the
+// cards show actual album/poster/book covers instead of the gradient
+// fallback. Best-effort: a miss just leaves coverUrl empty.
+async function spotifyCoverFor(query, signal) {
+  try {
+    const res = await fetch(
+      `/.netlify/functions/spotify-search?q=${encodeURIComponent(query.slice(0, 100))}`,
+      { signal }
+    )
+    if (!res.ok) return ''
+    const ct = res.headers.get('content-type') || ''
+    if (!ct.includes('application/json')) return ''
+    const data = await res.json()
+    const hit = (data.results || []).find((r) => r.coverUrl)
+    return hit?.coverUrl || ''
+  } catch {
+    return ''
+  }
+}
+
+async function enrichCoverArt(items, { signal } = {}) {
+  return Promise.all(
+    items.map(async (item) => {
+      if (item.coverUrl) return item
+      const q = `${item.title} ${item.creator || ''}`.trim()
+      if (!q) return item
+      try {
+        let coverUrl = ''
+        if (item.type === 'music') {
+          coverUrl = await spotifyCoverFor(q, signal)
+        } else if (item.type === 'movie' || item.type === 'tv') {
+          const results = await searchTMDB(item.title, { signal })
+          const match =
+            results.find((r) => r.type === item.type && r.coverUrl) ||
+            results.find((r) => r.coverUrl)
+          coverUrl = match?.coverUrl || ''
+        } else if (item.type === 'book') {
+          const results = await searchGoogleBooks(q, { signal })
+          coverUrl = results.find((r) => r.coverUrl)?.coverUrl || ''
+        }
+        return coverUrl ? { ...item, coverUrl } : item
+      } catch {
+        return item
+      }
+    })
+  )
+}
+
 /**
  * Real-user radar: pulls live releases from Spotify (music), TMDB (movies +
  * TV), OpenLibrary + NYT (books), AND a tastemaker-buzz pass from Claude that
@@ -240,7 +290,10 @@ async function buildRealRadar(profile, catalogItems, { signal } = {}) {
 
   const merged = [...releases, ...tastemakerScored].sort((a, b) => b.score - a.score)
   const deduped = dedupeByTitle(merged, catalogTitles)
-  const picks = pickWithQuotas(deduped, MAX_PICKS, 2)
+  const ranked = pickWithQuotas(deduped, MAX_PICKS, 2)
+
+  // Backfill cover art for anything missing it (mostly tastemaker picks).
+  const picks = await enrichCoverArt(ranked, { signal })
 
   return {
     picks,

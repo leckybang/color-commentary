@@ -11,6 +11,7 @@ import ExternalLinks from '../components/common/ExternalLinks'
 import MediaPickerInput from '../components/common/MediaPickerInput'
 import ItemLightbox from '../components/ItemLightbox'
 import CatalogInsights from '../components/CatalogInsights'
+import QuickAdd from '../components/QuickAdd'
 import { filterCatalog, sortCatalog, MEDIA_TYPES, STATUS_OPTIONS, getMediaColor } from '../utils/filterUtils'
 import { getCountsByType } from '../utils/catalogStats'
 
@@ -129,9 +130,9 @@ export default function Catalog() {
     setDragIndex(i)
     e.dataTransfer.effectAllowed = 'move'
     // Required for Firefox
-    try { e.dataTransfer.setData('text/plain', String(i)) } catch {}
+    try { e.dataTransfer.setData('text/plain', String(i)) } catch { /* not supported */ }
   }
-  const onDragOver = (i) => (e) => {
+  const onDragOver = () => (e) => {
     e.preventDefault()
     e.dataTransfer.dropEffect = 'move'
   }
@@ -218,7 +219,6 @@ export default function Catalog() {
 
   // Render an item card in a status section, with optional pin affordance
   const renderCatalogItem = (item) => {
-    const color = getMediaColor(item.type)
     const showPin = item.status === 'want' && !isInNextUp(item.id)
     const pinned = isInNextUp(item.id)
     return (
@@ -291,18 +291,18 @@ export default function Catalog() {
         </button>
       </div>
 
-      {/* Primary action: Add Media. Big and unmistakable. */}
+      {/* Primary action: Quick Add — straight to catalog */}
+      <div className="mb-3">
+        <QuickAdd addItem={addItem} />
+      </div>
+
+      {/* Secondary: detailed add (rating, review, status, genre) */}
       <button
         onClick={openAdd}
-        className="group w-full mb-4 bg-gradient-to-r from-accent-primary to-accent-hover text-white rounded-2xl p-5 hover:shadow-lg hover:shadow-accent-primary/20 transition-all flex items-center gap-4"
+        className="w-full mb-4 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-border text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors"
       >
-        <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-          <Plus size={24} strokeWidth={2.5} />
-        </div>
-        <div className="flex-1 min-w-0 text-left">
-          <p className="font-semibold text-base">Add Media</p>
-          <p className="text-xs text-white/80 mt-0.5">Log something you watched, read, or listened to.</p>
-        </div>
+        <Plus size={15} />
+        Add with rating &amp; review
       </button>
 
       {/* Media-type tabs */}
@@ -316,7 +316,9 @@ export default function Catalog() {
             color: t.color,
             count: typeCounts[t.value] || 0,
           })),
-        ].map(({ value, label, icon: Icon, color, count }) => {
+        ].map((tab) => {
+          const { value, label, color, count } = tab
+          const Icon = tab.icon
           const isActive = value === 'all' ? !hasTypeFilter : filters.type === value
           return (
             <button

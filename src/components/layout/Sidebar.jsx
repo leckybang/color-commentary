@@ -1,11 +1,10 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, SlidersHorizontal, BookMarked, Library, Radar, LogOut, Users, MessageCircle, User } from 'lucide-react'
+import { LayoutDashboard, Library, Radar, LogOut, Users, User } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { usePublicProfile } from '../../hooks/usePublicProfile'
 
 const NAV_ITEMS = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/weekly', icon: BookMarked, label: 'Liner Notes', mobile: 'Liner' },
   { to: '/radar', icon: Radar, label: 'Radar' },
   { to: '/catalog', icon: Library, label: 'Catalog' },
   { to: '/people', icon: Users, label: 'People' },
@@ -28,7 +27,10 @@ export default function Sidebar() {
         </div>
 
         <nav className="flex-1 p-3 space-y-1">
-          {NAV_ITEMS.map(({ to, icon: Icon, label }) => (
+          {NAV_ITEMS.map((nav) => {
+            const { to, label } = nav
+            const Icon = nav.icon
+            return (
             <NavLink
               key={to}
               to={to}
@@ -43,7 +45,8 @@ export default function Sidebar() {
               <Icon size={18} />
               {label}
             </NavLink>
-          ))}
+            )
+          })}
         </nav>
 
         <div className="p-4 border-t border-border">
@@ -74,7 +77,10 @@ export default function Sidebar() {
 
       {/* Mobile bottom nav */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-bg-secondary border-t border-border z-40 px-1 py-1 flex justify-around">
-        {NAV_ITEMS.map(({ to, icon: Icon, label, mobile }) => (
+        {NAV_ITEMS.map((nav) => {
+          const { to, label, mobile } = nav
+          const Icon = nav.icon
+          return (
           <NavLink
             key={to}
             to={to}
@@ -87,7 +93,8 @@ export default function Sidebar() {
             <Icon size={18} />
             <span>{mobile || label}</span>
           </NavLink>
-        ))}
+          )
+        })}
       </nav>
     </>
   )

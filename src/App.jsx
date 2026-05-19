@@ -5,7 +5,6 @@ import Layout from './components/layout/Layout'
 import Login from './pages/Login'
 import Onboarding from './pages/Onboarding'
 import Dashboard from './pages/Dashboard'
-import Weekly from './pages/Weekly'
 import Catalog from './pages/Catalog'
 import Radar from './pages/Radar'
 import Moodboard from './pages/Moodboard'
@@ -61,12 +60,12 @@ function AppRoutes() {
       <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route path="/" element={<Dashboard />} />
         <Route path="/me" element={<MyProfile />} />
-        <Route path="/weekly" element={<Weekly />} />
         <Route path="/catalog" element={<Catalog />} />
         <Route path="/radar" element={<Radar />} />
         <Route path="/people" element={<People />} />
 
         {/* Legacy redirects */}
+        <Route path="/weekly" element={<Navigate to="/" replace />} />
         <Route path="/profile" element={<Navigate to="/me" replace />} />
         <Route path="/calibrate" element={<Navigate to="/me?tab=taste" replace />} />
         <Route path="/friends" element={<Navigate to="/people?tab=friends" replace />} />
