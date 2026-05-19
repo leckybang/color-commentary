@@ -10,7 +10,9 @@ import Modal from '../components/common/Modal'
 import ExternalLinks from '../components/common/ExternalLinks'
 import MediaPickerInput from '../components/common/MediaPickerInput'
 import ItemLightbox from '../components/ItemLightbox'
+import CatalogInsights from '../components/CatalogInsights'
 import { filterCatalog, sortCatalog, MEDIA_TYPES, STATUS_OPTIONS, getMediaColor } from '../utils/filterUtils'
+import { getCountsByType } from '../utils/catalogStats'
 
 const EMPTY_ITEM = { title: '', creator: '', type: null, genre: '', status: 'want', rating: 0, review: '', coverUrl: '', year: '' }
 
@@ -59,11 +61,15 @@ export default function Catalog() {
   }, [])
 
   const filtered = sortCatalog(filterCatalog(items, filters), sortBy)
-  const hasActiveFilters = !!(filters.type && filters.type !== 'all') ||
-    !!(filters.status && filters.status !== 'all') ||
+  // A type-only filter (from the top tab strip) should still show the status
+  // groupings — only "non-type" filters collapse the view to flat.
+  const hasNonTypeFilters = !!(filters.status && filters.status !== 'all') ||
     !!(filters.search && filters.search.trim()) ||
     !!(filters.genre && filters.genre.trim()) ||
     !!filters.rating
+  const hasTypeFilter = !!(filters.type && filters.type !== 'all')
+  const hasActiveFilters = hasNonTypeFilters
+  const typeCounts = getCountsByType(items)
 
   // Build Next Up items (in order) from catalog
   const nextUpItems = nextUpIds
@@ -298,6 +304,62 @@ export default function Catalog() {
           <p className="text-xs text-white/80 mt-0.5">Log something you watched, read, or listened to.</p>
         </div>
       </button>
+
+      {/* Media-type tabs */}
+      <div className="flex gap-1 mb-4 overflow-x-auto -mx-1 px-1 pb-1">
+        {[
+          { value: 'all', label: 'All', icon: Library, color: 'var(--color-accent-primary)', count: items.length },
+          ...MEDIA_TYPES.map((t) => ({
+            value: t.value,
+            label: t.label,
+            icon: t.value === 'music' ? Music : t.value === 'movie' ? Film : t.value === 'tv' ? Tv : BookOpen,
+            color: t.color,
+            count: typeCounts[t.value] || 0,
+          })),
+        ].map(({ value, label, icon: Icon, color, count }) => {
+          const isActive = value === 'all' ? !hasTypeFilter : filters.type === value
+          return (
+            <button
+              key={value}
+              onClick={() => {
+                setFilters({ ...filters, type: value === 'all' ? 'all' : value })
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-all whitespace-nowrap"
+              style={
+                isActive
+                  ? {
+                      backgroundColor: `color-mix(in srgb, ${color} 18%, transparent)`,
+                      color,
+                      borderColor: `color-mix(in srgb, ${color} 50%, transparent)`,
+                    }
+                  : {
+                      backgroundColor: 'transparent',
+                      color: 'var(--color-text-muted)',
+                      borderColor: 'var(--color-border)',
+                    }
+              }
+            >
+              <Icon size={14} />
+              {label}
+              <span
+                className="text-[10px] px-1.5 rounded-full"
+                style={
+                  isActive
+                    ? { backgroundColor: `color-mix(in srgb, ${color} 25%, transparent)`, color }
+                    : { backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-muted)' }
+                }
+              >
+                {count}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Insights — collapsed by default */}
+      <div className="mb-6">
+        <CatalogInsights items={items} onItemClick={openLightbox} />
+      </div>
 
       {/* Secondary: filter / search existing items. Demoted under the primary action. */}
       <details className="mb-6 group">

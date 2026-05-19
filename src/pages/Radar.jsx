@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Radar as RadarIcon, Sparkles, Calendar, Loader2, RefreshCw, ChevronDown, ChevronUp, Check, Bookmark, Mail, Info, Music, Film, Tv, BookOpen } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { Radar as RadarIcon, Sparkles, Calendar, Loader2, RefreshCw, ChevronDown, ChevronUp, Check, Bookmark, Mail, Info, Music, Film, Tv, BookOpen, Newspaper } from 'lucide-react'
 import CoverArt from '../components/common/CoverArt'
 import ExternalLinks from '../components/common/ExternalLinks'
 import { useTasteProfile } from '../hooks/useTasteProfile'
@@ -17,6 +17,8 @@ function RadarCard({ item, onAdd, onDismiss, isAdded }) {
   const [expanded, setExpanded] = useState(false)
   const Icon = TYPE_ICONS[item.type] || Music
   const color = getMediaColor(item.type)
+  const isTastemaker = !!item.isTastemaker
+  const hasReleaseDate = !!item.releaseDate
 
   return (
     <div
@@ -24,20 +26,31 @@ function RadarCard({ item, onAdd, onDismiss, isAdded }) {
         expanded ? 'border-accent-primary/30 shadow-lg shadow-accent-primary/5' : 'border-border hover:border-accent-primary/15'
       }`}
     >
-      {/* Collapsed header */}
       <div className="p-4 cursor-pointer" onClick={() => setExpanded(!expanded)}>
         <div className="flex items-start gap-3">
           <CoverArt title={item.title} type={item.type} creator={item.creator} coverUrl={item.coverUrl} size="radar" />
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-text-primary text-sm">{item.title}</h3>
             <p className="text-xs text-text-secondary mt-0.5">{item.creator}</p>
-            <div className="flex items-center gap-2 mt-2">
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
               <span
                 className="text-xs px-2 py-0.5 rounded-full font-medium"
                 style={{ backgroundColor: `color-mix(in srgb, ${color} 15%, transparent)`, color }}
               >
                 {TYPE_LABELS[item.type]}
               </span>
+              {isTastemaker && item.source && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-accent-primary/15 text-accent-primary flex items-center gap-1">
+                  <Newspaper size={10} />
+                  {item.source}
+                </span>
+              )}
+              {!isTastemaker && hasReleaseDate && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-bg-tertiary text-text-muted flex items-center gap-1">
+                  <Calendar size={10} />
+                  {formatDate(item.releaseDate)}
+                </span>
+              )}
               {item.genre && <span className="text-xs text-text-muted">{item.genre}</span>}
             </div>
           </div>
@@ -46,22 +59,15 @@ function RadarCard({ item, onAdd, onDismiss, isAdded }) {
           </div>
         </div>
 
-        {!expanded && item.description && (
-          <p className="text-xs text-text-muted mt-2 line-clamp-2 leading-relaxed">{item.description}</p>
-        )}
-        {!expanded && item.releaseDate && (
-          <div className="flex items-center gap-1 mt-2 text-xs text-text-muted">
-            <Calendar size={12} />
-            {formatDate(item.releaseDate)}
-          </div>
+        {!expanded && (item.blurb || item.description) && (
+          <p className="text-xs text-text-muted mt-2 line-clamp-2 leading-relaxed">{item.blurb || item.description}</p>
         )}
       </div>
 
-      {/* Expanded detail */}
       {expanded && (
         <div className="px-4 pb-4 space-y-3">
-          {item.description && (
-            <p className="text-sm text-text-secondary leading-relaxed">{item.description}</p>
+          {(item.blurb || item.description) && (
+            <p className="text-sm text-text-secondary leading-relaxed">{item.blurb || item.description}</p>
           )}
           {item.releaseDate && (
             <div className="flex items-center gap-1.5 text-xs text-text-muted">
@@ -70,9 +76,9 @@ function RadarCard({ item, onAdd, onDismiss, isAdded }) {
             </div>
           )}
           {item.reason && (
-            <div className="flex items-center gap-1.5 text-xs">
-              <Sparkles size={12} className="text-accent-primary shrink-0" />
-              <span className="text-accent-primary/80">{item.reason}</span>
+            <div className="flex items-start gap-1.5 text-xs">
+              <Sparkles size={12} className="text-accent-primary shrink-0 mt-0.5" />
+              <span className="text-accent-primary/80 leading-relaxed">{item.reason}</span>
             </div>
           )}
           <ExternalLinks type={item.type} title={item.title} creator={item.creator} />
@@ -104,6 +110,16 @@ function RadarCard({ item, onAdd, onDismiss, isAdded }) {
   )
 }
 
+const FILTER_TABS = [
+  { value: 'all',   label: 'All',         icon: Sparkles },
+  { value: 'buzz',  label: 'Tastemakers', icon: Newspaper },
+  { value: 'new',   label: 'New Releases',icon: Calendar },
+  { value: 'music', label: 'Music',       icon: Music },
+  { value: 'movie', label: 'Movies',      icon: Film },
+  { value: 'tv',    label: 'TV',          icon: Tv },
+  { value: 'book',  label: 'Books',       icon: BookOpen },
+]
+
 export default function Radar() {
   const { user } = useAuth()
   const { profile, isProfileEmpty } = useTasteProfile()
@@ -119,7 +135,7 @@ export default function Radar() {
 
   const [dismissed, setDismissed] = useState(new Set())
   const [addedItems, setAddedItems] = useState(new Set())
-  const [activeTab, setActiveTab] = useState('releases')
+  const [activeFilter, setActiveFilter] = useState('all')
   const [letterOpen, setLetterOpen] = useState(true)
 
   const handleRefresh = () => {
@@ -136,8 +152,38 @@ export default function Radar() {
     setDismissed((prev) => new Set([...prev, item.title]))
   }
 
-  const visibleReleases = (radar?.newReleases || []).filter((r) => !dismissed.has(r.title))
-  const visibleDiscoveries = (radar?.discoveries || []).filter((d) => !dismissed.has(d.title))
+  // Unified feed: radar.picks if present, else fall back to legacy newReleases + discoveries.
+  const allPicks = useMemo(() => {
+    if (!radar) return []
+    if (Array.isArray(radar.picks) && radar.picks.length > 0) return radar.picks
+    return [...(radar.newReleases || []), ...(radar.discoveries || [])]
+  }, [radar])
+
+  const filteredPicks = useMemo(() => {
+    const visible = allPicks.filter((r) => !dismissed.has(r.title))
+    switch (activeFilter) {
+      case 'buzz':  return visible.filter((r) => r.isTastemaker)
+      case 'new':   return visible.filter((r) => r.releaseDate && !r.isTastemaker)
+      case 'music': return visible.filter((r) => r.type === 'music')
+      case 'movie': return visible.filter((r) => r.type === 'movie')
+      case 'tv':    return visible.filter((r) => r.type === 'tv')
+      case 'book':  return visible.filter((r) => r.type === 'book')
+      default:      return visible
+    }
+  }, [allPicks, dismissed, activeFilter])
+
+  const tabCounts = useMemo(() => {
+    const visible = allPicks.filter((r) => !dismissed.has(r.title))
+    return {
+      all:   visible.length,
+      buzz:  visible.filter((r) => r.isTastemaker).length,
+      new:   visible.filter((r) => r.releaseDate && !r.isTastemaker).length,
+      music: visible.filter((r) => r.type === 'music').length,
+      movie: visible.filter((r) => r.type === 'movie').length,
+      tv:    visible.filter((r) => r.type === 'tv').length,
+      book:  visible.filter((r) => r.type === 'book').length,
+    }
+  }, [allPicks, dismissed])
 
   if (isProfileEmpty()) {
     return (
@@ -168,7 +214,7 @@ export default function Radar() {
           <p className="text-text-secondary text-sm">
             {isDemo
               ? 'A sample dispatch — fictional picks, real vibes.'
-              : 'New releases and discoveries based on your tastes'}
+              : 'New releases and tastemaker buzz, curated to your taste.'}
           </p>
         </div>
         <button
@@ -181,31 +227,28 @@ export default function Radar() {
         </button>
       </div>
 
-      {/* Demo-mode caveat */}
       {isDemo && (
         <div className="mb-6 flex items-start gap-2 p-3 bg-accent-primary/5 border border-accent-primary/20 rounded-xl">
           <Info size={16} className="text-accent-primary mt-0.5 shrink-0" />
           <p className="text-xs text-text-secondary leading-relaxed">
             <span className="font-medium text-accent-primary">Affectionately fictional.</span>{' '}
-            Demo Weekly Radar uses parody titles and made-up release dates. Sign in to swap this for real new releases from Spotify, TMDB, and OpenLibrary.
+            Demo Weekly Radar uses parody titles. Sign in for real new releases plus tastemaker buzz from NYT Books, Pitchfork, The Cut, LitHub, Rotten Tomatoes, and more.
           </p>
         </div>
       )}
 
-      {/* Loading state */}
       {!isDemo && loading && !radar && (
         <div className="mb-6 flex items-center gap-2 text-sm text-text-muted">
           <Loader2 size={14} className="animate-spin" />
-          Pulling this week's releases from Spotify, TMDB, and OpenLibrary…
+          Pulling this week's releases and tastemaker buzz…
         </div>
       )}
 
-      {/* Error state */}
       {!isDemo && error && (
         <div className="mb-6 flex items-start gap-2 p-3 bg-accent-movies/5 border border-accent-movies/20 rounded-xl">
           <Info size={16} className="text-accent-movies mt-0.5 shrink-0" />
           <p className="text-xs text-text-secondary leading-relaxed">
-            Couldn't reach one of the media APIs. Try refreshing in a minute.
+            Couldn't reach one of the sources. Try refreshing in a minute.
           </p>
         </div>
       )}
@@ -231,7 +274,6 @@ export default function Radar() {
                 </div>
               ) : letter ? (
                 <>
-                  {/* Header */}
                   <div className="border-b border-border pb-4">
                     <p className="text-xs font-medium text-text-muted tracking-widest uppercase mb-1">
                       The Weekly Radar{letter.weekLabel ? ` — ${letter.weekLabel}` : ''}
@@ -244,7 +286,6 @@ export default function Radar() {
                     </p>
                   </div>
 
-                  {/* Paragraphs */}
                   {(letter.paragraphs || []).map((para, i) => (
                     <p
                       key={i}
@@ -257,12 +298,10 @@ export default function Radar() {
                     />
                   ))}
 
-                  {/* Featured items — find them on */}
                   {(letter.featuredTitles || []).length > 0 && (() => {
-                    const allRadarItems = [...(radar?.newReleases || []), ...(radar?.discoveries || [])]
                     const matched = (letter.featuredTitles || []).flatMap((title) => {
                       const t = title.toLowerCase()
-                      const found = allRadarItems.find(
+                      const found = allPicks.find(
                         (r) => r.title.toLowerCase() === t ||
                                r.title.toLowerCase().includes(t) ||
                                t.includes(r.title.toLowerCase())
@@ -285,7 +324,6 @@ export default function Radar() {
                     )
                   })()}
 
-                  {/* Closing */}
                   <div className="border-t border-border pt-4 mt-4">
                     <p className="text-text-secondary text-sm italic">{letter.closing}</p>
                     <p
@@ -302,81 +340,51 @@ export default function Radar() {
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="flex gap-2 mb-6">
-        <button
-          onClick={() => setActiveTab('releases')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            activeTab === 'releases'
-              ? 'bg-accent-primary/15 text-accent-primary'
-              : 'text-text-secondary hover:bg-bg-hover'
-          }`}
-        >
-          <Calendar size={16} />
-          Notable Releases ({visibleReleases.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('discoveries')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            activeTab === 'discoveries'
-              ? 'bg-accent-primary/15 text-accent-primary'
-              : 'text-text-secondary hover:bg-bg-hover'
-          }`}
-        >
-          <Sparkles size={16} />
-          Discoveries ({visibleDiscoveries.length})
-        </button>
+      {/* Filter tabs — segments the unified picks feed */}
+      <div className="flex gap-2 mb-6 overflow-x-auto -mx-1 px-1 pb-1">
+        {FILTER_TABS.map(({ value, label, icon: Icon }) => {
+          const count = tabCounts[value] ?? 0
+          const isActive = activeFilter === value
+          if (count === 0 && value !== 'all') return null
+          return (
+            <button
+              key={value}
+              onClick={() => setActiveFilter(value)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                isActive
+                  ? 'bg-accent-primary/15 text-accent-primary'
+                  : 'text-text-secondary hover:bg-bg-hover border border-border'
+              }`}
+            >
+              <Icon size={14} />
+              {label}
+              <span className={`text-[10px] px-1.5 rounded-full ${isActive ? 'bg-accent-primary/25 text-accent-primary' : 'bg-bg-tertiary text-text-muted'}`}>
+                {count}
+              </span>
+            </button>
+          )
+        })}
       </div>
 
-      {/* Tab content */}
-      {activeTab === 'releases' && (
-        <div>
-          {visibleReleases.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {visibleReleases.map((item, i) => (
-                <RadarCard
-                  key={`${item.title}-${i}`}
-                  item={item}
-                  onAdd={handleAdd}
-                  onDismiss={handleDismiss}
-                  isAdded={addedItems.has(item.title)}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12 bg-bg-secondary border border-border rounded-2xl">
-              <Calendar size={32} className="mx-auto text-text-muted/30 mb-3" />
-              <p className="text-text-secondary">
-                {loading ? "Loading this week's releases…" : 'No new releases this week. Check back soon!'}
-              </p>
-            </div>
-          )}
+      {/* Unified feed */}
+      {filteredPicks.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {filteredPicks.map((item, i) => (
+            <RadarCard
+              key={`${item.title}-${i}`}
+              item={item}
+              onAdd={handleAdd}
+              onDismiss={handleDismiss}
+              isAdded={addedItems.has(item.title)}
+            />
+          ))}
         </div>
-      )}
-
-      {activeTab === 'discoveries' && (
-        <div>
-          <p className="text-sm text-text-muted mb-4">
-            Based on your taste profile, you might enjoy these artists and titles you haven't cataloged yet.
+      ) : (
+        <div className="text-center py-12 bg-bg-secondary border border-border rounded-2xl">
+          <RadarIcon size={32} className="mx-auto text-text-muted/30 mb-3" />
+          <p className="text-text-secondary">
+            {loading ? "Loading this week's radar…" : activeFilter === 'all' ? 'Nothing on the radar right now. Try refreshing.' : 'No picks match that filter.'}
           </p>
-          {visibleDiscoveries.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {visibleDiscoveries.map((item, i) => (
-                <RadarCard
-                  key={`${item.title}-${i}`}
-                  item={item}
-                  onAdd={handleAdd}
-                  onDismiss={handleDismiss}
-                  isAdded={addedItems.has(item.title)}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12 bg-bg-secondary border border-border rounded-2xl">
-              <Sparkles size={32} className="mx-auto text-text-muted/30 mb-3" />
-              <p className="text-text-secondary">No more discoveries right now. Refresh or update your profile!</p>
-            </div>
-          )}
         </div>
       )}
     </div>

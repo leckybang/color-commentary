@@ -15,6 +15,7 @@ import MediaSearchInput from '../components/common/MediaSearchInput'
 import { generateWeeklyLetter } from '../utils/weeklyLetter'
 import CalibrationOnboarding from '../components/CalibrationOnboarding'
 import CalibrationWidget from '../components/CalibrationWidget'
+import CatalogInsights from '../components/CatalogInsights'
 import { CALIBRATION_QUESTIONS } from '../data/calibrationData'
 
 // Liner Notes section configs (mirrors Weekly.jsx)
@@ -292,7 +293,7 @@ export default function Dashboard() {
 
       {/* ─── Daily Taste Calibration ─── */}
       {user && !user.uid?.startsWith('demo') && (
-        <CalibrationWidget user={user} addTag={addTag} />
+        <CalibrationWidget user={user} profile={profile} addTag={addTag} />
       )}
 
       {/* ─── Stats Row ─── */}
@@ -320,6 +321,11 @@ export default function Dashboard() {
             </div>
           )
         })}
+      </div>
+
+      {/* ─── Insights ─── */}
+      <div className="mb-8">
+        <CatalogInsights items={items} />
       </div>
 
       {/* ─── Main Grid ─── */}
@@ -474,7 +480,7 @@ export default function Dashboard() {
                     <p className="text-xs text-accent-primary mt-1.5">Read this week's full dispatch →</p>
                   </Link>
                 )}
-                {radar.newReleases.slice(0, 3).map((item, i) => {
+                {(radar.picks || radar.newReleases || []).slice(0, 3).map((item, i) => {
                   return (
                     <Link to="/radar" key={i} className="flex items-center gap-3 p-2 rounded-lg hover:bg-bg-hover transition-colors">
                       <CoverArt title={item.title} type={item.type} coverUrl={item.coverUrl} size="sm" />
