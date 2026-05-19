@@ -153,13 +153,19 @@ export default function Dashboard() {
     return { emoji: first.emoji, title: first.title, teaser: firstSentence }
   }, [letter])
 
-  // Secondary contextual CTA
-  let cta = null
-  if (isProfileEmpty()) {
-    cta = { to: '/me?tab=taste', label: 'Build Your Taste Profile', icon: Sparkles }
-  } else if (radar) {
-    cta = { to: '/radar', label: 'Check Your Weekly Radar', icon: Radar }
-  }
+  // Only nudge profile-building when it's empty. (Radar link removed — Radar
+  // shows up further down anyway.)
+  const showBuildProfile = isProfileEmpty()
+
+  // Show the Taste Check beside Quick Add only when it's actually available:
+  // non-demo user who hasn't dismissed it for the day. Mirrors the widget's
+  // own daily-dismiss logic so the two-column layout doesn't leave a gap.
+  const calibrationDismissed = useMemo(() => {
+    if (!user || user.uid?.startsWith('demo')) return true
+    const d = new Date()
+    return !!localStorage.getItem(`cc_calibration_${d.getFullYear()}-${d.getMonth()}-${d.getDate()}_${user.uid}`)
+  }, [user])
+  const showCalibration = !!user && !user.uid?.startsWith('demo') && !calibrationDismissed
 
   const handleAddNote = () => {
     if (!noteText.trim()) return
@@ -207,29 +213,31 @@ export default function Dashboard() {
         <p className="text-text-secondary">Here's the vibe check on your media universe.</p>
       </div>
 
-      {/* ─── Quick Add (primary entry point — adds straight to catalog) ─── */}
-      <div className="mb-4">
+      {/* ─── Quick Add + Taste Check, side-by-side on desktop ─── */}
+      <div
+        className={`grid grid-cols-1 gap-4 mb-6 items-start ${
+          showCalibration ? 'lg:grid-cols-2' : ''
+        }`}
+      >
         <QuickAdd addItem={addItem} />
+        {showCalibration && (
+          <CalibrationWidget user={user} profile={profile} addTag={addTag} />
+        )}
       </div>
 
-      {/* Secondary contextual CTA */}
-      {cta && (
+      {/* Build-profile nudge (only when empty) */}
+      {showBuildProfile && (
         <div className="mb-8">
           <Link
-            to={cta.to}
+            to="/me?tab=taste"
             className="inline-flex items-center gap-2 text-sm text-accent-primary hover:underline"
           >
-            <cta.icon size={14} />
-            {cta.label}
+            <Sparkles size={14} />
+            Build Your Taste Profile
           </Link>
         </div>
       )}
-      {!cta && <div className="mb-8" />}
-
-      {/* ─── Daily Taste Calibration ─── */}
-      {user && !user.uid?.startsWith('demo') && (
-        <CalibrationWidget user={user} profile={profile} addTag={addTag} />
-      )}
+      {!showBuildProfile && <div className="mb-2" />}
 
       {/* ─── Stats Row ─── */}
       <div className="grid grid-cols-4 gap-3 mb-8">
