@@ -106,8 +106,13 @@ function formatRadarItems(radarItems) {
       if (i.creator) line += ` by ${i.creator}`
       line += ` (${i.type}`
       if (i.genre) line += `, ${i.genre}`
-      if (i.releaseDate) line += `, ${i.releaseDate}`
+      if (i.releaseDate) line += `, released ${i.releaseDate}`
       line += ')'
+      // Tastemaker picks carry real critical context — surface it so the
+      // letter can cite the actual source instead of inventing a reason.
+      if (i.source) line += `\n  · Critical context [${i.source}]: ${i.blurb || '(buzz noted, no summary)'}`
+      else if (i.releaseDate) line += `\n  · New release (no critical writeup available)`
+      if (i.reason) line += `\n  · Fits this reader because: ${i.reason}`
       return line
     })
     .join('\n')
@@ -146,26 +151,34 @@ Write a 2–3 sentence taste profile.`
     const profileSummary = await callClaude(apiKey, summarySystem, summaryUser, 300, 0.3)
 
     // --- Call 2: The letter ---
-    const letterSystem = `You write the weekly cultural dispatch for Color Commentary, a media tracker for people with conspicuously good taste. Voice: warm, snappy, slightly insufferable — writes like the most knowledgeable friend you have who also knows they're a bit much about it. Second person. Opening endearment varies ("you person of taste," "oh, you magnificent thing," "well, well," etc.).
+    const letterSystem = `You write the weekly cultural dispatch for Color Commentary, a media tracker for people with good taste. Voice: a sharp, well-read critic-friend — warm but not fawning, confident, specific. Think a culture columnist, not a hype machine.
 
-This is a RECOMMENDATION DISPATCH, not a summary of what the reader has already done. Write about what is new and good this week, with genuine enthusiasm and cultural insight.
+This is a RECOMMENDATION DISPATCH about what's worth your attention this week.
 
-RULES:
-- Only recommend things you can make a GENUINE case for based on what you actually know about the work. If you'd have to fabricate a description, skip it and pick something else.
-- Use the reader's taste as a LENS to frame why a pick suits them — one brief "you're someone who..." framing is fine, but do not quote their ratings, reviews, or specific past items back to them. They've already consumed those things.
-- Write about the WORKS THEMSELVES with confidence and specificity. What's actually interesting about this? What should they know? Why now?
-- Each featured pick gets 2-3 sentences max. Tight, confident, opinionated.
-- The letter should feel like it arrived in one swift, assured motion.
+HEADLINE ("greeting"):
+- Write a real headline, like a column would have. Sentence case or title case, normal punctuation. It should end with a period, question mark, or nothing — NEVER a trailing comma, and NEVER all-lowercase.
+- It should gesture at the week's actual picks or a through-line between them. NOT a generic salutation. Examples of the right register: "Three records worth clearing your week for." / "The buzziest novel of the month is also the strangest." / "A quiet week, but the quiet ones reward you." Do NOT use pet names like "you magnificent thing."
+
+CITING SOURCES (critical):
+- Several picks include real critical context from a named publication (Pitchfork, NYT Book Review, LitHub, The Cut, Rotten Tomatoes, Vulture, etc.). When a pick has this, CITE IT plainly: e.g. "Pitchfork singled it out for…" or "Per the NYT Book Review, …". Attribute the buzz to the source — that is the whole point of this dispatch.
+- If a pick has NO critical context (just a new release), say something true about the work itself or note plainly that it's a fresh drop. Do NOT manufacture critical acclaim that wasn't given to you.
+
+DO NOT FABRICATE TASTE CONNECTIONS:
+- Do NOT invent connections to authors/artists/works the reader supposedly likes (e.g. "your proven taste for X's claustrophobic intelligence"). Only reference the reader's taste if it is explicitly in the sensibility summary below, and even then keep it light and general — at most one such aside in the whole letter.
+- Better to say nothing about the reader than to fake a personal connection. Let the works carry the letter.
+
+- Each featured pick gets 2-3 sentences: what it is, what's being said about it (with the source), why it's worth the time.
+- Under 320 words total.
 
 Respond ONLY with a valid JSON object — no prose outside it, no markdown fences:
 {"greeting":"string","paragraphs":["string","string","string"],"featuredTitles":["string"],"closing":"string"}`
 
-    const letterUser = `This reader's sensibility: ${profileSummary}
+    const letterUser = `This reader's sensibility (use sparingly, do not fabricate beyond this): ${profileSummary}
 
-This week's new releases — pick 3–5 you genuinely know enough about to say something true and interesting. Skip anything you'd have to invent a reason for:
-${formatRadarItems(radarItems) || '(no releases this week)'}
+This week's picks. Items tagged with [Source] have real critical context — cite the source when you feature them. Pick 3–5 you can say something true and interesting about:
+${formatRadarItems(radarItems) || '(no picks this week)'}
 
-Write the dispatch. Bold titles with **title**. Under 320 words total. "featuredTitles" must exactly match the titles you bolded.`
+Write the dispatch. Bold titles with **title**. Under 320 words total. The "greeting" is a real headline (no trailing comma, not all-lowercase). "featuredTitles" must exactly match the titles you bolded.`
 
     const rawLetter = await callClaude(apiKey, letterSystem, letterUser, 1400, 0.85)
     const letterData = extractJSON(rawLetter)
