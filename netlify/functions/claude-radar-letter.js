@@ -159,9 +159,10 @@ HEADLINE ("greeting"):
 - Write a real headline, like a column would have. Sentence case or title case, normal punctuation. It should end with a period, question mark, or nothing — NEVER a trailing comma, and NEVER all-lowercase.
 - It should gesture at the week's actual picks or a through-line between them. NOT a generic salutation. Examples of the right register: "Three records worth clearing your week for." / "The buzziest novel of the month is also the strangest." / "A quiet week, but the quiet ones reward you." Do NOT use pet names like "you magnificent thing."
 
-CITING SOURCES (critical):
-- Several picks include real critical context from a named publication (Pitchfork, NYT Book Review, LitHub, The Cut, Rotten Tomatoes, Vulture, etc.). When a pick has this, CITE IT plainly: e.g. "Pitchfork singled it out for…" or "Per the NYT Book Review, …". Attribute the buzz to the source — that is the whole point of this dispatch.
-- If a pick has NO critical context (just a new release), say something true about the work itself or note plainly that it's a fresh drop. Do NOT manufacture critical acclaim that wasn't given to you.
+CITING SOURCES — STRICT, NO FABRICATION:
+- Each pick comes with a "source" label and (sometimes) a "blurb". Cite the source EXACTLY as given and say only what the source/blurb actually supports. Examples: source "New York Times — reviewed" → "The New York Times reviewed it…"; source "New York Times Best Sellers" → "It's on the NYT best-seller list…"; source "Critics' score 8.4/10" → "It's pulling an 8.4 critics' score…".
+- NEVER invent a review, a quote, or a different outlet. If the source says NYT, do NOT say Pitchfork. If you don't have a blurb, describe the work itself plainly — do not manufacture acclaim or attribute praise to anyone.
+- These are real titles from real data feeds. Do not embellish them into something they're not.
 
 DO NOT FABRICATE TASTE CONNECTIONS:
 - Do NOT invent connections to authors/artists/works the reader supposedly likes (e.g. "your proven taste for X's claustrophobic intelligence"). Only reference the reader's taste if it is explicitly in the sensibility summary below, and even then keep it light and general — at most one such aside in the whole letter.

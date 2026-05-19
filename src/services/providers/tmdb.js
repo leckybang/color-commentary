@@ -62,6 +62,8 @@ function normalizeListItem(item, type) {
     coverUrl: item.poster_path ? `${IMG_BASE}${item.poster_path}` : '',
     description: item.overview || '',
     popularity: item.popularity || 0,
+    voteAverage: typeof item.vote_average === 'number' ? item.vote_average : 0,
+    voteCount: typeof item.vote_count === 'number' ? item.vote_count : 0,
     isNewRelease: true,
   }
 }

@@ -33,9 +33,15 @@ const SOURCE_SITES = [
 
 function reviewLink(item) {
   if (!item?.source || !item?.title) return null
+  // Best case: a real review URL from the data source (NYT supplies these).
+  if (item.reviewUrl) {
+    const hit0 = SOURCE_SITES.find((s) => s.re.test(item.source))
+    return { label: hit0?.name || item.source.split(/[—–-]/)[0].trim(), url: item.reviewUrl }
+  }
   const hit = SOURCE_SITES.find((s) => s.re.test(item.source))
-  // Rotten Tomatoes has a clean on-site search; everything else → scoped Google.
-  if (hit?.domain === 'rottentomatoes.com') {
+  // Screen picks scored by critics → Rotten Tomatoes' on-site search is the
+  // natural destination for the critical consensus.
+  if (hit?.domain === 'rottentomatoes.com' || (!hit && (item.type === 'movie' || item.type === 'tv'))) {
     return { label: 'Rotten Tomatoes', url: `https://www.rottentomatoes.com/search?search=${encodeURIComponent(item.title)}` }
   }
   const base = `${item.title} ${item.creator || ''} review`.trim()
