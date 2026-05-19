@@ -1,52 +1,79 @@
 import { useMemo, useState } from 'react'
-import { BarChart3, Star, TrendingUp, Calendar, ChevronDown, ChevronUp, Music, Film, Tv, BookOpen } from 'lucide-react'
+import { BarChart3, Star, TrendingUp, ChevronDown, ChevronUp, Music, Film, Tv, BookOpen } from 'lucide-react'
 import {
   getActivityRollup,
-  getAddedByBucket,
+  getActivityByType,
   buildNarrative,
   getTopRated,
   getRecentHighlyRated,
 } from '../utils/catalogStats'
 import CoverArt from './common/CoverArt'
 
-const TYPE_ICON = { music: Music, movie: Film, tv: Tv, book: BookOpen }
-const TYPE_COLORS = {
-  music: 'var(--color-accent-music)',
-  movie: 'var(--color-accent-movies)',
-  tv: 'var(--color-accent-tv)',
-  book: 'var(--color-accent-books)',
+const TYPE_META = {
+  book: { label: 'Books', icon: BookOpen, color: 'var(--color-accent-books)' },
+  tv: { label: 'TV', icon: Tv, color: 'var(--color-accent-tv)' },
+  movie: { label: 'Movies', icon: Film, color: 'var(--color-accent-movies)' },
+  music: { label: 'Music', icon: Music, color: 'var(--color-accent-music)' },
+}
+const TYPE_ORDER = ['book', 'tv', 'movie', 'music']
+
+const PERIODS = [
+  { v: 'week', l: 'This week' },
+  { v: 'month', l: 'This month' },
+  { v: 'year', l: 'This year' },
+]
+
+// Compact stat tile per media type.
+function TypeTile({ type, stat }) {
+  const m = TYPE_META[type]
+  const Icon = m.icon
+  const dim = stat.added === 0 && stat.finished === 0 && stat.inProgress === 0
+  return (
+    <div
+      className="rounded-xl p-3 border bg-bg-tertiary relative overflow-hidden"
+      style={{ borderColor: dim ? 'var(--color-border)' : `color-mix(in srgb, ${m.color} 35%, transparent)` }}
+    >
+      <div className="absolute top-0 left-0 right-0 h-1" style={{ backgroundColor: m.color, opacity: dim ? 0.25 : 1 }} />
+      <div className="flex items-center gap-1.5 mb-1.5 mt-1">
+        <Icon size={13} style={{ color: m.color }} />
+        <span className="text-[11px] font-medium text-text-muted uppercase tracking-wide">{m.label}</span>
+      </div>
+      <div className="flex items-baseline gap-1">
+        <span className="text-2xl font-bold" style={{ color: dim ? 'var(--color-text-muted)' : m.color }}>
+          {stat.added}
+        </span>
+        <span className="text-[10px] text-text-muted">added</span>
+      </div>
+      <p className="text-[11px] text-text-muted mt-0.5">
+        {stat.finished} done · {stat.inProgress} in progress
+      </p>
+    </div>
+  )
 }
 
-// Stacked vertical bar chart — one bar per bucket, stacked by media type.
-function StackedBars({ buckets }) {
-  const max = Math.max(1, ...buckets.map((b) => b.total))
+// Slim 100%-width bar showing the period's added split by type.
+function ProportionBar({ by }) {
+  const total = TYPE_ORDER.reduce((s, t) => s + by[t].added, 0)
+  if (total === 0) return null
   return (
-    <div className="flex items-end gap-1.5 h-24">
-      {buckets.map((b, i) => {
-        const total = b.total
-        const pctTotal = (total / max) * 100
-        return (
-          <div key={i} className="flex-1 flex flex-col items-center gap-1.5 min-w-0">
-            <div className="w-full flex-1 flex items-end relative" title={`${total} added — ${b.label}`}>
-              <div
-                className="w-full rounded-md overflow-hidden flex flex-col-reverse transition-all"
-                style={{ height: `${Math.max(pctTotal, total > 0 ? 6 : 2)}%`, minHeight: total > 0 ? 6 : 2 }}
-              >
-                {['music', 'movie', 'tv', 'book'].map((t) => {
-                  const c = b.byType[t] || 0
-                  if (c === 0) return null
-                  const segPct = (c / total) * 100
-                  return (
-                    <div key={t} style={{ height: `${segPct}%`, backgroundColor: TYPE_COLORS[t], opacity: 0.85 }} />
-                  )
-                })}
-                {total === 0 && <div className="w-full h-full bg-bg-tertiary" />}
-              </div>
-            </div>
-            <span className="text-[10px] text-text-muted truncate w-full text-center">{b.label}</span>
-          </div>
-        )
-      })}
+    <div>
+      <div className="flex h-2.5 rounded-full overflow-hidden bg-bg-tertiary">
+        {TYPE_ORDER.map((t) => {
+          const w = (by[t].added / total) * 100
+          if (w === 0) return null
+          return <div key={t} style={{ width: `${w}%`, backgroundColor: TYPE_META[t].color }} />
+        })}
+      </div>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-[11px] text-text-muted">
+        {TYPE_ORDER.map((t) => (
+          by[t].added > 0 ? (
+            <span key={t} className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: TYPE_META[t].color }} />
+              {by[t].added} {TYPE_META[t].label.toLowerCase()}
+            </span>
+          ) : null
+        ))}
+      </div>
     </div>
   )
 }
@@ -55,14 +82,14 @@ function ItemRow({ item, onClick }) {
   return (
     <button
       onClick={() => onClick?.(item)}
-      className="flex items-center gap-3 p-2 rounded-lg hover:bg-bg-hover transition-colors w-full text-left"
+      className="flex items-center gap-2.5 p-1.5 rounded-lg hover:bg-bg-hover transition-colors w-full text-left"
     >
       <CoverArt title={item.title} type={item.type} coverUrl={item.coverUrl} size="sm" />
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-text-primary truncate">{item.title}</p>
         <p className="text-xs text-text-muted truncate">{item.creator}</p>
       </div>
-      <div className="flex items-center gap-1 shrink-0">
+      <div className="flex items-center gap-0.5 shrink-0">
         <Star size={11} fill="currentColor" className="text-amber-500" />
         <span className="text-xs font-medium text-amber-500">{item.rating}</span>
       </div>
@@ -70,31 +97,20 @@ function ItemRow({ item, onClick }) {
   )
 }
 
-const PERIODS = [
-  { v: 'week', l: 'This week' },
-  { v: 'month', l: 'This month' },
-  { v: 'year', l: 'This year' },
-]
-
 /**
- * CatalogInsights — narrative analytics over the catalog.
- *
- * Counts ADDED + FINISHED + IN-PROGRESS (not just finished), so it reflects
- * everything the user logs via Quick Add.
- *
- * Props:
- *   items, onItemClick?, defaultOpen?, compact?
+ * CatalogInsights — compact infographic over the catalog.
+ * Counts added + finished + in-progress (not just finished), so it reflects
+ * everything logged via Quick Add.
  */
 export default function CatalogInsights({ items, onItemClick, defaultOpen = false, compact = false }) {
   const [open, setOpen] = useState(defaultOpen)
   const [period, setPeriod] = useState('month')
-  const [granularity, setGranularity] = useState('week')
 
   const rollup = useMemo(() => getActivityRollup(items), [items])
   const narrative = useMemo(() => buildNarrative(items, period), [items, period])
-  const buckets = useMemo(() => getAddedByBucket(items, granularity), [items, granularity])
-  const topRated = useMemo(() => getTopRated(items, 6, 4), [items])
-  const recentStars = useMemo(() => getRecentHighlyRated(items, 6, 30, 4), [items])
+  const activity = useMemo(() => getActivityByType(items, period), [items, period])
+  const topRated = useMemo(() => getTopRated(items, 5, 4), [items])
+  const recentStars = useMemo(() => getRecentHighlyRated(items, 5, 30, 4), [items])
 
   return (
     <div className="bg-bg-secondary border border-border rounded-2xl overflow-hidden">
@@ -102,18 +118,18 @@ export default function CatalogInsights({ items, onItemClick, defaultOpen = fals
         onClick={() => setOpen(!open)}
         className="w-full flex items-center justify-between p-5 hover:bg-bg-hover/30 transition-colors"
       >
-        <div className="flex items-center gap-2 text-left">
+        <div className="flex items-center gap-2 text-left min-w-0">
           <BarChart3 size={18} className="text-accent-primary shrink-0" />
           <h2 className="font-semibold text-text-primary">Insights</h2>
-          <span className="text-xs text-text-muted">
-            {rollup.week.added} added this week · {rollup.month.added} this month · {rollup.year.added} this year
+          <span className="text-xs text-text-muted truncate">
+            {rollup.week.added} this week · {rollup.month.added} this month · {rollup.year.added} this year
           </span>
         </div>
         {open ? <ChevronUp size={16} className="text-text-muted shrink-0" /> : <ChevronDown size={16} className="text-text-muted shrink-0" />}
       </button>
 
       {open && (
-        <div className="px-5 pb-5 space-y-5 border-t border-border pt-5">
+        <div className="px-5 pb-5 space-y-4 border-t border-border pt-4">
           {/* Period toggle */}
           <div className="flex bg-bg-tertiary rounded-lg p-0.5 w-fit">
             {PERIODS.map((p) => (
@@ -129,96 +145,58 @@ export default function CatalogInsights({ items, onItemClick, defaultOpen = fals
             ))}
           </div>
 
-          {/* Narrative */}
-          <div className="space-y-2">
+          {/* Narrative headline */}
+          <div className="space-y-1">
             {narrative.lines.map((line, i) => (
-              <p key={i} className="text-sm text-text-primary leading-relaxed">
+              <p key={i} className="text-sm text-text-primary leading-snug">
                 {i === 0 ? <span className="text-base">🎯 </span> : null}
                 {line}
               </p>
             ))}
           </div>
 
-          {/* Added-over-time chart */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-1.5">
-                <Calendar size={14} className="text-text-muted" />
-                <span className="text-xs font-medium text-text-secondary uppercase tracking-wide">
-                  Added over time
-                </span>
-              </div>
-              <div className="flex bg-bg-tertiary rounded-lg p-0.5">
-                {[
-                  { v: 'week', l: 'Weeks' },
-                  { v: 'month', l: 'Months' },
-                ].map((opt) => (
-                  <button
-                    key={opt.v}
-                    onClick={() => setGranularity(opt.v)}
-                    className={`px-3 py-1 text-xs rounded-md transition-colors ${
-                      granularity === opt.v ? 'bg-bg-secondary text-text-primary' : 'text-text-muted hover:text-text-secondary'
-                    }`}
-                  >
-                    {opt.l}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <StackedBars buckets={buckets} />
-            <div className="flex flex-wrap items-center gap-3 mt-3 text-[11px] text-text-muted">
-              {['music', 'movie', 'tv', 'book'].map((t) => {
-                const Icon = TYPE_ICON[t]
-                return (
-                  <span key={t} className="flex items-center gap-1">
-                    <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: TYPE_COLORS[t] }} />
-                    <Icon size={11} />
-                    <span className="capitalize">{t === 'movie' ? 'movies' : t}</span>
-                  </span>
-                )
-              })}
-            </div>
+          {/* Per-type tiles */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+            {TYPE_ORDER.map((t) => (
+              <TypeTile key={t} type={t} stat={activity.by[t]} />
+            ))}
           </div>
 
-          {!compact && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <div className="flex items-center gap-1.5 mb-2">
-                  <Star size={14} className="text-amber-500" fill="currentColor" />
-                  <span className="text-xs font-medium text-text-secondary uppercase tracking-wide">
-                    Top-rated faves
-                  </span>
-                </div>
-                {topRated.length > 0 ? (
-                  <div className="space-y-1">
+          {/* Proportion bar */}
+          <ProportionBar by={activity.by} />
+
+          {!compact && (topRated.length > 0 || recentStars.length > 0) && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+              {topRated.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <Star size={13} className="text-amber-500" fill="currentColor" />
+                    <span className="text-[11px] font-medium text-text-secondary uppercase tracking-wide">
+                      Top-rated faves
+                    </span>
+                  </div>
+                  <div className="space-y-0.5">
                     {topRated.map((item) => (
                       <ItemRow key={item.id} item={item} onClick={onItemClick} />
                     ))}
                   </div>
-                ) : (
-                  <p className="text-xs text-text-muted italic">No 4+ star items yet.</p>
-                )}
-              </div>
-
-              <div>
-                <div className="flex items-center gap-1.5 mb-2">
-                  <TrendingUp size={14} className="text-accent-primary" />
-                  <span className="text-xs font-medium text-text-secondary uppercase tracking-wide">
-                    Recently 4+ starred
-                  </span>
                 </div>
-                {recentStars.length > 0 ? (
-                  <div className="space-y-1">
+              )}
+              {recentStars.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <TrendingUp size={13} className="text-accent-primary" />
+                    <span className="text-[11px] font-medium text-text-secondary uppercase tracking-wide">
+                      Recently 4+ starred
+                    </span>
+                  </div>
+                  <div className="space-y-0.5">
                     {recentStars.map((item) => (
                       <ItemRow key={item.id} item={item} onClick={onItemClick} />
                     ))}
                   </div>
-                ) : (
-                  <p className="text-xs text-text-muted italic">
-                    Nothing 4+ starred in the last 30 days.
-                  </p>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           )}
         </div>
