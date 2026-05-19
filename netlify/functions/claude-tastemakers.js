@@ -90,21 +90,27 @@ export async function handler(event) {
 
   const monthYear = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 
-  const systemPrompt = `You are a cultural curator who tracks what pop-culture tastemakers — NYT Books / NYT Book Review, LitHub's Bookmarks newsletter, The Cut, Refinery 29, Pitchfork, Rotten Tomatoes critics, Vulture, The New Yorker, The Atlantic, The Ringer, BBC, The Guardian's culture desk — have been covering.
+  const systemPrompt = `You are a cultural curator who tracks what pop-culture tastemakers — LitHub's Bookmarks (which aggregates rave book reviews), NYT Book Review, Rotten Tomatoes critics, Pitchfork, The Cut, Vulture, The New Yorker, The Atlantic, The Ringer — have been raving about.
 
-You are NOT a deep-genre engine. You don't surface niche YA romantasy, obscure metal subgenres, or filler streaming-chart entries. You surface what *critics with taste* have flagged as worth attention in the last few months.
+EVERYTHING YOU SURFACE IS A RAVE. This is a "what's genuinely great right now" list, not a "what exists" list. Do not include anything mixed, divisive, or merely fine. No hedging, no "skippable," no "your mileage may vary." If you wouldn't press it into a friend's hands, leave it out.
 
-You can speak in present tense about what these outlets cover, but never invent fake reviews or fake quotes. Only feature works you genuinely know exist and were notably discussed.
+You are NOT a deep-genre engine. No niche YA romantasy, obscure subgenres, or streaming-chart filler. Critics-with-taste only.
+
+Never invent reviews or quotes. Only feature works you genuinely know exist and were genuinely acclaimed.
+
+TWO ANCHOR PICKS ARE MANDATORY (always include both, first in the list):
+1. A BOOK that LitHub Bookmarks or the NYT Book Review rave-reviewed — broadly beloved by critics, not a mixed reception. source must name the outlet.
+2. A MOVIE or TV show that is NEW and FRESH on Rotten Tomatoes — recently released, Certified Fresh / high critic score. source like "Rotten Tomatoes — Certified Fresh".
+
+Then fill the rest (about 6 more) with other raves across music/movies/TV/books — at least one music pick (Pitchfork-grade) and balance the types.
 
 For each pick give:
 - title (string)
 - creator (string — artist, director, author, showrunner)
 - type ("music" | "movie" | "tv" | "book")
-- source (which publication or critical context — e.g. "Pitchfork", "NYT Book Review", "LitHub Bookmarks", "The Cut", "Rotten Tomatoes Critics' Pick", "Vulture")
-- blurb (1 sentence on what tastemakers are saying — no fabricated quotes)
-- reason (1 short sentence on why this lines up with the reader's taste profile)
-
-Aim for 8 picks. Balance media types — at least 1 of each (music, movie, tv, book). Skip anything you'd have to invent.
+- source (the publication + the nature of the praise — e.g. "LitHub Bookmarks — rave", "Rotten Tomatoes — Certified Fresh", "Pitchfork — Best New Music", "NYT Book Review — Editors' Choice")
+- blurb (1 confident sentence on why critics love it — no fabricated quotes)
+- reason (1 short sentence connecting it to the reader's taste — only if genuine; otherwise speak to why the work itself is essential)
 
 Respond ONLY with valid JSON, no prose outside it, no markdown fences:
 {"items":[{"title":"","creator":"","type":"","source":"","blurb":"","reason":""}]}`
@@ -115,7 +121,7 @@ ${formatProfile(profile)}
 Already in their catalog (don't recommend these again):
 ${formatCatalogTitles(catalogItems) || '(empty)'}
 
-Surface what tastemakers are buzzing about right now that this person should know about. 8 picks.`
+Give ~8 picks, all genuine raves. Pick 1 (book) MUST be a LitHub Bookmarks / NYT Book Review rave. Pick 2 (movie or TV) MUST be new and Certified Fresh on Rotten Tomatoes. No mixed or skippable picks.`
 
   try {
     const raw = await callClaude(apiKey, systemPrompt, userContent, 2200, 0.65)

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Radar as RadarIcon, Sparkles, Calendar, Loader2, RefreshCw, ChevronDown, ChevronUp, Check, Bookmark, Mail, Info, Music, Film, Tv, BookOpen, Newspaper } from 'lucide-react'
+import { Radar as RadarIcon, Sparkles, Calendar, Loader2, RefreshCw, ChevronDown, ChevronUp, Check, Bookmark, Mail, Info, Music, Film, Tv, BookOpen, Newspaper, ExternalLink } from 'lucide-react'
 import CoverArt from '../components/common/CoverArt'
 import ExternalLinks from '../components/common/ExternalLinks'
 import { useTasteProfile } from '../hooks/useTasteProfile'
@@ -13,12 +13,44 @@ import { formatDate } from '../utils/dateUtils'
 const TYPE_ICONS = { music: Music, movie: Film, tv: Tv, book: BookOpen }
 const TYPE_LABELS = { music: 'Music', movie: 'Movie', tv: 'TV', book: 'Book' }
 
+// Map a free-text source ("Pitchfork — Best New Music", "LitHub Bookmarks —
+// rave") to the publication + a site-scoped search that reliably lands on the
+// actual review. We deliberately don't trust an LLM-supplied URL (those
+// hallucinate / 404); a publication-scoped search always resolves.
+const SOURCE_SITES = [
+  { re: /lit\s*hub|bookmarks/i, name: 'LitHub', domain: 'lithub.com' },
+  { re: /pitchfork/i, name: 'Pitchfork', domain: 'pitchfork.com' },
+  { re: /rotten\s*tomatoes/i, name: 'Rotten Tomatoes', domain: 'rottentomatoes.com' },
+  { re: /n\.?\s*y\.?\s*t|new york times/i, name: 'NYT', domain: 'nytimes.com' },
+  { re: /the cut/i, name: 'The Cut', domain: 'thecut.com' },
+  { re: /vulture/i, name: 'Vulture', domain: 'vulture.com' },
+  { re: /new yorker/i, name: 'The New Yorker', domain: 'newyorker.com' },
+  { re: /atlantic/i, name: 'The Atlantic', domain: 'theatlantic.com' },
+  { re: /ringer/i, name: 'The Ringer', domain: 'theringer.com' },
+  { re: /guardian/i, name: 'The Guardian', domain: 'theguardian.com' },
+  { re: /refinery\s*29/i, name: 'Refinery29', domain: 'refinery29.com' },
+]
+
+function reviewLink(item) {
+  if (!item?.source || !item?.title) return null
+  const hit = SOURCE_SITES.find((s) => s.re.test(item.source))
+  // Rotten Tomatoes has a clean on-site search; everything else → scoped Google.
+  if (hit?.domain === 'rottentomatoes.com') {
+    return { label: 'Rotten Tomatoes', url: `https://www.rottentomatoes.com/search?search=${encodeURIComponent(item.title)}` }
+  }
+  const base = `${item.title} ${item.creator || ''} review`.trim()
+  const query = hit ? `${base} site:${hit.domain}` : `${base} ${item.source}`
+  const label = hit?.name || item.source.split(/[—–-]/)[0].trim()
+  return { label, url: `https://www.google.com/search?q=${encodeURIComponent(query)}` }
+}
+
 function RadarCard({ item, onAdd, onDismiss, isAdded }) {
   const [expanded, setExpanded] = useState(false)
   const Icon = TYPE_ICONS[item.type] || Music
   const color = getMediaColor(item.type)
   const isTastemaker = !!item.isTastemaker
   const hasReleaseDate = !!item.releaseDate
+  const review = isTastemaker ? reviewLink(item) : null
 
   return (
     <div
@@ -40,10 +72,25 @@ function RadarCard({ item, onAdd, onDismiss, isAdded }) {
                 {TYPE_LABELS[item.type]}
               </span>
               {isTastemaker && item.source && (
-                <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-accent-primary/15 text-accent-primary flex items-center gap-1">
-                  <Newspaper size={10} />
-                  {item.source}
-                </span>
+                review ? (
+                  <a
+                    href={review.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-accent-primary/15 text-accent-primary hover:bg-accent-primary/25 transition-colors flex items-center gap-1"
+                    title={`Read the ${review.label} review`}
+                  >
+                    <Newspaper size={10} />
+                    {item.source}
+                    <ExternalLink size={9} />
+                  </a>
+                ) : (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-accent-primary/15 text-accent-primary flex items-center gap-1">
+                    <Newspaper size={10} />
+                    {item.source}
+                  </span>
+                )
               )}
               {!isTastemaker && hasReleaseDate && (
                 <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-bg-tertiary text-text-muted flex items-center gap-1">
@@ -80,6 +127,19 @@ function RadarCard({ item, onAdd, onDismiss, isAdded }) {
               <Sparkles size={12} className="text-accent-primary shrink-0 mt-0.5" />
               <span className="text-accent-primary/80 leading-relaxed">{item.reason}</span>
             </div>
+          )}
+          {review && (
+            <a
+              href={review.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-accent-primary hover:underline"
+            >
+              <Newspaper size={13} />
+              Read the {review.label} review
+              <ExternalLink size={11} />
+            </a>
           )}
           <ExternalLinks type={item.type} title={item.title} creator={item.creator} />
           <div className="flex gap-2 pt-2 border-t border-border">

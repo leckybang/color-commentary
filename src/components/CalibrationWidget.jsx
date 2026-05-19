@@ -67,7 +67,7 @@ export default function CalibrationWidget({ user, profile, addTag }) {
   if (dismissedToday || !round) {
     if (dismissedToday && picksToday > 0) {
       return (
-        <div className="bg-bg-secondary border border-border rounded-2xl p-4 mb-6 flex items-center gap-3">
+        <div className="bg-bg-secondary border border-border rounded-2xl p-4 flex items-center gap-3">
           <Check size={16} className="text-accent-books" />
           <p className="text-sm text-text-secondary">
             Nice — {picksToday} {picksToday === 1 ? 'pick' : 'picks'} added to your taste profile today.
@@ -127,7 +127,7 @@ export default function CalibrationWidget({ user, profile, addTag }) {
   }
 
   return (
-    <div className="bg-bg-secondary border border-border rounded-2xl p-5 mb-6">
+    <div className="bg-bg-secondary border border-border rounded-2xl p-5">
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-2">
           <Sparkles size={16} style={{ color }} />

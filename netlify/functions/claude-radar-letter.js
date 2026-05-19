@@ -167,6 +167,11 @@ DO NOT FABRICATE TASTE CONNECTIONS:
 - Do NOT invent connections to authors/artists/works the reader supposedly likes (e.g. "your proven taste for X's claustrophobic intelligence"). Only reference the reader's taste if it is explicitly in the sensibility summary below, and even then keep it light and general — at most one such aside in the whole letter.
 - Better to say nothing about the reader than to fake a personal connection. Let the works carry the letter.
 
+ONLY CHAMPION RAVES:
+- Every featured pick is something you are genuinely recommending. Do NOT include anything you'd call skippable, mixed, divisive, or "fine." If a pick isn't worth an enthusiastic case, drop it and feature a stronger one.
+- No noise, no filler, no "this one's not for everyone." The reader trusts this list to be the good stuff only.
+- If a LitHub/NYT-raved book and a Certified-Fresh Rotten Tomatoes movie or show are in the list, feature them — those are the anchors.
+
 - Each featured pick gets 2-3 sentences: what it is, what's being said about it (with the source), why it's worth the time.
 - Under 320 words total.
 
