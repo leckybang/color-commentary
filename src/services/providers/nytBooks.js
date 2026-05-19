@@ -11,6 +11,9 @@ export const isNYTConfigured = !!API_KEY
 
 function normalize(book, publishedDate) {
   if (!book) return null
+  // NYT gives a real review URL when the book has been reviewed. Prefer the
+  // proper review, then the Sunday review, and never link to the buy page.
+  const reviewUrl = book.book_review_link || book.sunday_review_link || ''
   return {
     type: 'book',
     provider: 'nyt',
@@ -24,6 +27,8 @@ function normalize(book, publishedDate) {
     releaseDate: publishedDate || '',
     coverUrl: book.book_image || '',
     description: book.description || '',
+    rank: typeof book.rank === 'number' ? book.rank : 99,
+    reviewUrl,
     isNewRelease: true,
   }
 }

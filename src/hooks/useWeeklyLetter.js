@@ -46,13 +46,13 @@ function readLetterCache(uid) {
 function writeLetterCache(uid, letter) {
   try {
     localStorage.setItem(letterCacheKey(uid), JSON.stringify({ ...letter, cachedAt: Date.now() }))
-  } catch {}
+  } catch { /* quota / private mode — skip cache */ }
 }
 
 function clearLetterCache(uid) {
   try {
     localStorage.removeItem(letterCacheKey(uid))
-  } catch {}
+  } catch { /* nothing to clear */ }
 }
 
 // Convert the template letter shape into the normalized shape.
@@ -112,9 +112,16 @@ export function useWeeklyLetter({ user, isDemo, profile, catalogItems, radar }) 
       }
     }
 
-    // Fetch a fresh Claude letter
+    // Fetch a fresh Claude letter.
+    // Only feed it the CURATED picks — tastemaker raves with a real source /
+    // critical blurb. The raw Spotify/TMDB stream is full of franchise filler
+    // ("Mortal Kombat II", gift books); handing that to the letter just makes
+    // it write paragraphs dismissing junk. If we somehow have <3 strong picks,
+    // fall back to the whole feed so the letter isn't empty.
     setLoading(true)
-    const allItems = [...(radar.newReleases || []), ...(radar.discoveries || [])]
+    const everything = [...(radar.picks || radar.newReleases || []), ...(radar.discoveries || [])]
+    const strong = everything.filter((i) => i.isTastemaker || i.source || i.blurb)
+    const allItems = (strong.length >= 3 ? strong : everything).slice(0, 8)
 
     fetch('/.netlify/functions/claude-radar-letter', {
       method: 'POST',

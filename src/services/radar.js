@@ -17,8 +17,7 @@ import { fetchNYTBestsellers } from './providers/nytBooks'
 import { searchGoogleBooks } from './providers/googleBooks'
 
 const CACHE_TTL_MS = 30 * 60 * 1000 // 30 minutes
-const MAX_PICKS = 14 // unified feed (releases + tastemaker buzz merged)
-const MAX_TASTEMAKERS = 8
+const MAX_PICKS = 14 // unified feed (real-data anchors + releases merged)
 
 function isDemoUid(uid) {
   return typeof uid === 'string' && uid.startsWith('demo')
@@ -187,28 +186,59 @@ async function fetchSpotifyNewReleases() {
   return spotifyInflight
 }
 
-async function fetchTastemakers(profile, catalogItems) {
-  try {
-    const res = await fetch('/.netlify/functions/claude-tastemakers', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ profile, catalogItems }),
+/**
+ * Honest "tastemaker" anchors built from REAL API data — never an LLM's
+ * recollection (which hallucinates fake albums and fake review quotes).
+ *
+ *  - Book anchor: a current NYT Best Seller. NYT supplies a real review URL
+ *    when the book has been reviewed, so the source + link are verifiable.
+ *  - Screen anchor: the highest critic-scored recent movie/show from TMDB
+ *    (real vote_average over a meaningful vote_count).
+ *
+ * Each anchor carries an honest `source` label and (for books) a real
+ * `reviewUrl`. The letter cites whatever source we hand it, so it can only
+ * say true things.
+ */
+function buildHonestAnchors(booksNYT, movies, tv) {
+  const anchors = []
+
+  const bookCands = (booksNYT || []).filter((b) => b && b.title)
+  if (bookCands.length) {
+    bookCands.sort(
+      (a, b) =>
+        (b.reviewUrl ? 1 : 0) - (a.reviewUrl ? 1 : 0) ||
+        (a.rank || 99) - (b.rank || 99)
+    )
+    const b = bookCands[0]
+    anchors.push({
+      ...b,
+      isTastemaker: true,
+      source: b.reviewUrl ? 'New York Times — reviewed' : 'New York Times Best Sellers',
+      blurb: b.description || 'A current New York Times best seller.',
+      reviewUrl: b.reviewUrl || '',
     })
-    if (!res.ok) return []
-    const ct = res.headers.get('content-type') || ''
-    if (!ct.includes('application/json')) return []
-    const data = await res.json()
-    return Array.isArray(data.items) ? data.items : []
-  } catch (err) {
-    console.warn('claude-tastemakers fetch failed', err.message)
-    return []
   }
+
+  const screenPool = [...(movies || []), ...(tv || [])].filter(
+    (s) => s && s.title && (s.voteCount || 0) >= 50 && (s.voteAverage || 0) >= 6.8
+  )
+  screenPool.sort((a, b) => (b.voteAverage || 0) - (a.voteAverage || 0))
+  if (screenPool[0]) {
+    const s = screenPool[0]
+    anchors.push({
+      ...s,
+      isTastemaker: true,
+      source: `Critics' score ${s.voteAverage.toFixed(1)}/10`,
+      blurb: s.description || '',
+    })
+  }
+
+  return anchors
 }
 
-// Tastemaker picks come from Claude, which can't supply real cover art.
-// Look each one up in the same media APIs the rest of the radar uses so the
-// cards show actual album/poster/book covers instead of the gradient
-// fallback. Best-effort: a miss just leaves coverUrl empty.
+// Some items (e.g. OpenLibrary author matches) arrive without cover art.
+// Look them up in the same media APIs the rest of the radar uses so the
+// cards show real covers instead of the gradient fallback. Best-effort.
 async function spotifyCoverFor(query, signal) {
   try {
     const res = await fetch(
@@ -256,11 +286,10 @@ async function enrichCoverArt(items, { signal } = {}) {
 
 /**
  * Real-user radar: pulls live releases from Spotify (music), TMDB (movies +
- * TV), OpenLibrary + NYT (books), AND a tastemaker-buzz pass from Claude that
- * curates what NYT Book Review / LitHub / Pitchfork / The Cut / Refinery 29 /
- * Rotten Tomatoes have been highlighting recently. Releases + tastemaker
- * picks are merged into one unified feed (no more separate Releases vs
- * Discoveries tabs).
+ * TV), OpenLibrary + NYT (books). Real, verifiable "tastemaker" anchors (a
+ * NYT-reviewed/best-selling book and the top critic-scored recent screen
+ * title) lead the feed. Everything is a real title from a real API — no
+ * LLM-recalled picks (those hallucinated fake albums + fake reviews).
  */
 async function buildRealRadar(profile, catalogItems, { signal } = {}) {
   const catalogTitles = new Set(
@@ -268,31 +297,32 @@ async function buildRealRadar(profile, catalogItems, { signal } = {}) {
   )
   const favAuthors = profile?.books?.authors || []
 
-  const [music, movies, tv, booksByAuthor, booksNYT, tastemakers] = await Promise.all([
+  const [music, movies, tv, booksByAuthor, booksNYT] = await Promise.all([
     fetchSpotifyNewReleases({ signal }),
     fetchTMDBNewMovies(12, { signal }),
     fetchTMDBNewTV(12, { signal }),
     fetchOpenLibraryByAuthors(favAuthors, 2, { signal }),
     fetchNYTBestsellers(10, { signal }),
-    fetchTastemakers(profile || {}, catalogItems || []),
   ])
 
   const releases = [...music, ...movies, ...tv, ...booksByAuthor, ...booksNYT]
     .map((item) => ({ ...item, score: rankScore(item, profile || {}) }))
 
-  // Tastemaker items don't have releaseDate or popularity, but they earn a
-  // base buzz score so they slot into the unified ranking. Items that also
-  // match the user's stated taste get an additional bump via matchScore.
-  const tastemakerScored = (tastemakers || []).slice(0, MAX_TASTEMAKERS).map((item) => ({
+  // Real, verifiable anchors (NYT book + top-critic-scored TMDB screen).
+  // They get a strong boost so they lead the feed, but they are real titles
+  // with honest source labels — no fabrication.
+  const anchors = buildHonestAnchors(booksNYT, movies, tv).map((item) => ({
     ...item,
-    score: matchScore(item, profile || {}) + 14, // base buzz boost
+    score: matchScore(item, profile || {}) + 30,
   }))
 
-  const merged = [...releases, ...tastemakerScored].sort((a, b) => b.score - a.score)
+  const anchorTitles = new Set(anchors.map((a) => (a.title || '').toLowerCase()))
+  const merged = [...anchors, ...releases.filter((r) => !anchorTitles.has((r.title || '').toLowerCase()))]
+    .sort((a, b) => b.score - a.score)
   const deduped = dedupeByTitle(merged, catalogTitles)
   const ranked = pickWithQuotas(deduped, MAX_PICKS, 2)
 
-  // Backfill cover art for anything missing it (mostly tastemaker picks).
+  // Backfill cover art for anything still missing it.
   const picks = await enrichCoverArt(ranked, { signal })
 
   return {

@@ -159,31 +159,36 @@ HEADLINE ("greeting"):
 - Write a real headline, like a column would have. Sentence case or title case, normal punctuation. It should end with a period, question mark, or nothing — NEVER a trailing comma, and NEVER all-lowercase.
 - It should gesture at the week's actual picks or a through-line between them. NOT a generic salutation. Examples of the right register: "Three records worth clearing your week for." / "The buzziest novel of the month is also the strangest." / "A quiet week, but the quiet ones reward you." Do NOT use pet names like "you magnificent thing."
 
-CITING SOURCES (critical):
-- Several picks include real critical context from a named publication (Pitchfork, NYT Book Review, LitHub, The Cut, Rotten Tomatoes, Vulture, etc.). When a pick has this, CITE IT plainly: e.g. "Pitchfork singled it out for…" or "Per the NYT Book Review, …". Attribute the buzz to the source — that is the whole point of this dispatch.
-- If a pick has NO critical context (just a new release), say something true about the work itself or note plainly that it's a fresh drop. Do NOT manufacture critical acclaim that wasn't given to you.
+CITING SOURCES — STRICT, NO FABRICATION:
+- Each pick comes with a "source" label and (sometimes) a "blurb". Cite the source EXACTLY as given and say only what the source/blurb actually supports. Examples: source "New York Times — reviewed" → "The New York Times reviewed it…"; source "New York Times Best Sellers" → "It's on the NYT best-seller list…"; source "Critics' score 8.4/10" → "It's pulling an 8.4 critics' score…".
+- NEVER invent a review, a quote, or a different outlet. If the source says NYT, do NOT say Pitchfork. If you don't have a blurb, describe the work itself plainly — do not manufacture acclaim or attribute praise to anyone.
+- These are real titles from real data feeds. Do not embellish them into something they're not.
 
 DO NOT FABRICATE TASTE CONNECTIONS:
 - Do NOT invent connections to authors/artists/works the reader supposedly likes (e.g. "your proven taste for X's claustrophobic intelligence"). Only reference the reader's taste if it is explicitly in the sensibility summary below, and even then keep it light and general — at most one such aside in the whole letter.
 - Better to say nothing about the reader than to fake a personal connection. Let the works carry the letter.
 
-ONLY CHAMPION RAVES:
-- Every featured pick is something you are genuinely recommending. Do NOT include anything you'd call skippable, mixed, divisive, or "fine." If a pick isn't worth an enthusiastic case, drop it and feature a stronger one.
-- No noise, no filler, no "this one's not for everyone." The reader trusts this list to be the good stuff only.
-- If a LitHub/NYT-raved book and a Certified-Fresh Rotten Tomatoes movie or show are in the list, feature them — those are the anchors.
+RECOMMEND-ONLY — THE MOST IMPORTANT RULE:
+- This letter contains ONLY things you are enthusiastically recommending. Write about 2–4 picks you genuinely love.
+- NEVER mention, name, list, or allude to anything you are NOT recommending. No roundups of the weak stuff. No "the rest of the week is…". No acknowledging that other releases exist.
+- BANNED words/moves: "noise", "skip", "skippable", "filler", "franchise maintenance", "standard", "without critical momentum", "largely", "the rest of", "mixed", "divisive", "not for everyone", "your mileage". If you're tempted to write a paragraph dismissing things, delete it entirely.
+- If only ONE pick is genuinely great, write a short, confident letter about just that one. A tight 2-paragraph rave beats a padded survey. Quality over coverage, always.
+- Feature the LitHub/NYT-raved book and the Certified-Fresh Rotten Tomatoes movie/show when present — those are the anchors.
+- Each featured pick: 2–3 sentences — what it is, what critics (cite the source) are saying, why it's worth the time.
+- Under 280 words total. Shorter is fine.
 
-- Each featured pick gets 2-3 sentences: what it is, what's being said about it (with the source), why it's worth the time.
-- Under 320 words total.
+CLOSING:
+- "closing" is ONE warm forward-looking sentence. NO signoff, NO name, NO em-dash, NO "—Anything". The app adds the signoff itself. Do not sign the letter.
 
 Respond ONLY with a valid JSON object — no prose outside it, no markdown fences:
-{"greeting":"string","paragraphs":["string","string","string"],"featuredTitles":["string"],"closing":"string"}`
+{"greeting":"string","paragraphs":["string","string"],"featuredTitles":["string"],"closing":"string"}`
 
     const letterUser = `This reader's sensibility (use sparingly, do not fabricate beyond this): ${profileSummary}
 
-This week's picks. Items tagged with [Source] have real critical context — cite the source when you feature them. Pick 3–5 you can say something true and interesting about:
+This week's curated picks — these are pre-vetted raves. Feature the 2–4 strongest. Items tagged with [Source] have real critical context; cite the source:
 ${formatRadarItems(radarItems) || '(no picks this week)'}
 
-Write the dispatch. Bold titles with **title**. Under 320 words total. The "greeting" is a real headline (no trailing comma, not all-lowercase). "featuredTitles" must exactly match the titles you bolded.`
+Write the dispatch. Bold featured titles with **title**. ONLY write about picks you're recommending — never reference anything else. Under 280 words. "greeting" is a real headline (no trailing comma, not all-lowercase). "closing" has no signoff. "featuredTitles" must exactly match the titles you bolded.`
 
     const rawLetter = await callClaude(apiKey, letterSystem, letterUser, 1400, 0.85)
     const letterData = extractJSON(rawLetter)
@@ -200,7 +205,15 @@ Write the dispatch. Bold titles with **title**. Under 320 words total. The "gree
         greeting: String(letterData.greeting || '').slice(0, 300),
         paragraphs: (letterData.paragraphs || []).map((p) => String(p).slice(0, 800)).slice(0, 5),
         featuredTitles: (letterData.featuredTitles || []).map((t) => String(t)).slice(0, 8),
-        closing: String(letterData.closing || '').slice(0, 300),
+        // Strip any signoff the model tacked on (e.g. "—CultureCommentary",
+        // "- Your Radar") so it doesn't double up with the app's signoff.
+        closing: String(letterData.closing || '')
+          .split('\n')
+          .filter((ln) => !/^\s*[—–-]\s*\S/.test(ln) && !/your .*radar/i.test(ln))
+          .join(' ')
+          .replace(/\s*[—–-]\s*[A-Z][\w ]{2,40}\s*$/, '')
+          .trim()
+          .slice(0, 300),
         weekLabel: currentWeekLabel(),
       }),
     }
