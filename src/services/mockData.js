@@ -250,9 +250,15 @@ export function getDiscoveries(tasteProfile, catalogItems = []) {
 }
 
 export function getWeeklyRadar(tasteProfile, catalogItems = []) {
+  const releases = getNewReleases(tasteProfile, catalogItems)
+  const discoveries = getDiscoveries(tasteProfile, catalogItems)
+  // Unified feed: merge releases and discoveries into a single ranked list
+  // so the new Radar UI shows one stream instead of two tabs.
+  const picks = [...releases, ...discoveries].sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 14)
   return {
-    newReleases: getNewReleases(tasteProfile, catalogItems),
-    discoveries: getDiscoveries(tasteProfile, catalogItems),
+    picks,
+    newReleases: releases,
+    discoveries,
     generatedAt: new Date().toISOString(),
   }
 }

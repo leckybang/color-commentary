@@ -16,8 +16,8 @@ import { fetchOpenLibraryByAuthors } from './providers/openLibrary'
 import { fetchNYTBestsellers } from './providers/nytBooks'
 
 const CACHE_TTL_MS = 30 * 60 * 1000 // 30 minutes
-const MAX_RELEASES = 8
-const MAX_DISCOVERIES = 6
+const MAX_PICKS = 14 // unified feed (releases + tastemaker buzz merged)
+const MAX_TASTEMAKERS = 8
 
 function isDemoUid(uid) {
   return typeof uid === 'string' && uid.startsWith('demo')
@@ -186,9 +186,31 @@ async function fetchSpotifyNewReleases() {
   return spotifyInflight
 }
 
+async function fetchTastemakers(profile, catalogItems) {
+  try {
+    const res = await fetch('/.netlify/functions/claude-tastemakers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ profile, catalogItems }),
+    })
+    if (!res.ok) return []
+    const ct = res.headers.get('content-type') || ''
+    if (!ct.includes('application/json')) return []
+    const data = await res.json()
+    return Array.isArray(data.items) ? data.items : []
+  } catch (err) {
+    console.warn('claude-tastemakers fetch failed', err.message)
+    return []
+  }
+}
+
 /**
- * Real-user radar: pulls from Spotify (music), TMDB (movies + TV), OpenLibrary
- * (books). All requests run in parallel; any individual failure returns [].
+ * Real-user radar: pulls live releases from Spotify (music), TMDB (movies +
+ * TV), OpenLibrary + NYT (books), AND a tastemaker-buzz pass from Claude that
+ * curates what NYT Book Review / LitHub / Pitchfork / The Cut / Refinery 29 /
+ * Rotten Tomatoes have been highlighting recently. Releases + tastemaker
+ * picks are merged into one unified feed (no more separate Releases vs
+ * Discoveries tabs).
  */
 async function buildRealRadar(profile, catalogItems, { signal } = {}) {
   const catalogTitles = new Set(
@@ -196,40 +218,35 @@ async function buildRealRadar(profile, catalogItems, { signal } = {}) {
   )
   const favAuthors = profile?.books?.authors || []
 
-  // Book sources: NYT bestsellers for curated picks + OpenLibrary scoped to
-  // favorite authors. We intentionally skip OpenLibrary's generic "new
-  // releases" stream because it's flooded with low-quality self-published
-  // entries with placeholder dates.
-  const [music, movies, tv, booksByAuthor, booksNYT] = await Promise.all([
+  const [music, movies, tv, booksByAuthor, booksNYT, tastemakers] = await Promise.all([
     fetchSpotifyNewReleases({ signal }),
     fetchTMDBNewMovies(12, { signal }),
     fetchTMDBNewTV(12, { signal }),
     fetchOpenLibraryByAuthors(favAuthors, 2, { signal }),
     fetchNYTBestsellers(10, { signal }),
+    fetchTastemakers(profile || {}, catalogItems || []),
   ])
 
-  const allReleases = [...music, ...movies, ...tv, ...booksByAuthor, ...booksNYT]
+  const releases = [...music, ...movies, ...tv, ...booksByAuthor, ...booksNYT]
     .map((item) => ({ ...item, score: rankScore(item, profile || {}) }))
-    .sort((a, b) => b.score - a.score)
 
-  const deduped = dedupeByTitle(allReleases, catalogTitles)
-
-  // Per-type quotas: guarantee each of music / movie / tv / book is
-  // represented before any one category hoards all the slots. TMDB items
-  // carry a popularity bonus that Spotify/NYT don't, so a pure global
-  // top-N sort otherwise drowns out music and books.
-  const newReleases = pickWithQuotas(deduped, MAX_RELEASES, 2)
-  const takenIds = new Set(newReleases.map((r) => r.externalId || r.title))
-  const remaining = deduped.filter((r) => !takenIds.has(r.externalId || r.title))
-  const discoveries = pickWithQuotas(remaining, MAX_DISCOVERIES, 2).map((item) => ({
+  // Tastemaker items don't have releaseDate or popularity, but they earn a
+  // base buzz score so they slot into the unified ranking. Items that also
+  // match the user's stated taste get an additional bump via matchScore.
+  const tastemakerScored = (tastemakers || []).slice(0, MAX_TASTEMAKERS).map((item) => ({
     ...item,
-    isDiscovery: true,
-    isNewRelease: false,
+    score: matchScore(item, profile || {}) + 14, // base buzz boost
   }))
 
+  const merged = [...releases, ...tastemakerScored].sort((a, b) => b.score - a.score)
+  const deduped = dedupeByTitle(merged, catalogTitles)
+  const picks = pickWithQuotas(deduped, MAX_PICKS, 2)
+
   return {
-    newReleases,
-    discoveries,
+    picks,
+    // Keep legacy keys populated for older callers (e.g. Dashboard teaser).
+    newReleases: picks,
+    discoveries: [],
     generatedAt: new Date().toISOString(),
     isDemo: false,
   }
