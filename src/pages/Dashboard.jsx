@@ -82,8 +82,8 @@ export default function Dashboard() {
     if (!radar) return []
     return [
       { bucket: 'Hyped', item: radar.hyped?.[0] },
+      { bucket: 'Hyped', item: radar.hyped?.[1] },
       { bucket: "Critics' Darlings", item: radar.darlings?.[0] },
-      { bucket: 'Overhyped', item: radar.overhyped?.[0] },
     ].filter((p) => p.item)
   }, [radar])
 

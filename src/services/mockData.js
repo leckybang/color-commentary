@@ -259,7 +259,6 @@ export function getWeeklyRadar(tasteProfile, catalogItems = []) {
     items.map((i) => ({ ...i, bucket, isTastemaker: true, source: source || i.source || 'Demo pick' }))
   return {
     hyped: tag(releases.slice(0, 4), 'hyped', 'Demo · Hyped'),
-    overhyped: tag(releases.slice(4, 6), 'overhyped', 'Demo · Mixed reviews'),
     darlings: tag(discoveries.slice(0, 4), 'darlings', 'Demo · Critics\' pick'),
     generatedAt: new Date().toISOString(),
   }

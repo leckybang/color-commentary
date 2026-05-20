@@ -4,7 +4,6 @@ import { useAuth } from '../hooks/useAuth'
 import { useTasteProfile } from '../hooks/useTasteProfile'
 import { usePublicProfile } from '../hooks/usePublicProfile'
 import { usePublicProfileByUsername } from '../hooks/usePublicProfileByUsername'
-import { useHeavyRotation } from '../hooks/useHeavyRotation'
 import { useCatalog } from '../hooks/useCatalog'
 import { determineArchetype } from '../utils/archetypes'
 import { getMediaColor } from '../utils/filterUtils'
@@ -23,7 +22,6 @@ export default function PublicProfile({ isSelf }) {
   const { user } = useAuth()
   const { profile } = useTasteProfile()
   const myProfile = usePublicProfile()
-  const { itemIds } = useHeavyRotation()
   const { items, getStats } = useCatalog()
 
   // Fetch a Supabase profile when viewing someone else's slug
@@ -91,9 +89,18 @@ export default function PublicProfile({ isSelf }) {
   // without fetching that data too. For now, only show full data for own profile.
   const showFullData = isOwnProfile
   const archetype = showFullData ? determineArchetype(profile) : null
-  const rotationItems = showFullData ? itemIds.map((id) => items.find((i) => i.id === id)).filter(Boolean) : []
+  // Current Favorites — auto-derived from the user's most recent 4★+ items
+  // (favoring the most recently consumed). Replaces the manually-pinned
+  // "Heavy Rotation" — the user wants this to just reflect what they loved
+  // recently, not what they manually curated.
+  const currentFavorites = showFullData
+    ? [...items]
+        .filter((i) => (i.rating || 0) >= 4)
+        .sort((a, b) => new Date(b.dateConsumed || b.dateAdded || 0) - new Date(a.dateConsumed || a.dateAdded || 0))
+        .slice(0, 6)
+    : []
   const stats = showFullData ? getStats() : null
-  // "Right Now" is now driven by the catalog: the most recently added items.
+  // "Right Now" is the most recently added items (regardless of rating).
   const recentlyAdded = showFullData
     ? [...items]
         .sort((a, b) => new Date(b.dateAdded || 0) - new Date(a.dateAdded || 0))
@@ -156,13 +163,13 @@ export default function PublicProfile({ isSelf }) {
             ))}
           </div>
 
-          {/* Current Favorites */}
+          {/* Current Favorites — auto-derived from recent 4★+ catalog items */}
           <div className="bg-bg-secondary border border-border rounded-2xl p-6 mb-6">
             <h2 className="text-lg font-bold text-text-primary text-center mb-1">Current Favorites</h2>
-            <p className="text-xs text-text-muted text-center mb-5">What I'm endorsing this week</p>
-            {rotationItems.length > 0 ? (
-              <div className="grid grid-cols-4 gap-3">
-                {rotationItems.map((item) => (
+            <p className="text-xs text-text-muted text-center mb-5">My most recent 4★+ picks</p>
+            {currentFavorites.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+                {currentFavorites.map((item) => (
                   <div key={item.id} className="text-center">
                     <CoverArt title={item.title} type={item.type} creator={item.creator} coverUrl={item.coverUrl} size="lg" className="mx-auto" />
                     <p className="text-xs font-medium text-text-primary mt-2 truncate">{item.title}</p>
@@ -178,10 +185,10 @@ export default function PublicProfile({ isSelf }) {
               </div>
             ) : (
               <div className="text-center py-6 text-text-muted">
-                <p className="text-sm">Nothing in rotation yet.</p>
+                <p className="text-sm">Rate a few things 4 stars or higher and they'll show up here.</p>
                 {isOwnProfile && (
-                  <Link to="/me?tab=taste" className="text-xs text-accent-primary hover:underline mt-1 inline-block">
-                    Set up your Current Favorites in the Calibrator
+                  <Link to="/catalog" className="text-xs text-accent-primary hover:underline mt-1 inline-block">
+                    Go to your Catalog
                   </Link>
                 )}
               </div>
@@ -248,21 +255,19 @@ export default function PublicProfile({ isSelf }) {
             </div>
           </div>
 
-          {/* Genre map */}
+          {/* Taste Map — every signal the Taste Calibrator collected, per category */}
           <div className="bg-bg-secondary border border-border rounded-2xl p-6">
-            <h2 className="text-lg font-semibold text-text-primary mb-4">Genre Map</h2>
-            <div className="grid grid-cols-2 gap-4">
+            <h2 className="text-lg font-semibold text-text-primary mb-1">Taste Map</h2>
+            <p className="text-xs text-text-muted mb-4">Everything your Taste Calibrator picks and catalog have taught us.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {[
-                { key: 'music', label: 'Music', icon: Music, color: 'var(--color-accent-music)' },
-                { key: 'movies', label: 'Movies', icon: Film, color: 'var(--color-accent-movies)' },
-                { key: 'tv', label: 'TV', icon: Tv, color: 'var(--color-accent-tv)' },
-                { key: 'books', label: 'Books', icon: BookOpen, color: 'var(--color-accent-books)' },
+                { key: 'music', label: 'Music', icon: Music, color: 'var(--color-accent-music)', nameFields: ['artists'], extraFields: ['albums'] },
+                { key: 'movies', label: 'Movies', icon: Film, color: 'var(--color-accent-movies)', nameFields: ['directors', 'actors'], extraFields: ['films'] },
+                { key: 'tv', label: 'TV', icon: Tv, color: 'var(--color-accent-tv)', nameFields: ['shows', 'creators'], extraFields: [] },
+                { key: 'books', label: 'Books', icon: BookOpen, color: 'var(--color-accent-books)', nameFields: ['authors'], extraFields: ['books'] },
               ].map((cat) => {
-                const { key, label, color } = cat
+                const { key, label, color, nameFields, extraFields } = cat
                 const Icon = cat.icon
-                // Profile-stated genres + genres aggregated from the user's
-                // actual catalog items of this type. Merging shows the user
-                // that taste data is accumulating from both sources.
                 const stated = profile[key]?.genres || []
                 const catType = { music: 'music', movies: 'movie', tv: 'tv', books: 'book' }[key]
                 const catalogGenreCounts = {}
@@ -275,25 +280,55 @@ export default function PublicProfile({ isSelf }) {
                 const fromCatalog = Object.entries(catalogGenreCounts)
                   .sort((a, b) => b[1] - a[1])
                   .map(([g]) => g)
-                const merged = [...stated]
-                for (const g of fromCatalog) if (!merged.some((m) => m.toLowerCase() === g.toLowerCase())) merged.push(g)
+                const mergedGenres = [...stated]
+                for (const g of fromCatalog)
+                  if (!mergedGenres.some((m) => m.toLowerCase() === g.toLowerCase())) mergedGenres.push(g)
+
+                // All stated names from the Taste Calibrator (artists, directors,
+                // actors, shows, authors, etc.).
+                const names = []
+                for (const f of [...nameFields, ...extraFields]) {
+                  for (const n of profile[key]?.[f] || []) {
+                    if (!names.some((x) => x.toLowerCase() === String(n).toLowerCase())) names.push(n)
+                  }
+                }
+                const isEmpty = names.length === 0 && mergedGenres.length === 0
                 return (
-                  <div key={key}>
-                    <div className="flex items-center gap-1.5 mb-2">
+                  <div key={key} className="rounded-xl border p-4" style={{ borderColor: `color-mix(in srgb, ${color} 30%, transparent)` }}>
+                    <div className="flex items-center gap-1.5 mb-3">
                       <Icon size={14} style={{ color }} />
-                      <span className="text-xs font-medium text-text-muted">{label}</span>
+                      <span className="text-sm font-semibold" style={{ color }}>{label}</span>
                     </div>
-                    {merged.length > 0 ? (
-                      <div className="flex flex-wrap gap-1">
-                        {merged.map((g) => (
-                          <span key={g} className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: `color-mix(in srgb, ${color} 15%, transparent)`, color }}>
-                            {g}
-                          </span>
-                        ))}
+                    {names.length > 0 && (
+                      <div className="mb-3">
+                        <p className="text-[10px] uppercase tracking-wide text-text-muted mb-1.5">
+                          {nameFields.includes('directors') ? 'Directors & actors' : nameFields.includes('shows') ? 'Shows & creators' : nameFields.includes('authors') ? 'Authors' : 'Artists'}
+                        </p>
+                        <div className="flex flex-wrap gap-1">
+                          {names.slice(0, 20).map((n) => (
+                            <span key={n} className="text-xs px-2 py-0.5 rounded-full bg-bg-tertiary text-text-secondary border border-border">
+                              {n}
+                            </span>
+                          ))}
+                          {names.length > 20 && (
+                            <span className="text-xs px-2 py-0.5 text-text-muted">+{names.length - 20}</span>
+                          )}
+                        </div>
                       </div>
-                    ) : (
-                      <p className="text-xs text-text-muted italic">—</p>
                     )}
+                    {mergedGenres.length > 0 ? (
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wide text-text-muted mb-1.5">Genres</p>
+                        <div className="flex flex-wrap gap-1">
+                          {mergedGenres.map((g) => (
+                            <span key={g} className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: `color-mix(in srgb, ${color} 15%, transparent)`, color }}>
+                              {g}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                    {isEmpty && <p className="text-xs text-text-muted italic">Nothing here yet — keep using the Taste Check.</p>}
                   </div>
                 )
               })}

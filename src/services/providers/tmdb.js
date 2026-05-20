@@ -137,3 +137,34 @@ export async function fetchTMDBNewTV(limit = 10, { signal } = {}) {
   const results = await fetchTMDBList(path, 'tv', { signal })
   return results.slice(0, limit)
 }
+
+/**
+ * Fetch credits for a TMDB movie or show. Returns:
+ *   { creator: string, cast: string[] }
+ * For movies, creator = director(s). For TV, creator = created_by names.
+ * Cast is the top ~3 billed names. Empty values on failure.
+ */
+export async function fetchTMDBCredits(id, type, { signal } = {}) {
+  if (!TMDB_API_KEY || !id) return { creator: '', cast: [] }
+  const path = type === 'tv' ? `/tv/${id}` : `/movie/${id}`
+  // Single combined call: /movie/{id}?append_to_response=credits gets details
+  // (including `created_by` for TV) plus the credits in one request.
+  const url = `${BASE}${path}?api_key=${TMDB_API_KEY}&append_to_response=credits&language=en-US`
+  try {
+    const res = await fetch(url, { signal })
+    if (!res.ok) return { creator: '', cast: [] }
+    const data = await res.json()
+    let creator = ''
+    if (type === 'tv') {
+      creator = (data.created_by || []).map((c) => c.name).filter(Boolean).join(', ')
+    } else {
+      const directors = (data.credits?.crew || []).filter((c) => c.job === 'Director').map((c) => c.name)
+      creator = directors.join(', ')
+    }
+    const cast = (data.credits?.cast || []).slice(0, 3).map((c) => c.name).filter(Boolean)
+    return { creator, cast }
+  } catch (err) {
+    if (err.name !== 'AbortError') console.warn('TMDB credits failed', id, err.message)
+    return { creator: '', cast: [] }
+  }
+}
