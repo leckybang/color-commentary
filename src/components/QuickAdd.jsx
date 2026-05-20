@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Headphones, Eye, BookOpen, Check, Plus, ArrowRight } from 'lucide-react'
+import { Headphones, Eye, BookOpen, Check, Plus, ArrowRight, X } from 'lucide-react'
 import MediaPickerInput from './common/MediaPickerInput'
 import { getMediaColor } from '../utils/filterUtils'
 
@@ -42,115 +42,216 @@ const STATUS_CHOICES = [
 ]
 
 /**
- * QuickAdd — the dashboard/catalog entry point. Replaces the old Liner Notes
- * box: framed the same way ("what are you listening to / watching / reading")
- * but every entry creates a real catalog item.
+ * QuickAdd — compact entry point.
+ *
+ * UX: three small pills (Listening to / Watching / Reading). Click one to
+ * expand into an inline panel with: status toggle, search input, optional
+ * genre. After an add, the panel collapses back to pills.
  *
  * Props:
  *   addItem: (item) => newItem   — from useCatalog
- *   onAdded?: (newItem) => void  — optional hook for parent refresh
+ *   onAdded?: (newItem) => void
  */
 export default function QuickAdd({ addItem, onAdded }) {
+  const [openKey, setOpenKey] = useState(null) // which row's panel is open
+  const [draft, setDraft] = useState('')
+  const [genre, setGenre] = useState('')
   const [status, setStatus] = useState('watching')
-  // Per-row controlled input text so the field clears after a pick.
-  const [drafts, setDrafts] = useState({ listening: '', watching: '', reading: '' })
-  // Session list of what was just added, newest first.
+  const [pickedMeta, setPickedMeta] = useState(null)
   const [justAdded, setJustAdded] = useState([])
+  const panelRef = useRef(null)
 
-  const setDraft = (key, v) => setDrafts((d) => ({ ...d, [key]: v }))
+  const activeRow = ROWS.find((r) => r.key === openKey) || null
+
+  // Close panel on outside click / Escape.
+  useEffect(() => {
+    if (!openKey) return
+    const onDocClick = (e) => {
+      if (panelRef.current && !panelRef.current.contains(e.target)) setOpenKey(null)
+    }
+    const onKey = (e) => { if (e.key === 'Escape') setOpenKey(null) }
+    document.addEventListener('mousedown', onDocClick)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDocClick)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [openKey])
+
+  const openPill = (key) => {
+    setOpenKey(key)
+    setDraft('')
+    setGenre('')
+    setPickedMeta(null)
+  }
 
   const commit = (row, result) => {
     const isText = result.kind === 'text'
-    const type = isText ? row.defaultType : result.type || row.defaultType
+    const type = isText ? row.defaultType : (result.type || row.defaultType)
     const payload = {
       title: result.title,
-      creator: result.creator || '',
+      creator: result.creator || pickedMeta?.creator || '',
       type,
-      coverUrl: result.coverUrl || '',
-      year: result.year || '',
+      coverUrl: result.coverUrl || pickedMeta?.coverUrl || '',
+      year: result.year || pickedMeta?.year || '',
+      genre: genre || '',
       status,
     }
     if (!payload.title.trim()) return
     const created = addItem(payload)
-    setDraft(row.key, '')
     setJustAdded((prev) => [
       { id: created?.id || `${payload.title}-${Date.now()}`, title: payload.title, type, status },
       ...prev,
-    ].slice(0, 6))
+    ].slice(0, 5))
+    setDraft('')
+    setGenre('')
+    setPickedMeta(null)
+    setOpenKey(null)
     onAdded?.(created)
   }
 
-  return (
-    <div className="bg-bg-secondary border border-border rounded-2xl p-5">
-      <div className="flex items-center justify-between mb-1 gap-3 flex-wrap">
-        <div className="flex items-center gap-2">
-          <Plus size={18} className="text-accent-primary" />
-          <h2 className="font-semibold text-text-primary">Quick Add</h2>
-        </div>
-        {/* Status selector — applies to whatever you add next */}
-        <div className="flex bg-bg-tertiary rounded-lg p-0.5">
-          {STATUS_CHOICES.map((s) => (
-            <button
-              key={s.value}
-              onClick={() => setStatus(s.value)}
-              className={`px-2.5 py-1 text-xs rounded-md transition-colors ${
-                status === s.value
-                  ? 'bg-bg-secondary text-text-primary font-medium'
-                  : 'text-text-muted hover:text-text-secondary'
-              }`}
-            >
-              {s.label}
-            </button>
-          ))}
-        </div>
-      </div>
-      <p className="text-xs text-text-muted mb-4">
-        Whatever you're into right now — it goes straight to your catalog as{' '}
-        <span className="text-text-secondary">
-          {STATUS_CHOICES.find((s) => s.value === status)?.label.toLowerCase()}
-        </span>.
-      </p>
+  const handlePick = (result) => {
+    if (result.kind === 'text') {
+      setPickedMeta(null)
+      setDraft(result.title)
+    } else {
+      setPickedMeta(result)
+      setDraft(result.title)
+    }
+  }
 
-      <div className="space-y-4">
+  // Plain text → addItem on Enter (the picker already does this via onPick
+  // with kind:'text'); covered by commit.
+
+  return (
+    <div className="bg-bg-secondary border border-border rounded-2xl p-4 relative">
+      <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
+        <div className="flex items-center gap-2">
+          <Plus size={16} className="text-accent-primary" />
+          <h2 className="font-semibold text-text-primary text-sm">Quick Add</h2>
+        </div>
+        <span className="text-[11px] text-text-muted">Tap a pill to log something fast.</span>
+      </div>
+
+      {/* Compact pills */}
+      <div className="grid grid-cols-3 gap-2">
         {ROWS.map((row) => {
           const Icon = row.icon
+          const isOpen = openKey === row.key
           return (
-            <div key={row.key}>
-              <div className="flex items-center gap-1.5 mb-1.5">
-                <Icon size={13} style={{ color: row.color }} />
-                <span className="text-xs font-medium text-text-muted">{row.label}</span>
-              </div>
-              <MediaPickerInput
-                value={drafts[row.key]}
-                onChange={(v) => setDraft(row.key, v)}
-                onPick={(result) => commit(row, result)}
-                placeholder={row.placeholder}
-                preferredTypes={row.preferredTypes}
-              />
-            </div>
+            <button
+              key={row.key}
+              onClick={() => (isOpen ? setOpenKey(null) : openPill(row.key))}
+              className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border text-sm font-medium transition-all"
+              style={{
+                borderColor: isOpen ? `color-mix(in srgb, ${row.color} 55%, transparent)` : 'var(--color-border)',
+                backgroundColor: isOpen ? `color-mix(in srgb, ${row.color} 12%, transparent)` : 'transparent',
+                color: isOpen ? row.color : 'var(--color-text-secondary)',
+              }}
+            >
+              <Icon size={14} />
+              {row.label}
+            </button>
           )
         })}
       </div>
 
+      {/* Expanded panel */}
+      {activeRow && (
+        <div
+          ref={panelRef}
+          className="mt-3 p-3 rounded-xl border"
+          style={{ borderColor: `color-mix(in srgb, ${activeRow.color} 40%, transparent)`, backgroundColor: 'var(--color-bg-tertiary)' }}
+        >
+          {/* Status toggle */}
+          <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
+            <div className="flex bg-bg-secondary rounded-lg p-0.5">
+              {STATUS_CHOICES.map((s) => (
+                <button
+                  key={s.value}
+                  onClick={() => setStatus(s.value)}
+                  className={`px-2.5 py-1 text-[11px] rounded-md transition-colors ${
+                    status === s.value ? 'bg-bg-tertiary text-text-primary font-medium' : 'text-text-muted hover:text-text-secondary'
+                  }`}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => setOpenKey(null)}
+              className="p-1 rounded text-text-muted hover:text-text-secondary"
+              aria-label="Close"
+            >
+              <X size={14} />
+            </button>
+          </div>
+
+          {/* Search */}
+          <MediaPickerInput
+            value={draft}
+            onChange={(v) => {
+              setDraft(v)
+              if (pickedMeta && v !== pickedMeta.title) setPickedMeta(null)
+            }}
+            onPick={(result) => {
+              // If user picks from the dropdown, capture meta but DON'T commit
+              // yet — they may still want to set a genre. Pressing Enter on
+              // free text commits immediately. Detect "free text" via kind.
+              if (result.kind === 'text') {
+                commit(activeRow, result)
+              } else {
+                handlePick(result)
+              }
+            }}
+            placeholder={activeRow.placeholder}
+            preferredTypes={activeRow.preferredTypes}
+            autoFocus
+          />
+
+          {/* Genre + Save row */}
+          <div className="flex items-center gap-2 mt-2">
+            <input
+              type="text"
+              value={genre}
+              onChange={(e) => setGenre(e.target.value)}
+              placeholder="Genre (optional)"
+              className="flex-1 bg-bg-secondary border border-border rounded-lg px-3 py-1.5 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-primary transition-colors"
+            />
+            <button
+              type="button"
+              disabled={!draft.trim()}
+              onClick={() => commit(activeRow, { kind: pickedMeta ? 'media' : 'text', title: draft, ...(pickedMeta || {}) })}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-colors disabled:opacity-40"
+              style={{ backgroundColor: activeRow.color }}
+            >
+              Add
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Just-added confirmation */}
       {justAdded.length > 0 && (
-        <div className="mt-4 pt-4 border-t border-border">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-text-muted uppercase tracking-wide">
+        <div className="mt-3 pt-3 border-t border-border">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[10px] font-medium text-text-muted uppercase tracking-wide">
               Just added
             </span>
             <Link
               to="/catalog"
-              className="text-xs text-accent-primary hover:underline flex items-center gap-1"
+              className="text-[11px] text-accent-primary hover:underline flex items-center gap-0.5"
             >
-              View catalog <ArrowRight size={11} />
+              View catalog <ArrowRight size={10} />
             </Link>
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             {justAdded.map((it) => {
               const color = getMediaColor(it.type)
               return (
-                <div key={it.id} className="flex items-center gap-2 text-sm">
-                  <Check size={13} className="text-accent-books shrink-0" />
+                <div key={it.id} className="flex items-center gap-2 text-xs">
+                  <Check size={11} className="text-accent-books shrink-0" />
                   <span className="text-text-primary truncate flex-1 min-w-0">{it.title}</span>
                   <span
                     className="text-[10px] px-1.5 py-0.5 rounded-full shrink-0"

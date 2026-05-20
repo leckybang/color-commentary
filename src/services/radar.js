@@ -10,14 +10,11 @@
  */
 
 import { getWeeklyRadar as getMockRadar } from './mockData'
-import { matchScore } from '../utils/matchScore'
 import { fetchTMDBNewMovies, fetchTMDBNewTV, searchTMDB } from './providers/tmdb'
-import { fetchOpenLibraryByAuthors } from './providers/openLibrary'
 import { fetchNYTBestsellers } from './providers/nytBooks'
 import { searchGoogleBooks } from './providers/googleBooks'
 
 const CACHE_TTL_MS = 30 * 60 * 1000 // 30 minutes
-const MAX_PICKS = 14 // unified feed (real-data anchors + releases merged)
 
 function isDemoUid(uid) {
   return typeof uid === 'string' && uid.startsWith('demo')
@@ -55,97 +52,6 @@ function writeCache(uid, payload) {
   } catch {
     // Quota or private-browsing mode — silently skip cache.
   }
-}
-
-function dedupeByTitle(items, existingTitles = new Set()) {
-  const seen = new Set(Array.from(existingTitles).map((t) => t.toLowerCase()))
-  const out = []
-  for (const item of items) {
-    const key = (item.title || '').toLowerCase()
-    if (!key || seen.has(key)) continue
-    seen.add(key)
-    out.push(item)
-  }
-  return out
-}
-
-/**
- * Recency score — items released this month get the biggest boost, trailing
- * off over ~6 months. Items without a release date get a small penalty so
- * they fall below anything with real recency data. The intent: "buzzy this
- * week" should beat "old show that still airs."
- */
-function recencyScore(releaseDate) {
-  if (!releaseDate) return -2
-  const ts = Date.parse(releaseDate)
-  if (Number.isNaN(ts)) return -2
-  const daysFromNow = Math.abs(Date.now() - ts) / 86400000
-  if (daysFromNow <= 14) return 20 // last two weeks — strongest boost
-  if (daysFromNow <= 45) return 12
-  if (daysFromNow <= 90) return 6
-  if (daysFromNow <= 180) return 2
-  return -5 // older than 6 months: actively demoted
-}
-
-/**
- * Popularity bonus for items that carry a TMDB popularity score. Normalized
- * so even the most popular items add at most ~4 points — enough to break
- * ties within a recency tier without drowning out taste matches.
- */
-function popularityScore(item) {
-  const p = item.popularity
-  if (!p || p <= 0) return 0
-  return Math.min(4, Math.log10(p + 1) * 2)
-}
-
-function rankScore(item, profile) {
-  return matchScore(item, profile) + recencyScore(item.releaseDate) + popularityScore(item)
-}
-
-const RADAR_TYPES = ['music', 'movie', 'tv', 'book']
-
-/**
- * Pick `total` items with a minimum floor per type. Items are assumed to
- * already be sorted best-first globally. We first take `minPerType` from
- * each category (skipping any that don't have enough), then fill the
- * remaining slots from whatever's leftover in the global ranking.
- *
- * This guarantees music/books aren't crowded out by TMDB's popularity-rich
- * movie/TV results.
- */
-function pickWithQuotas(items, total, minPerType) {
-  const byType = new Map(RADAR_TYPES.map((t) => [t, []]))
-  for (const item of items) {
-    const bucket = byType.get(item.type)
-    if (bucket) bucket.push(item)
-  }
-
-  const picked = []
-  const pickedIds = new Set()
-  const markPicked = (item) => {
-    picked.push(item)
-    pickedIds.add(item.externalId || item.title)
-  }
-
-  // Pass 1: floor per type — only items with a positive taste-match score.
-  // If a type's only available items have zero taste relevance, skip the
-  // forced floor so random filler doesn't crowd out genuinely relevant items.
-  for (const type of RADAR_TYPES) {
-    const bucket = (byType.get(type) || []).filter((i) => (i.score ?? 0) > 0)
-    for (let i = 0; i < minPerType && i < bucket.length && picked.length < total; i++) {
-      markPicked(bucket[i])
-    }
-  }
-
-  // Pass 2: fill remaining slots from the global ranking.
-  for (const item of items) {
-    if (picked.length >= total) break
-    const id = item.externalId || item.title
-    if (pickedIds.has(id)) continue
-    markPicked(item)
-  }
-
-  return picked
 }
 
 // Module-scope dedupe for the spotify-radar function. If multiple callers
@@ -186,57 +92,7 @@ async function fetchSpotifyNewReleases() {
   return spotifyInflight
 }
 
-/**
- * Honest "tastemaker" anchors built from REAL API data — never an LLM's
- * recollection (which hallucinates fake albums and fake review quotes).
- *
- *  - Book anchor: a current NYT Best Seller. NYT supplies a real review URL
- *    when the book has been reviewed, so the source + link are verifiable.
- *  - Screen anchor: the highest critic-scored recent movie/show from TMDB
- *    (real vote_average over a meaningful vote_count).
- *
- * Each anchor carries an honest `source` label and (for books) a real
- * `reviewUrl`. The letter cites whatever source we hand it, so it can only
- * say true things.
- */
-function buildHonestAnchors(booksNYT, movies, tv) {
-  const anchors = []
-
-  const bookCands = (booksNYT || []).filter((b) => b && b.title)
-  if (bookCands.length) {
-    bookCands.sort(
-      (a, b) =>
-        (b.reviewUrl ? 1 : 0) - (a.reviewUrl ? 1 : 0) ||
-        (a.rank || 99) - (b.rank || 99)
-    )
-    const b = bookCands[0]
-    anchors.push({
-      ...b,
-      isTastemaker: true,
-      source: b.reviewUrl ? 'New York Times — reviewed' : 'New York Times Best Sellers',
-      blurb: b.description || 'A current New York Times best seller.',
-      reviewUrl: b.reviewUrl || '',
-    })
-  }
-
-  const screenPool = [...(movies || []), ...(tv || [])].filter(
-    (s) => s && s.title && (s.voteCount || 0) >= 50 && (s.voteAverage || 0) >= 6.8
-  )
-  screenPool.sort((a, b) => (b.voteAverage || 0) - (a.voteAverage || 0))
-  if (screenPool[0]) {
-    const s = screenPool[0]
-    anchors.push({
-      ...s,
-      isTastemaker: true,
-      source: `Critics' score ${s.voteAverage.toFixed(1)}/10`,
-      blurb: s.description || '',
-    })
-  }
-
-  return anchors
-}
-
-// Some items (e.g. OpenLibrary author matches) arrive without cover art.
+// Some items (e.g. Pitchfork RSS items) arrive without cover art.
 // Look them up in the same media APIs the rest of the radar uses so the
 // cards show real covers instead of the gradient fallback. Best-effort.
 async function spotifyCoverFor(query, signal) {
@@ -284,52 +140,106 @@ async function enrichCoverArt(items, { signal } = {}) {
   )
 }
 
-/**
- * Real-user radar: pulls live releases from Spotify (music), TMDB (movies +
- * TV), OpenLibrary + NYT (books). Real, verifiable "tastemaker" anchors (a
- * NYT-reviewed/best-selling book and the top critic-scored recent screen
- * title) lead the feed. Everything is a real title from a real API — no
- * LLM-recalled picks (those hallucinated fake albums + fake reviews).
- */
-async function buildRealRadar(profile, catalogItems, { signal } = {}) {
-  const catalogTitles = new Set(
-    (catalogItems || []).map((i) => (i.title || '').toLowerCase()).filter(Boolean)
-  )
-  const favAuthors = profile?.books?.authors || []
+async function fetchPitchforkBNM({ signal } = {}) {
+  try {
+    const res = await fetch('/.netlify/functions/pitchfork-rss', { signal })
+    if (!res.ok) return []
+    const ct = res.headers.get('content-type') || ''
+    if (!ct.includes('application/json')) return []
+    const data = await res.json()
+    return Array.isArray(data.items) ? data.items : []
+  } catch (err) {
+    if (err.name !== 'AbortError') console.warn('pitchfork-rss fetch failed', err.message)
+    return []
+  }
+}
 
-  const [music, movies, tv, booksByAuthor, booksNYT] = await Promise.all([
+/**
+ * Real-user radar — generic for everyone, three buckets:
+ *
+ *   HYPED: popular + well-reviewed new things (TMDB high vote / high pop +
+ *     recent; top NYT bestsellers; fresh Spotify drops).
+ *   OVERHYPED: popular + poorly-reviewed (TMDB high pop + low vote, recent).
+ *     The "everyone's talking but critics aren't sold" bucket.
+ *   CRITICS' DARLINGS: NYT-reviewed books, top critic-scored TMDB titles,
+ *     Pitchfork "Best New Music" via RSS. Things the press loves.
+ *
+ * All real data from APIs we already use — no LLM recall, no hallucinated
+ * picks. No personalization either; this is the same dispatch for everyone.
+ */
+async function buildRealRadar({ signal } = {}) {
+  const [music, movies, tv, booksNYT, pitchfork] = await Promise.all([
     fetchSpotifyNewReleases({ signal }),
-    fetchTMDBNewMovies(12, { signal }),
-    fetchTMDBNewTV(12, { signal }),
-    fetchOpenLibraryByAuthors(favAuthors, 2, { signal }),
-    fetchNYTBestsellers(10, { signal }),
+    fetchTMDBNewMovies(20, { signal }),
+    fetchTMDBNewTV(20, { signal }),
+    fetchNYTBestsellers(15, { signal }),
+    fetchPitchforkBNM({ signal }),
   ])
 
-  const releases = [...music, ...movies, ...tv, ...booksByAuthor, ...booksNYT]
-    .map((item) => ({ ...item, score: rankScore(item, profile || {}) }))
+  const tag = (items, bucket, extras = {}) =>
+    items.map((it) => ({ ...it, bucket, isTastemaker: true, ...extras(it) }))
 
-  // Real, verifiable anchors (NYT book + top-critic-scored TMDB screen).
-  // They get a strong boost so they lead the feed, but they are real titles
-  // with honest source labels — no fabrication.
-  const anchors = buildHonestAnchors(booksNYT, movies, tv).map((item) => ({
-    ...item,
-    score: matchScore(item, profile || {}) + 30,
-  }))
+  // ── HYPED ──
+  const hypedMovies = [...movies]
+    .filter((m) => (m.voteAverage || 0) >= 7 && (m.voteCount || 0) >= 100)
+    .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
+    .slice(0, 3)
+  const hypedTV = [...tv]
+    .filter((t) => (t.voteAverage || 0) >= 7 && (t.voteCount || 0) >= 50)
+    .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
+    .slice(0, 3)
+  const hypedBooks = booksNYT.filter((b) => (b.rank || 99) <= 5).slice(0, 3)
+  const hypedMusic = music.slice(0, 3)
 
-  const anchorTitles = new Set(anchors.map((a) => (a.title || '').toLowerCase()))
-  const merged = [...anchors, ...releases.filter((r) => !anchorTitles.has((r.title || '').toLowerCase()))]
-    .sort((a, b) => b.score - a.score)
-  const deduped = dedupeByTitle(merged, catalogTitles)
-  const ranked = pickWithQuotas(deduped, MAX_PICKS, 2)
+  const hyped = [
+    ...tag(hypedBooks, 'hyped', (b) => ({ source: `NYT Best Seller${b.rank ? ` · #${b.rank}` : ''}`, blurb: b.description || 'A current New York Times best seller.' })),
+    ...tag(hypedMovies, 'hyped', (m) => ({ source: `Critics ${m.voteAverage.toFixed(1)}/10 · trending`, blurb: m.description || '' })),
+    ...tag(hypedTV, 'hyped', (t) => ({ source: `Critics ${t.voteAverage.toFixed(1)}/10 · trending`, blurb: t.description || '' })),
+    ...tag(hypedMusic, 'hyped', () => ({ source: 'New on Spotify', blurb: '' })),
+  ]
 
-  // Backfill cover art for anything still missing it.
-  const picks = await enrichCoverArt(ranked, { signal })
+  // ── OVERHYPED ──
+  const overMovies = [...movies]
+    .filter((m) => (m.popularity || 0) >= 50 && (m.voteCount || 0) >= 100 && (m.voteAverage || 0) > 0 && (m.voteAverage || 0) < 6)
+    .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
+    .slice(0, 3)
+  const overTV = [...tv]
+    .filter((t) => (t.popularity || 0) >= 30 && (t.voteCount || 0) >= 100 && (t.voteAverage || 0) > 0 && (t.voteAverage || 0) < 6)
+    .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
+    .slice(0, 3)
+  const overhyped = [
+    ...tag(overMovies, 'overhyped', (m) => ({ source: `Mixed reviews · ${m.voteAverage.toFixed(1)}/10`, blurb: m.description || '' })),
+    ...tag(overTV, 'overhyped', (t) => ({ source: `Mixed reviews · ${t.voteAverage.toFixed(1)}/10`, blurb: t.description || '' })),
+  ]
+
+  // ── CRITICS' DARLINGS ──
+  const reviewedBooks = booksNYT.filter((b) => b.reviewUrl).slice(0, 3)
+  const acclaimedMovies = [...movies]
+    .filter((m) => (m.voteAverage || 0) >= 7.6 && (m.voteCount || 0) >= 200)
+    .sort((a, b) => (b.voteAverage || 0) - (a.voteAverage || 0))
+    .slice(0, 2)
+  const acclaimedTV = [...tv]
+    .filter((t) => (t.voteAverage || 0) >= 7.6 && (t.voteCount || 0) >= 100)
+    .sort((a, b) => (b.voteAverage || 0) - (a.voteAverage || 0))
+    .slice(0, 2)
+  const darlings = [
+    ...tag(reviewedBooks, 'darlings', () => ({ source: 'New York Times — reviewed', blurb: '' })),
+    ...pitchfork.slice(0, 3).map((p) => ({ ...p, bucket: 'darlings', isTastemaker: true })),
+    ...tag(acclaimedMovies, 'darlings', (m) => ({ source: `Critics' score ${m.voteAverage.toFixed(1)}/10`, blurb: m.description || '' })),
+    ...tag(acclaimedTV, 'darlings', (t) => ({ source: `Critics' score ${t.voteAverage.toFixed(1)}/10`, blurb: t.description || '' })),
+  ]
+
+  // Backfill cover art for anything missing it (e.g. Pitchfork RSS items).
+  const [hypedFinal, overhypedFinal, darlingsFinal] = await Promise.all([
+    enrichCoverArt(hyped, { signal }),
+    enrichCoverArt(overhyped, { signal }),
+    enrichCoverArt(darlings, { signal }),
+  ])
 
   return {
-    picks,
-    // Keep legacy keys populated for older callers (e.g. Dashboard teaser).
-    newReleases: picks,
-    discoveries: [],
+    hyped: hypedFinal,
+    overhyped: overhypedFinal,
+    darlings: darlingsFinal,
     generatedAt: new Date().toISOString(),
     isDemo: false,
   }
@@ -360,13 +270,12 @@ export async function getWeeklyRadar(user, profile, catalogItems = [], opts = {}
   const key = `${uid}_${weekKey()}_${opts.forceRefresh ? 'refresh' : 'normal'}`
   if (inflight.has(key)) return inflight.get(key)
 
-  const promise = buildRealRadar(profile, catalogItems, opts)
+  const promise = buildRealRadar(opts)
     .then((fresh) => {
       // Don't cache empty results — a failed API fetch (missing env vars, outage)
-      // shouldn't lock the user out for 30 minutes. Leave the cache empty so
-      // the next load (or Refresh click) tries the APIs again.
+      // shouldn't lock the user out for 30 minutes.
       const hasContent =
-        (fresh.newReleases?.length ?? 0) + (fresh.discoveries?.length ?? 0) > 0
+        (fresh.hyped?.length ?? 0) + (fresh.overhyped?.length ?? 0) + (fresh.darlings?.length ?? 0) > 0
       if (hasContent) writeCache(uid, fresh)
       return fresh
     })
@@ -382,7 +291,7 @@ export async function getWeeklyRadar(user, profile, catalogItems = [], opts = {}
  * Synchronous helper for places that only need the demo payload (e.g.
  * Onboarding previews before the user has an account).
  */
-export function getDemoRadar(profile, catalogItems = []) {
+export function getDemoRadar(profile = {}, catalogItems = []) {
   const mock = getMockRadar(profile, catalogItems)
   return { ...mock, isDemo: true }
 }

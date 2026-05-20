@@ -440,6 +440,76 @@ export default function Profile({ hidePublicProfile = false, hideHeader = false 
             <activeCat.icon size={24} style={{ color: activeCat.color }} />
             <h2 className="text-lg font-semibold">{activeCat.label}</h2>
           </div>
+
+          {/* From your catalog — auto-derived top-rated items + frequent genres */}
+          {(() => {
+            const catType = { music: 'music', movies: 'movie', tv: 'tv', books: 'book' }[activeCat.key]
+            const ofType = catalogItems.filter((i) => i.type === catType)
+            const topRated = [...ofType]
+              .filter((i) => (i.rating || 0) >= 4)
+              .sort((a, b) => (b.rating || 0) - (a.rating || 0))
+              .slice(0, 6)
+            const genreCounts = {}
+            for (const i of ofType) {
+              if (!i.genre) continue
+              for (const g of String(i.genre).split(/[,/]+/).map((s) => s.trim()).filter(Boolean)) {
+                genreCounts[g] = (genreCounts[g] || 0) + 1
+              }
+            }
+            const topGenres = Object.entries(genreCounts)
+              .sort((a, b) => b[1] - a[1])
+              .slice(0, 8)
+              .map(([g]) => g)
+            if (topRated.length === 0 && topGenres.length === 0) return null
+            return (
+              <div
+                className="rounded-xl border p-4"
+                style={{ borderColor: `color-mix(in srgb, ${activeCat.color} 35%, transparent)`, backgroundColor: 'var(--color-bg-tertiary)' }}
+              >
+                <p className="text-xs font-medium uppercase tracking-wide mb-2" style={{ color: activeCat.color }}>
+                  From your catalog
+                </p>
+                <p className="text-[11px] text-text-muted mb-3">
+                  Auto-pulled from items you've added and rated. The more you log, the more this fills in.
+                </p>
+                {topRated.length > 0 && (
+                  <div className="mb-3">
+                    <p className="text-[11px] font-medium text-text-muted mb-1.5">Top rated (4★+)</p>
+                    <div className="space-y-1">
+                      {topRated.map((item) => (
+                        <div key={item.id} className="flex items-center gap-2 text-sm">
+                          <span className="text-text-primary truncate flex-1 min-w-0">{item.title}</span>
+                          {item.creator && <span className="text-xs text-text-muted truncate">{item.creator}</span>}
+                          <span className="text-xs text-amber-500 shrink-0">★ {item.rating}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {topGenres.length > 0 && (
+                  <div>
+                    <p className="text-[11px] font-medium text-text-muted mb-1.5">Genres you keep returning to</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {topGenres.map((g) => (
+                        <span
+                          key={g}
+                          className="text-xs px-2 py-0.5 rounded-full border"
+                          style={{
+                            borderColor: `color-mix(in srgb, ${activeCat.color} 35%, transparent)`,
+                            color: activeCat.color,
+                            backgroundColor: `color-mix(in srgb, ${activeCat.color} 10%, transparent)`,
+                          }}
+                        >
+                          {g}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })()}
+
           {activeCat.fields.map((field) => {
             const calibrationQ = CALIBRATION_QUESTIONS.find(
               (q) => q.category === activeCat.key && q.field === field.key

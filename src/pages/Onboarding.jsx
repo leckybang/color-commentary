@@ -1,17 +1,12 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Music, Film, Tv, BookOpen, ArrowRight, ArrowLeft, Sparkles, ChevronRight, Check, Plus, Bookmark, Star } from 'lucide-react'
-import StarRating from '../components/common/StarRating'
-import CoverArt from '../components/common/CoverArt'
+import { Music, Film, Tv, BookOpen, ArrowRight, ArrowLeft, Sparkles, ChevronRight } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { useTasteProfile } from '../hooks/useTasteProfile'
-import { useCatalog } from '../hooks/useCatalog'
 import ChipSelector from '../components/common/ChipSelector'
 import TagInput from '../components/common/TagInput'
 import { GENRE_OPTIONS, SUGGESTION_MAP, SUGGESTION_FIELD, SUGGESTION_LABEL, getSuggestionsForGenres } from '../data/onboardingSuggestions'
-import { getDemoRadar } from '../services/radar'
 import { determineArchetype } from '../utils/archetypes'
-import { getMediaColor } from '../utils/filterUtils'
 
 const CATEGORIES = [
   {
@@ -69,11 +64,7 @@ export default function Onboarding() {
   const navigate = useNavigate()
   const { updateProfile } = useAuth()
   const { profile, addTag, removeTag } = useTasteProfile()
-  const { addItem } = useCatalog()
   const [step, setStep] = useState(0)
-  const [addedItems, setAddedItems] = useState(new Set())
-  const [ratingItem, setRatingItem] = useState(null)  // title of item being rated
-  const [ratingValue, setRatingValue] = useState(0)
 
   const current = STEPS[step]
   const isLast = step === STEPS.length - 1
@@ -84,12 +75,6 @@ export default function Onboarding() {
 
   const archetype = useMemo(() => determineArchetype(profile), [profile])
 
-  // Onboarding runs before the user has any catalog data — show the parody
-  // sample deck so the "your first recommendations" screen has something to
-  // render. We caveat it below so it's clear these are illustrative picks.
-  const radar = useMemo(() => {
-    return getDemoRadar(profile, [])
-  }, [profile])
 
   const next = () => {
     if (isLast) {
@@ -125,38 +110,6 @@ export default function Onboarding() {
       removeTag(current.category, field, value)
     } else {
       addTag(current.category, field, value)
-    }
-  }
-
-  const handleWantToTry = (item) => {
-    addItem({
-      title: item.title,
-      creator: item.creator,
-      type: item.type,
-      genre: item.genre || '',
-      status: 'want',
-    })
-    setAddedItems((prev) => new Set([...prev, item.title]))
-  }
-
-  const handleAlreadyTried = (item) => {
-    if (ratingItem === item.title) {
-      // Save with rating
-      addItem({
-        title: item.title,
-        creator: item.creator,
-        type: item.type,
-        genre: item.genre || '',
-        status: 'finished',
-        rating: ratingValue,
-      })
-      setAddedItems((prev) => new Set([...prev, item.title]))
-      setRatingItem(null)
-      setRatingValue(0)
-    } else {
-      // Open rating UI
-      setRatingItem(item.title)
-      setRatingValue(0)
     }
   }
 
@@ -200,7 +153,10 @@ export default function Onboarding() {
           {current.key === 'welcome' && (
             <div className="text-center">
               <div className="flex justify-center gap-3 mb-8">
-                {CATEGORIES.map(({ icon: Icon, color }, i) => (
+                {CATEGORIES.map((c, i) => {
+                  const { color } = c
+                  const Icon = c.icon
+                  return (
                   <div
                     key={i}
                     className="w-16 h-16 rounded-2xl flex items-center justify-center"
@@ -208,13 +164,14 @@ export default function Onboarding() {
                   >
                     <Icon size={32} style={{ color }} />
                   </div>
-                ))}
+                  )
+                })}
               </div>
               <h1 className="text-3xl md:text-4xl font-bold text-text-primary mb-4">
                 Welcome to Color Commentary
               </h1>
               <p className="text-text-secondary text-lg mb-10 max-w-md mx-auto leading-relaxed">
-                Let's build your media universe. Pick your genres and favorites, and we'll power your personalized radar.
+                Let's build your media universe. Track what you're into, see what's hyped and what critics love.
               </p>
               <button
                 onClick={next}
@@ -367,7 +324,9 @@ export default function Onboarding() {
 
               {/* Taste summary */}
               <div className="flex justify-center gap-4 mb-8">
-                {CATEGORIES.map(({ key: cat, icon: Icon, color }) => {
+                {CATEGORIES.map((c) => {
+                  const { key: cat, color } = c
+                  const Icon = c.icon
                   const count = profile[cat] ? Object.values(profile[cat]).reduce((s, a) => s + a.length, 0) : 0
                   return (
                     <div key={cat} className="text-center">
@@ -383,77 +342,32 @@ export default function Onboarding() {
                 })}
               </div>
 
-              {/* Recommendations */}
-              {(radar.newReleases.length > 0 || radar.discoveries.length > 0) && (
-                <div className="mb-8">
-                  <h2 className="text-lg font-semibold text-text-primary text-center mb-1">
-                    A taste of your Weekly Radar
-                  </h2>
-                  <p className="text-sm text-text-muted text-center mb-1">
-                    Save what you want to check out, or rate things you've already tried.
-                  </p>
-                  <p className="text-xs text-text-muted/80 text-center italic mb-4">
-                    (Sample picks — affectionately fictional. Real releases show up once you're in.)
-                  </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[420px] overflow-y-auto pr-1">
-                    {[...radar.newReleases.slice(0, 4), ...radar.discoveries.slice(0, 4)].map((item, i) => {
-                      const isAdded = addedItems.has(item.title)
-                      const isRating = ratingItem === item.title
-                      return (
-                        <div
-                          key={`${item.title}-${i}`}
-                          className="bg-bg-secondary/80 border border-border rounded-xl p-3 transition-all"
-                        >
-                          <div className="flex items-center gap-3">
-                            <CoverArt title={item.title} type={item.type} creator={item.creator} coverUrl={item.coverUrl} size="sm" />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-text-primary truncate">{item.title}</p>
-                              <p className="text-xs text-text-muted truncate">{item.creator}</p>
-                            </div>
-                          </div>
-
-                          {isAdded ? (
-                            <div className="flex items-center justify-center gap-1.5 mt-3 pt-2 border-t border-border text-xs text-accent-books">
-                              <Check size={14} />
-                              Added to Catalog
-                            </div>
-                          ) : isRating ? (
-                            <div className="mt-3 pt-2 border-t border-border">
-                              <p className="text-xs text-text-muted mb-2">How was it?</p>
-                              <div className="flex items-center justify-between">
-                                <StarRating rating={ratingValue} onChange={setRatingValue} size={22} />
-                                <button
-                                  onClick={() => handleAlreadyTried(item)}
-                                  className="text-xs font-medium px-3 py-1.5 rounded-lg bg-accent-primary/10 text-accent-primary hover:bg-accent-primary/20 transition-colors"
-                                >
-                                  Save
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="flex gap-2 mt-3 pt-2 border-t border-border">
-                              <button
-                                onClick={() => handleWantToTry(item)}
-                                className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-xs font-medium text-accent-primary hover:bg-accent-primary/10 transition-colors"
-                              >
-                                <Bookmark size={13} />
-                                Want to Try
-                              </button>
-                              <button
-                                onClick={() => handleAlreadyTried(item)}
-                                className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-xs font-medium text-text-secondary hover:bg-bg-hover transition-colors"
-                              >
-                                <Check size={13} />
-                                Already Tried
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
+              {/* What you get next — generic, no fake titles */}
+              <div className="mb-8">
+                <h2 className="text-lg font-semibold text-text-primary text-center mb-1">
+                  What you'll get on your Radar
+                </h2>
+                <p className="text-sm text-text-muted text-center mb-5">
+                  A weekly dispatch from the parts of culture worth your attention.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {[
+                    { title: 'Hyped', body: 'Popular new releases this month that critics also love.', color: 'var(--color-accent-primary)' },
+                    { title: 'Overhyped', body: 'Things everyone is talking about that the reviews don\'t back up.', color: 'var(--color-accent-movies)' },
+                    { title: "Critics' Darlings", body: 'Quietly raved picks from places like NYT Books and Pitchfork.', color: 'var(--color-accent-books)' },
+                  ].map((b) => (
+                    <div
+                      key={b.title}
+                      className="rounded-xl p-4 border bg-bg-secondary/60 text-left"
+                      style={{ borderColor: `color-mix(in srgb, ${b.color} 35%, transparent)` }}
+                    >
+                      <div className="h-1 w-10 rounded-full mb-2" style={{ backgroundColor: b.color }} />
+                      <p className="text-sm font-semibold text-text-primary mb-1">{b.title}</p>
+                      <p className="text-xs text-text-muted leading-relaxed">{b.body}</p>
+                    </div>
+                  ))}
                 </div>
-              )}
+              </div>
 
               <div className="text-center">
                 <button
