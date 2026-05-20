@@ -123,3 +123,23 @@ CREATE POLICY "Users can manage own next_up"
 ```
 
 This mirrors the `heavy_rotation_items` table — a simple ordered list of catalog item IDs with the user's custom priority order. The `ON DELETE CASCADE` means if you delete a catalog item, it's automatically removed from Next Up.
+
+## Friend profile view — read catalogs of public profiles
+
+Run this so that when a user makes their profile public, **catalog reads** are also allowed (everything else stays owner-only). Taste profiles, weekly dumps, and scratchpad notes remain private regardless of the public-profile flag — only the catalog items become visible, and only when `is_public = true`.
+
+```sql
+-- Permit reading another user's catalog_items when their profile is public.
+-- Owner can still always manage their own (the existing FOR ALL policy).
+CREATE POLICY "Anyone can read catalog of public profiles"
+  ON catalog_items FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = catalog_items.user_id
+        AND profiles.is_public = true
+    )
+  );
+```
+
+Without this policy, a follower viewing `/u/<username>` will see only the basics (name, avatar, bio) — the Current Favorites / Right Now / Stats sections will be empty because the client can't read the friend's catalog. Run the policy once and the friend view fills in.
