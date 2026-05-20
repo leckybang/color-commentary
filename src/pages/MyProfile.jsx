@@ -120,14 +120,26 @@ export default function MyProfile() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-2 border-t border-border">
+              <div
+                className={`flex items-center justify-between pt-2 border-t border-border transition-colors ${
+                  usernameDraft && !publicProfile.isPublic ? 'p-3 -mx-3 rounded-lg bg-accent-primary/5 border border-accent-primary/20' : ''
+                }`}
+              >
                 <div>
-                  <p className="text-sm font-medium text-text-primary">Make profile public</p>
-                  <p className="text-xs text-text-muted">Let anyone at /{publicProfile.username || 'your-username'} see your profile.</p>
+                  <p className="text-sm font-medium text-text-primary flex items-center gap-2">
+                    Make profile public
+                    {usernameDraft && !publicProfile.isPublic && (
+                      <span className="text-[10px] uppercase tracking-wide text-accent-primary font-semibold">Required for friends to find you</span>
+                    )}
+                  </p>
+                  <p className="text-xs text-text-muted">
+                    Let anyone at <span className="text-text-secondary">/{publicProfile.username || 'your-username'}</span> see your profile. Friends can only find you in search when this is on.
+                  </p>
                 </div>
                 <button
                   onClick={publicProfile.togglePublic}
                   className={`w-12 h-7 rounded-full transition-colors relative shrink-0 ml-3 ${publicProfile.isPublic ? 'bg-accent-primary' : 'bg-bg-tertiary border border-border'}`}
+                  aria-label={publicProfile.isPublic ? 'Profile is public — click to make private' : 'Profile is private — click to make public'}
                 >
                   <div className={`w-5 h-5 rounded-full bg-white absolute top-1 transition-transform ${publicProfile.isPublic ? 'translate-x-6' : 'translate-x-1'}`} />
                 </button>
@@ -141,7 +153,7 @@ export default function MyProfile() {
                     type="text"
                     value={usernameDraft}
                     onChange={(e) => setUsernameDraft(e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, ''))}
-                    placeholder="leckybang"
+                    placeholder="yourname"
                     maxLength={30}
                     className="flex-1 bg-transparent px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none"
                   />

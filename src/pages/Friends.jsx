@@ -127,11 +127,21 @@ export default function Friends() {
         )}
 
         {searchQuery.length >= 2 && !searching && searchResults.length === 0 && (
-          <p className="text-xs text-text-muted mt-3 text-center">
-            {isSupabaseConfigured
-              ? "No one matching that. They might not have set a username, or their profile isn't public."
-              : 'Full friend search requires online mode. Try "Alex", "Sam", or "Jordan" for demo users.'}
-          </p>
+          <div className="mt-3 p-3 bg-bg-tertiary/50 border border-border rounded-lg text-xs text-text-secondary leading-relaxed">
+            {isSupabaseConfigured ? (
+              <>
+                <p className="font-medium text-text-primary mb-1">No matches for "{searchQuery}".</p>
+                <p>
+                  If you know they're signed up, double-check that{' '}
+                  <span className="text-text-primary font-medium">they've set a username</span> and{' '}
+                  <span className="text-text-primary font-medium">toggled "Make profile public"</span> in their Settings.
+                  Private profiles don't show up in search.
+                </p>
+              </>
+            ) : (
+              <p>Full friend search requires online mode. Try "Alex", "Sam", or "Jordan" for demo users.</p>
+            )}
+          </div>
         )}
         {searching && searchQuery.length >= 2 && (
           <p className="text-xs text-text-muted mt-3 text-center italic">Searching…</p>
