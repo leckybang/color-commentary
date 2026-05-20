@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { Music, Film, Tv, BookOpen, Radar, Star, CalendarPlus, Plus, ArrowRight, Sparkles, Library, MessageCircle, X, Send, Lightbulb } from 'lucide-react'
+import { Music, Film, Tv, BookOpen, Radar, Star, CalendarPlus, Plus, ArrowRight, Sparkles, Library, MessageCircle, X, Send } from 'lucide-react'
 import { useCatalog } from '../hooks/useCatalog'
 import { useTasteProfile } from '../hooks/useTasteProfile'
 import { useScratchpad } from '../hooks/useScratchpad'
@@ -10,7 +10,6 @@ import { getMediaColor, MEDIA_TYPES } from '../utils/filterUtils'
 import { formatDate } from '../utils/dateUtils'
 import CoverArt from '../components/common/CoverArt'
 import MediaPickerInput from '../components/common/MediaPickerInput'
-import { generateWeeklyLetter } from '../utils/weeklyLetter'
 import CalibrationOnboarding from '../components/CalibrationOnboarding'
 import CalibrationWidget from '../components/CalibrationWidget'
 import CatalogInsights from '../components/CatalogInsights'
@@ -26,67 +25,6 @@ const SCRATCHPAD_TYPE_TO_SEARCH = {
 
 const TYPE_ICONS = { music: Music, movie: Film, tv: Tv, book: BookOpen }
 
-// ─── Tidbits generator ───
-function generateTidbits(stats, profile, addedThisWeek) {
-  const tidbits = []
-  const seed = new Date().getFullYear() * 100 + Math.floor(new Date().getDate() / 7)
-
-  // Milestone celebrations
-  if (stats.total === 0) {
-    tidbits.push({ emoji: '👀', text: "Your catalog is giving 'new apartment, no furniture.' Let's fix that." })
-  } else if (stats.total >= 50) {
-    tidbits.push({ emoji: '🏛️', text: `${stats.total} items. At this point your catalog qualifies as a cultural institution.` })
-  } else if (stats.total >= 25) {
-    tidbits.push({ emoji: '📚', text: `${stats.total} items deep. You're not cataloging anymore, you're curating.` })
-  } else if (stats.total >= 10) {
-    tidbits.push({ emoji: '🎉', text: `Double digits! ${stats.total} items. Your radar is officially paying attention to you now.` })
-  }
-
-  // Recent activity
-  if (addedThisWeek >= 5) {
-    tidbits.push({ emoji: '🔥', text: `${addedThisWeek} things added this week. Someone's been busy consuming culture.` })
-  } else if (addedThisWeek === 0 && stats.total > 0) {
-    tidbits.push({ emoji: '📮', text: "Nothing logged this week yet. Quick — what's the last thing you watched or read?" })
-  }
-
-  // Genre loyalty
-  const allGenres = [
-    ...(profile.music?.genres || []),
-    ...(profile.movies?.genres || []),
-    ...(profile.tv?.genres || []),
-    ...(profile.books?.genres || []),
-  ]
-  if (allGenres.length > 0) {
-    const genreCounts = {}
-    allGenres.forEach(g => { genreCounts[g] = (genreCounts[g] || 0) + 1 })
-    const topGenre = Object.entries(genreCounts).sort((a, b) => b[1] - a[1])[0]
-    if (topGenre[1] >= 2) {
-      tidbits.push({ emoji: '🎯', text: `"${topGenre[0]}" keeps showing up like it's your personality type. (It might be.)` })
-    }
-  }
-
-  // Type balance
-  if (stats.byType.music > 0 && stats.byType.book > 0 && stats.byType.movie > 0) {
-    tidbits.push({ emoji: '🦄', text: "Music, film, AND books? A true triple-threat consumer. We see you." })
-  } else if (stats.total > 3 && stats.byType.music === stats.total) {
-    tidbits.push({ emoji: '🎵', text: "Your catalog is 100% music. No notes. (Well, actually, lots of notes.)" })
-  }
-
-  // Prompts (always available)
-  const prompts = [
-    { emoji: '🌶️', text: "Spicy prompt: what's the most overrated thing in your catalog? Be honest. We won't tell." },
-    { emoji: '💬', text: "Has anyone recommended something to you lately? Drop it in the scratchpad before you forget and feel guilty about it in 3 months." },
-    { emoji: '🔄', text: "Remember that thing you gave 2 stars? Go revisit it. Redemption arcs are real." },
-    { emoji: '🎰', text: "Feeling indecisive? Go to your Radar and commit to the first thing that makes you go 'huh.'" },
-    { emoji: '🪩', text: "Hot take: rate the last thing you finished. Future-you will want to remember what you thought." },
-    { emoji: '🧊', text: "Cold take: you have objectively great taste. We checked." },
-    { emoji: '📱', text: "Quick — text a friend the last thing you 5-starred. They need to know." },
-  ]
-  tidbits.push(prompts[seed % prompts.length])
-
-  // Return 2 tidbits max, deterministically selected
-  return tidbits.slice(0, 2)
-}
 
 // ─── Time-based greeting ───
 function getGreeting(name) {
@@ -137,21 +75,17 @@ export default function Dashboard() {
   }, [items, mountTs])
 
   const recentItems = items.slice(0, 5)
-  const tidbits = generateTidbits(stats, profile, addedThisWeek)
 
-  const letter = useMemo(() => {
-    if (!radar) return null
-    return generateWeeklyLetter(profile, radar)
-  }, [profile, radar])
-
-  // Build a teaser from the letter
-  const radarTeaser = useMemo(() => {
-    if (!letter || letter.sections.length === 0) return null
-    const first = letter.sections[0]
-    const raw = first.body.replace(/\*\*(.+?)\*\*/g, '$1').replace(/\*(.+?)\*/g, '$1')
-    const firstSentence = raw.split(/\.\s/)[0] + '.'
-    return { emoji: first.emoji, title: first.title, teaser: firstSentence }
-  }, [letter])
+  // Dashboard Radar preview now shows one pick from each of the three radar
+  // buckets (Hyped / Overhyped / Critics' Darlings) — generic, no letter.
+  const radarPreview = useMemo(() => {
+    if (!radar) return []
+    return [
+      { bucket: 'Hyped', item: radar.hyped?.[0] },
+      { bucket: "Critics' Darlings", item: radar.darlings?.[0] },
+      { bucket: 'Overhyped', item: radar.overhyped?.[0] },
+    ].filter((p) => p.item)
+  }, [radar])
 
   // Only nudge profile-building when it's empty. (Radar link removed — Radar
   // shows up further down anyway.)
@@ -278,22 +212,6 @@ export default function Dashboard() {
 
         {/* Left column */}
         <div className="space-y-6">
-          {/* Weekly Tidbits */}
-          <div className="bg-bg-secondary border border-border rounded-2xl p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <Lightbulb size={18} className="text-accent-primary" />
-              <h2 className="font-semibold text-text-primary">This Week</h2>
-            </div>
-            <div className="space-y-3">
-              {tidbits.map((tidbit, i) => (
-                <div key={i} className="flex items-start gap-3 p-3 bg-bg-tertiary rounded-xl">
-                  <span className="text-lg shrink-0">{tidbit.emoji}</span>
-                  <p className="text-sm text-text-secondary leading-relaxed">{tidbit.text}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
           {/* Scratchpad */}
           <div className="bg-bg-secondary border border-border rounded-2xl p-5">
             <div className="flex items-center gap-2 mb-4">
@@ -400,43 +318,32 @@ export default function Dashboard() {
 
         {/* Right column */}
         <div className="space-y-6">
-          {/* Radar preview */}
+          {/* Radar preview — one pick from each bucket */}
           <div className="bg-bg-secondary border border-border rounded-2xl p-5">
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-1">
               <h2 className="font-semibold text-text-primary">Weekly Radar</h2>
               <Link to="/radar" className="text-sm text-accent-primary hover:underline flex items-center gap-1">
-                Read the full letter <ArrowRight size={14} />
+                See all picks <ArrowRight size={14} />
               </Link>
             </div>
+            <p className="text-xs text-text-muted mb-3">Hyped · Overhyped · Critics' Darlings.</p>
             {radarIsDemo && radar && (
               <p className="text-xs text-text-muted mb-3 italic">
-                Demo picks — affectionately fictional. Sign in for real releases.
+                Demo picks. Sign in for real ones.
               </p>
             )}
-            {radar ? (
-              <div className="space-y-3">
-                {radarTeaser && (
-                  <Link to="/radar" className="block p-3 bg-bg-tertiary rounded-xl hover:bg-bg-hover transition-colors">
-                    <p className="text-sm text-text-secondary leading-relaxed italic">
-                      "{radarTeaser.teaser}"
-                    </p>
-                    <p className="text-xs text-accent-primary mt-1.5">Read this week's full dispatch →</p>
+            {radar && radarPreview.length > 0 ? (
+              <div className="space-y-2">
+                {radarPreview.map(({ bucket, item }, i) => (
+                  <Link to="/radar" key={i} className="flex items-center gap-3 p-2 rounded-lg hover:bg-bg-hover transition-colors">
+                    <CoverArt title={item.title} type={item.type} coverUrl={item.coverUrl} size="sm" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] uppercase tracking-wide text-accent-primary font-medium">{bucket}</p>
+                      <p className="text-sm font-medium text-text-primary truncate">{item.title}</p>
+                      <p className="text-xs text-text-muted truncate">{item.creator}</p>
+                    </div>
                   </Link>
-                )}
-                {(radar.picks || radar.newReleases || []).slice(0, 3).map((item, i) => {
-                  return (
-                    <Link to="/radar" key={i} className="flex items-center gap-3 p-2 rounded-lg hover:bg-bg-hover transition-colors">
-                      <CoverArt title={item.title} type={item.type} coverUrl={item.coverUrl} size="sm" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-text-primary truncate">{item.title}</p>
-                        <p className="text-xs text-text-muted truncate">{item.creator}</p>
-                      </div>
-                      {item.releaseDate && (
-                        <span className="text-xs text-text-muted shrink-0">{formatDate(item.releaseDate)}</span>
-                      )}
-                    </Link>
-                  )
-                })}
+                ))}
               </div>
             ) : radarLoading ? (
               <div className="text-center py-8">

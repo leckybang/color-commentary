@@ -1,63 +1,47 @@
 /**
  * useWeeklyRadar — React hook wrapping the demo-aware radar service.
  *
- * For demo users, resolves synchronously on first render with the parody
- * payload. For real users, fetches live API data (Spotify/TMDB/OpenLibrary),
- * cached per-user/per-week for 30 min. Returns { radar, loading, error,
- * refresh }.
+ * Radar is now generic (same picks for everyone — no personalization gate).
+ * Demo users resolve synchronously; real users get a cached fetch.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from './useAuth'
-import { useTasteProfile } from './useTasteProfile'
-import { useCatalog } from './useCatalog'
 import { getWeeklyRadar, getDemoRadar } from '../services/radar'
 
 export function useWeeklyRadar() {
   const { user, isDemo } = useAuth()
-  const { profile, isProfileEmpty } = useTasteProfile()
-  const { items } = useCatalog()
 
-  const [radar, setRadar] = useState(() => (isDemo ? getDemoRadar(profile, items) : null))
-  const [loading, setLoading] = useState(!isDemo && !!user && !isProfileEmpty())
+  const [radar, setRadar] = useState(() => (isDemo ? getDemoRadar() : null))
+  const [loading, setLoading] = useState(!isDemo && !!user)
   const [error, setError] = useState(null)
   const [refreshKey, setRefreshKey] = useState(0)
 
-  const profileEmpty = isProfileEmpty()
   // `staleRef` lets the effect ignore results from a superseded render without
-  // aborting the underlying network requests. Aborting the fetches caused
-  // empty radar payloads to get written to the cache whenever the hook
-  // re-fired during auth/profile hydration.
+  // aborting the underlying network requests.
   const staleRef = useRef({ id: 0 })
 
   useEffect(() => {
-    // No profile — nothing to render.
-    if (profileEmpty) {
-      setRadar(null)
-      setLoading(false)
-      setError(null)
-      return
-    }
-
-    // Demo path: resolve synchronously, no fetch.
+    // Demo path: resolve in a microtask so setState doesn't fire sync in the
+    // effect (which the react-hooks/purity rule flags as cascading-render).
     if (isDemo || !user) {
-      setRadar(getDemoRadar(profile, items))
-      setLoading(false)
-      setError(null)
+      Promise.resolve().then(() => {
+        setRadar(getDemoRadar())
+        setLoading(false)
+        setError(null)
+      })
       return
     }
 
     const runId = staleRef.current.id + 1
     staleRef.current.id = runId
-    setLoading(true)
-    setError(null)
-
-    getWeeklyRadar(user, profile, items, {
-      forceRefresh: refreshKey > 0,
+    Promise.resolve().then(() => {
+      setLoading(true)
+      setError(null)
     })
+
+    getWeeklyRadar(user, null, [], { forceRefresh: refreshKey > 0 })
       .then((result) => {
-        // Only apply results if this is still the most recent run; otherwise
-        // the fetch was for a prior render that's been superseded.
         if (staleRef.current.id !== runId) return
         setRadar(result)
         setLoading(false)
@@ -68,10 +52,7 @@ export function useWeeklyRadar() {
         setError(err)
         setLoading(false)
       })
-    // `items` change (e.g. user adds something) shouldn't re-trigger an API
-    // round-trip; we rely on the 30-min cache and manual refresh.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.uid, isDemo, profileEmpty, refreshKey])
+  }, [user?.uid, isDemo, refreshKey, user])
 
   const refresh = useCallback(() => setRefreshKey((k) => k + 1), [])
 

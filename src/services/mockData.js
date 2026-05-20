@@ -250,15 +250,17 @@ export function getDiscoveries(tasteProfile, catalogItems = []) {
 }
 
 export function getWeeklyRadar(tasteProfile, catalogItems = []) {
+  // Demo radar reshaped to the new three-bucket structure (Hyped /
+  // Overhyped / Critics' Darlings). We don't have real critic data in mock,
+  // so we just split the mock content across the buckets for layout demos.
   const releases = getNewReleases(tasteProfile, catalogItems)
   const discoveries = getDiscoveries(tasteProfile, catalogItems)
-  // Unified feed: merge releases and discoveries into a single ranked list
-  // so the new Radar UI shows one stream instead of two tabs.
-  const picks = [...releases, ...discoveries].sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 14)
+  const tag = (items, bucket, source) =>
+    items.map((i) => ({ ...i, bucket, isTastemaker: true, source: source || i.source || 'Demo pick' }))
   return {
-    picks,
-    newReleases: releases,
-    discoveries,
+    hyped: tag(releases.slice(0, 4), 'hyped', 'Demo · Hyped'),
+    overhyped: tag(releases.slice(4, 6), 'overhyped', 'Demo · Mixed reviews'),
+    darlings: tag(discoveries.slice(0, 4), 'darlings', 'Demo · Critics\' pick'),
     generatedAt: new Date().toISOString(),
   }
 }

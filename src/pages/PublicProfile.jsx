@@ -260,16 +260,32 @@ export default function PublicProfile({ isSelf }) {
               ].map((cat) => {
                 const { key, label, color } = cat
                 const Icon = cat.icon
-                const genres = profile[key]?.genres || []
+                // Profile-stated genres + genres aggregated from the user's
+                // actual catalog items of this type. Merging shows the user
+                // that taste data is accumulating from both sources.
+                const stated = profile[key]?.genres || []
+                const catType = { music: 'music', movies: 'movie', tv: 'tv', books: 'book' }[key]
+                const catalogGenreCounts = {}
+                for (const item of items) {
+                  if (item.type !== catType || !item.genre) continue
+                  for (const g of String(item.genre).split(/[,/]+/).map((s) => s.trim()).filter(Boolean)) {
+                    catalogGenreCounts[g] = (catalogGenreCounts[g] || 0) + 1
+                  }
+                }
+                const fromCatalog = Object.entries(catalogGenreCounts)
+                  .sort((a, b) => b[1] - a[1])
+                  .map(([g]) => g)
+                const merged = [...stated]
+                for (const g of fromCatalog) if (!merged.some((m) => m.toLowerCase() === g.toLowerCase())) merged.push(g)
                 return (
                   <div key={key}>
                     <div className="flex items-center gap-1.5 mb-2">
                       <Icon size={14} style={{ color }} />
                       <span className="text-xs font-medium text-text-muted">{label}</span>
                     </div>
-                    {genres.length > 0 ? (
+                    {merged.length > 0 ? (
                       <div className="flex flex-wrap gap-1">
-                        {genres.map((g) => (
+                        {merged.map((g) => (
                           <span key={g} className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: `color-mix(in srgb, ${color} 15%, transparent)`, color }}>
                             {g}
                           </span>
