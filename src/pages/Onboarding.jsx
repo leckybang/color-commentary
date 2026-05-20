@@ -350,11 +350,10 @@ export default function Onboarding() {
                 <p className="text-sm text-text-muted text-center mb-5">
                   A weekly dispatch from the parts of culture worth your attention.
                 </p>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {[
                     { title: 'Hyped', body: 'Popular new releases this month that critics also love.', color: 'var(--color-accent-primary)' },
-                    { title: 'Overhyped', body: 'Things everyone is talking about that the reviews don\'t back up.', color: 'var(--color-accent-movies)' },
-                    { title: "Critics' Darlings", body: 'Quietly raved picks from places like NYT Books and Pitchfork.', color: 'var(--color-accent-books)' },
+                    { title: "Critics' Darlings", body: 'Quietly raved picks from NYT Books, Pitchfork, and top critics.', color: 'var(--color-accent-books)' },
                   ].map((b) => (
                     <div
                       key={b.title}

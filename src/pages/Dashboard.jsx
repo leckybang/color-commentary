@@ -326,7 +326,7 @@ export default function Dashboard() {
                 See all picks <ArrowRight size={14} />
               </Link>
             </div>
-            <p className="text-xs text-text-muted mb-3">Hyped · Overhyped · Critics' Darlings.</p>
+            <p className="text-xs text-text-muted mb-3">Hyped · Critics' Darlings.</p>
             {radarIsDemo && radar && (
               <p className="text-xs text-text-muted mb-3 italic">
                 Demo picks. Sign in for real ones.
