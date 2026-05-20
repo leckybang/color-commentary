@@ -10,7 +10,7 @@
  */
 
 import { getWeeklyRadar as getMockRadar } from './mockData'
-import { fetchTMDBNewMovies, fetchTMDBNewTV, searchTMDB } from './providers/tmdb'
+import { fetchTMDBNewMovies, fetchTMDBNewTV, searchTMDB, fetchTMDBCredits } from './providers/tmdb'
 import { fetchNYTBestsellers } from './providers/nytBooks'
 import { searchGoogleBooks } from './providers/googleBooks'
 
@@ -155,17 +155,20 @@ async function fetchPitchforkBNM({ signal } = {}) {
 }
 
 /**
- * Real-user radar — generic for everyone, three buckets:
+ * Real-user radar — two generic buckets:
  *
- *   HYPED: popular + well-reviewed new things (TMDB high vote / high pop +
- *     recent; top NYT bestsellers; fresh Spotify drops).
- *   OVERHYPED: popular + poorly-reviewed (TMDB high pop + low vote, recent).
- *     The "everyone's talking but critics aren't sold" bucket.
- *   CRITICS' DARLINGS: NYT-reviewed books, top critic-scored TMDB titles,
- *     Pitchfork "Best New Music" via RSS. Things the press loves.
+ *   HYPED: popular + well-reviewed new things (top critic-scored TMDB by
+ *     popularity, top NYT bestsellers, fresh Pitchfork BNM albums for music,
+ *     plus a couple of fresh Spotify drops when available).
+ *   CRITICS' DARLINGS: NYT-reviewed books, the top critic-scored TMDB
+ *     titles, more Pitchfork "Best New Music". Things the press loves.
  *
  * All real data from APIs we already use — no LLM recall, no hallucinated
- * picks. No personalization either; this is the same dispatch for everyone.
+ * picks. No personalization either; same dispatch for everyone.
+ *
+ * Music backbone is Pitchfork BNM (always real, has reviewUrl). Spotify
+ * new releases are sprinkled in when reachable but never required — if
+ * the Spotify creds aren't set, the bucket still has music.
  */
 async function buildRealRadar({ signal } = {}) {
   const [music, movies, tv, booksNYT, pitchfork] = await Promise.all([
@@ -189,27 +192,19 @@ async function buildRealRadar({ signal } = {}) {
     .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
     .slice(0, 3)
   const hypedBooks = booksNYT.filter((b) => (b.rank || 99) <= 5).slice(0, 3)
-  const hypedMusic = music.slice(0, 3)
+
+  // Music: Pitchfork is the reliable backbone (real titles + real review
+  // URLs). Spotify supplements when available. Each pick keeps its own
+  // honest source/review tag.
+  const hypedPitchfork = pitchfork.slice(0, 2).map((p) => ({ ...p, bucket: 'hyped', isTastemaker: true }))
+  const hypedSpotify = tag((music || []).slice(0, 2), 'hyped', () => ({ source: 'New on Spotify', blurb: '' }))
 
   const hyped = [
     ...tag(hypedBooks, 'hyped', (b) => ({ source: `NYT Best Seller${b.rank ? ` · #${b.rank}` : ''}`, blurb: b.description || 'A current New York Times best seller.' })),
     ...tag(hypedMovies, 'hyped', (m) => ({ source: `Critics ${m.voteAverage.toFixed(1)}/10 · trending`, blurb: m.description || '' })),
     ...tag(hypedTV, 'hyped', (t) => ({ source: `Critics ${t.voteAverage.toFixed(1)}/10 · trending`, blurb: t.description || '' })),
-    ...tag(hypedMusic, 'hyped', () => ({ source: 'New on Spotify', blurb: '' })),
-  ]
-
-  // ── OVERHYPED ──
-  const overMovies = [...movies]
-    .filter((m) => (m.popularity || 0) >= 50 && (m.voteCount || 0) >= 100 && (m.voteAverage || 0) > 0 && (m.voteAverage || 0) < 6)
-    .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
-    .slice(0, 3)
-  const overTV = [...tv]
-    .filter((t) => (t.popularity || 0) >= 30 && (t.voteCount || 0) >= 100 && (t.voteAverage || 0) > 0 && (t.voteAverage || 0) < 6)
-    .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
-    .slice(0, 3)
-  const overhyped = [
-    ...tag(overMovies, 'overhyped', (m) => ({ source: `Mixed reviews · ${m.voteAverage.toFixed(1)}/10`, blurb: m.description || '' })),
-    ...tag(overTV, 'overhyped', (t) => ({ source: `Mixed reviews · ${t.voteAverage.toFixed(1)}/10`, blurb: t.description || '' })),
+    ...hypedPitchfork,
+    ...hypedSpotify,
   ]
 
   // ── CRITICS' DARLINGS ──
@@ -222,27 +217,50 @@ async function buildRealRadar({ signal } = {}) {
     .filter((t) => (t.voteAverage || 0) >= 7.6 && (t.voteCount || 0) >= 100)
     .sort((a, b) => (b.voteAverage || 0) - (a.voteAverage || 0))
     .slice(0, 2)
+  // Pitchfork BNM picks not already in hyped go to darlings.
+  const usedPitchforkIds = new Set(hypedPitchfork.map((p) => p.externalId))
+  const darlingsPitchfork = pitchfork
+    .filter((p) => !usedPitchforkIds.has(p.externalId))
+    .slice(0, 3)
+    .map((p) => ({ ...p, bucket: 'darlings', isTastemaker: true }))
   const darlings = [
     ...tag(reviewedBooks, 'darlings', () => ({ source: 'New York Times — reviewed', blurb: '' })),
-    ...pitchfork.slice(0, 3).map((p) => ({ ...p, bucket: 'darlings', isTastemaker: true })),
+    ...darlingsPitchfork,
     ...tag(acclaimedMovies, 'darlings', (m) => ({ source: `Critics' score ${m.voteAverage.toFixed(1)}/10`, blurb: m.description || '' })),
     ...tag(acclaimedTV, 'darlings', (t) => ({ source: `Critics' score ${t.voteAverage.toFixed(1)}/10`, blurb: t.description || '' })),
   ]
 
   // Backfill cover art for anything missing it (e.g. Pitchfork RSS items).
-  const [hypedFinal, overhypedFinal, darlingsFinal] = await Promise.all([
+  let [hypedFinal, darlingsFinal] = await Promise.all([
     enrichCoverArt(hyped, { signal }),
-    enrichCoverArt(overhyped, { signal }),
     enrichCoverArt(darlings, { signal }),
   ])
 
+  // Enrich TMDB items (movies / TV) with director + lead cast. Cheap parallel
+  // calls; missing credits just leave creator/cast empty.
+  hypedFinal = await enrichTMDBCredits(hypedFinal, { signal })
+  darlingsFinal = await enrichTMDBCredits(darlingsFinal, { signal })
+
   return {
     hyped: hypedFinal,
-    overhyped: overhypedFinal,
     darlings: darlingsFinal,
     generatedAt: new Date().toISOString(),
     isDemo: false,
   }
+}
+
+async function enrichTMDBCredits(items, { signal } = {}) {
+  return Promise.all(
+    items.map(async (item) => {
+      if (item.provider !== 'tmdb' || !item.externalId) return item
+      const { creator, cast } = await fetchTMDBCredits(item.externalId, item.type, { signal })
+      return {
+        ...item,
+        creator: item.creator || creator,
+        cast: cast || [],
+      }
+    })
+  )
 }
 
 // In-flight request dedupe: if the hook fires multiple times in quick
@@ -275,7 +293,7 @@ export async function getWeeklyRadar(user, profile, catalogItems = [], opts = {}
       // Don't cache empty results — a failed API fetch (missing env vars, outage)
       // shouldn't lock the user out for 30 minutes.
       const hasContent =
-        (fresh.hyped?.length ?? 0) + (fresh.overhyped?.length ?? 0) + (fresh.darlings?.length ?? 0) > 0
+        (fresh.hyped?.length ?? 0) + (fresh.darlings?.length ?? 0) > 0
       if (hasContent) writeCache(uid, fresh)
       return fresh
     })

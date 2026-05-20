@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Radar as RadarIcon, Sparkles, Calendar, Loader2, RefreshCw, ChevronDown, ChevronUp, Check, Bookmark, Info, Music, Film, Tv, BookOpen, Newspaper, ExternalLink, TrendingUp, AlertTriangle, Award } from 'lucide-react'
+import { Radar as RadarIcon, Sparkles, Calendar, Loader2, RefreshCw, ChevronDown, ChevronUp, Check, Bookmark, Info, Music, Film, Tv, BookOpen, Newspaper, ExternalLink, TrendingUp, Award, Users } from 'lucide-react'
 import CoverArt from '../components/common/CoverArt'
 import ExternalLinks from '../components/common/ExternalLinks'
 import { useCatalog } from '../hooks/useCatalog'
@@ -47,13 +47,6 @@ const BUCKETS = [
     icon: TrendingUp,
     color: 'var(--color-accent-primary)',
     blurb: 'Popular new releases critics also love.',
-  },
-  {
-    key: 'overhyped',
-    label: 'Overhyped',
-    icon: AlertTriangle,
-    color: 'var(--color-accent-movies)',
-    blurb: "Everyone's talking — reviews don't back it up.",
   },
   {
     key: 'darlings',
@@ -131,6 +124,12 @@ function RadarCard({ item, onAdd, onDismiss, isAdded }) {
         <div className="px-4 pb-4 space-y-3">
           {(item.blurb || item.description) && (
             <p className="text-sm text-text-secondary leading-relaxed">{item.blurb || item.description}</p>
+          )}
+          {Array.isArray(item.cast) && item.cast.length > 0 && (
+            <div className="flex items-start gap-1.5 text-xs text-text-muted">
+              <Users size={12} className="shrink-0 mt-0.5" />
+              <span><span className="text-text-secondary">Starring</span> {item.cast.join(', ')}</span>
+            </div>
           )}
           {review && (
             <a
@@ -246,15 +245,11 @@ export default function Radar() {
     () => (radar?.hyped || []).filter((r) => !dismissed.has(r.title)),
     [radar, dismissed]
   )
-  const overhyped = useMemo(
-    () => (radar?.overhyped || []).filter((r) => !dismissed.has(r.title)),
-    [radar, dismissed]
-  )
   const darlings = useMemo(
     () => (radar?.darlings || []).filter((r) => !dismissed.has(r.title)),
     [radar, dismissed]
   )
-  const totalPicks = hyped.length + overhyped.length + darlings.length
+  const totalPicks = hyped.length + darlings.length
 
   // catalogItems isn't read directly here — useCatalog is consumed for addItem.
   void catalogItems
@@ -267,7 +262,7 @@ export default function Radar() {
           <p className="text-text-secondary text-sm">
             {isDemo
               ? 'A sample dispatch — fictional picks, real vibes.'
-              : "What's hyped, overhyped, and quietly raved this week. Same picks for everyone."}
+              : "What's hyped this week, and what critics are quietly raving about."}
           </p>
         </div>
         <button
@@ -285,7 +280,7 @@ export default function Radar() {
           <Info size={16} className="text-accent-primary mt-0.5 shrink-0" />
           <p className="text-xs text-text-secondary leading-relaxed">
             <span className="font-medium text-accent-primary">Demo dispatch.</span>{' '}
-            Sign in to see real Hyped / Overhyped / Critics' Darlings sourced from NYT Books, TMDB, and Pitchfork.
+            Sign in to see real Hyped + Critics' Darlings sourced from NYT Books, TMDB, and Pitchfork.
           </p>
         </div>
       )}
@@ -312,7 +307,7 @@ export default function Radar() {
             <BucketSection
               key={b.key}
               bucket={b}
-              items={b.key === 'hyped' ? hyped : b.key === 'overhyped' ? overhyped : darlings}
+              items={b.key === 'hyped' ? hyped : darlings}
               onAdd={handleAdd}
               onDismiss={handleDismiss}
               addedItems={addedItems}
