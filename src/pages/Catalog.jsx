@@ -622,7 +622,9 @@ export default function Catalog() {
             <label className="block text-sm font-medium text-text-secondary mb-2">Rating</label>
             <StarRating
               rating={formData.rating}
-              onChange={(r) => setFormData({ ...formData, rating: r })}
+              // Rating something means you finished it — reflect that in the
+              // status right away (still overridable via the Status select).
+              onChange={(r) => setFormData({ ...formData, rating: r, status: r > 0 ? 'finished' : formData.status })}
               size={28}
             />
           </div>

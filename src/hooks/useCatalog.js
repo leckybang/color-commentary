@@ -43,6 +43,22 @@ function toDb(item, userId) {
   }
 }
 
+/**
+ * A rating means you actually experienced something — so a rated item can't
+ * still be "Want to Try." Promote those to Finished, and make sure every
+ * Finished item carries a completion date so Insights can place it in time.
+ */
+function applyRatingRule(item) {
+  let next = item
+  if ((next.rating || 0) > 0 && next.status === 'want') {
+    next = { ...next, status: 'finished' }
+  }
+  if (next.status === 'finished' && !next.dateConsumed) {
+    next = { ...next, dateConsumed: next.dateAdded || new Date().toISOString() }
+  }
+  return next
+}
+
 export function useCatalog() {
   const { user } = useAuth()
   const [items, setItems] = useState([])
@@ -55,7 +71,7 @@ export function useCatalog() {
     if (!storageKey) return
 
     const saved = localStorage.getItem(storageKey)
-    if (saved) setItems(JSON.parse(saved))
+    if (saved) setItems(JSON.parse(saved).map(applyRatingRule))
     setLoading(false)
 
     if (canSync) {
@@ -71,8 +87,23 @@ export function useCatalog() {
           }
           if (data) {
             const mapped = data.map(fromDb)
-            setItems(mapped)
-            if (storageKey) localStorage.setItem(storageKey, JSON.stringify(mapped))
+            const migrated = mapped.map(applyRatingRule)
+            setItems(migrated)
+            if (storageKey) localStorage.setItem(storageKey, JSON.stringify(migrated))
+            // One-time backfill: persist any rows the rule promoted (rated but
+            // still "want", or finished with no date). Idempotent — once written
+            // they come back already-correct and produce no further changes.
+            const changed = migrated.filter(
+              (m, i) => isRealUuid(m.id) && (m.status !== mapped[i].status || m.dateConsumed !== mapped[i].dateConsumed)
+            )
+            changed.forEach((c) => {
+              supabase
+                .from('catalog_items')
+                .update(toDb(c, user.uid))
+                .eq('id', c.id)
+                .eq('user_id', user.uid)
+                .then(({ error: e }) => { if (e) console.error('Rating-rule backfill failed:', e.message) })
+            })
           }
         })
     }
@@ -84,7 +115,7 @@ export function useCatalog() {
   }
 
   const addItem = (item) => {
-    const newItem = {
+    const newItem = applyRatingRule({
       id: canSync ? crypto.randomUUID() : `item-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       dateAdded: new Date().toISOString(),
       rating: 0,
@@ -94,7 +125,7 @@ export function useCatalog() {
       genre: '',
       year: '',
       ...item,
-    }
+    })
     saveLocal([newItem, ...items])
 
     if (canSync && isRealUuid(newItem.id)) {
@@ -110,7 +141,7 @@ export function useCatalog() {
   }
 
   const updateItem = (id, updates) => {
-    const next = items.map((item) => (item.id === id ? { ...item, ...updates } : item))
+    const next = items.map((item) => (item.id === id ? applyRatingRule({ ...item, ...updates }) : item))
     saveLocal(next)
 
     if (canSync && isRealUuid(id)) {
