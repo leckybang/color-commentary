@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom'
 import { LayoutDashboard, SlidersHorizontal, BookMarked, Library, Radar, LogOut, Users, MessageCircle, User } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { usePublicProfile } from '../../hooks/usePublicProfile'
+import Logo from '../common/Logo'
 
 const NAV_ITEMS = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -21,9 +22,12 @@ export default function Sidebar() {
       {/* Desktop sidebar */}
       <aside className="hidden md:flex flex-col w-64 bg-bg-secondary border-r border-border h-screen sticky top-0">
         <div className="p-5 border-b border-border">
-          <h1 className="text-xl font-bold bg-gradient-to-r from-accent-music via-accent-movies to-accent-tv bg-clip-text text-transparent">
-            Color Commentary
-          </h1>
+          <div className="flex items-center gap-2.5">
+            <Logo size={30} />
+            <h1 className="text-xl font-bold bg-gradient-to-r from-accent-music via-accent-movies to-accent-tv bg-clip-text text-transparent">
+              Color Commentary
+            </h1>
+          </div>
           <p className="text-xs text-text-muted mt-1">Your media universe</p>
         </div>
 

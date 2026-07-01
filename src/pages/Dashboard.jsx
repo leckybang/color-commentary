@@ -14,7 +14,7 @@ import MediaPickerInput from '../components/common/MediaPickerInput'
 import MediaSearchInput from '../components/common/MediaSearchInput'
 import { generateWeeklyLetter } from '../utils/weeklyLetter'
 import CalibrationOnboarding from '../components/CalibrationOnboarding'
-import CalibrationWidget from '../components/CalibrationWidget'
+import InsightsHero from '../components/InsightsHero'
 import { CALIBRATION_QUESTIONS } from '../data/calibrationData'
 
 // Liner Notes section configs (mirrors Weekly.jsx)
@@ -115,7 +115,7 @@ function getGreeting(name) {
 export default function Dashboard() {
   const { user } = useAuth()
   const { items, getStats } = useCatalog()
-  const { profile, isProfileEmpty, addTag, saveProfile } = useTasteProfile()
+  const { profile, isProfileEmpty, saveProfile } = useTasteProfile()
   const { radar, loading: radarLoading, isDemo: radarIsDemo } = useWeeklyRadar()
   const { dumps, getStreak, getCurrentWeekDump, saveDump } = useWeeklyDumps()
   const { notes, addNote, deleteNote } = useScratchpad()
@@ -259,6 +259,9 @@ export default function Dashboard() {
         <p className="text-text-secondary">Here's the vibe check on your media universe.</p>
       </div>
 
+      {/* ─── Insights — front and center ─── */}
+      <InsightsHero items={items} displayName={user?.displayName} />
+
       {/* ─── Log Media (always-available primary entry point) ─── */}
       <Link
         to="/catalog?add=1"
@@ -289,11 +292,6 @@ export default function Dashboard() {
         </div>
       )}
       {cta.to === '/catalog' && <div className="mb-8" />}
-
-      {/* ─── Daily Taste Calibration ─── */}
-      {user && !user.uid?.startsWith('demo') && (
-        <CalibrationWidget user={user} addTag={addTag} />
-      )}
 
       {/* ─── Stats Row ─── */}
       <div className="grid grid-cols-4 gap-3 mb-8">

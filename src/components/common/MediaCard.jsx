@@ -1,4 +1,5 @@
-import { ExternalLink, Music, Film, Tv, BookOpen } from 'lucide-react'
+import { useState } from 'react'
+import { ExternalLink, Music, Film, Tv, BookOpen, Play, Check, RotateCcw, MoreHorizontal, X } from 'lucide-react'
 import StarRating from './StarRating'
 import CoverArt from './CoverArt'
 import { getMediaColor, STATUS_OPTIONS } from '../../utils/filterUtils'
@@ -11,13 +12,72 @@ const TYPE_LABELS = {
   book: 'Book',
 }
 
-export default function MediaCard({ item, onUpdate, onDelete, onClick }) {
+// The natural "next step" for the core loop: Want → In Progress → Finished.
+function PrimaryAction({ item, onUpdate, onFinish }) {
+  const stop = (e) => e.stopPropagation()
+
+  if (item.status === 'want') {
+    return (
+      <button
+        onClick={(e) => { stop(e); onUpdate?.(item.id, { status: 'watching' }) }}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-accent-tv/15 text-accent-tv hover:bg-accent-tv/25 transition-all active:scale-95"
+      >
+        <Play size={13} fill="currentColor" />
+        Start
+      </button>
+    )
+  }
+  if (item.status === 'watching') {
+    return (
+      <button
+        onClick={(e) => { stop(e); onFinish?.(item) }}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-accent-books/15 text-accent-books hover:bg-accent-books/25 transition-all active:scale-95"
+      >
+        <Check size={13} strokeWidth={3} />
+        Finish
+      </button>
+    )
+  }
+  if (item.status === 'finished') {
+    return (
+      <button
+        onClick={(e) => { stop(e); onUpdate?.(item.id, { status: 'watching' }) }}
+        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-text-muted hover:text-text-secondary hover:bg-bg-hover transition-colors"
+      >
+        <RotateCcw size={12} />
+        Revisit
+      </button>
+    )
+  }
+  // dropped
+  return (
+    <button
+      onClick={(e) => { stop(e); onUpdate?.(item.id, { status: 'watching' }) }}
+      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-text-muted hover:text-text-secondary hover:bg-bg-hover transition-colors"
+    >
+      <RotateCcw size={12} />
+      Pick back up
+    </button>
+  )
+}
+
+export default function MediaCard({ item, onUpdate, onFinish, onClick }) {
+  const [menuOpen, setMenuOpen] = useState(false)
   const color = getMediaColor(item.type)
-  const statusLabel = STATUS_OPTIONS.find((s) => s.value === item.status)?.label || item.status
   // Surface "find it on" links directly on Want-to-Try cards so users can jump
   // to Spotify/Apple/Amazon/Bookshop without first opening the edit modal.
   const showQuickLinks = item.status === 'want' && item.type && item.title
   const quickLinks = showQuickLinks ? getMediaLinks(item.type, item.title, item.creator || '') : []
+
+  const setStatus = (status) => {
+    setMenuOpen(false)
+    if (status === item.status) return
+    if (status === 'finished') {
+      onFinish?.(item)
+    } else {
+      onUpdate?.(item.id, { status })
+    }
+  }
 
   return (
     <div
@@ -38,7 +98,6 @@ export default function MediaCard({ item, onUpdate, onDelete, onClick }) {
             >
               {TYPE_LABELS[item.type]}
             </span>
-            <span className="text-xs text-text-muted">{statusLabel}</span>
           </div>
           {item.rating > 0 && (
             <div className="mt-2">
@@ -50,6 +109,50 @@ export default function MediaCard({ item, onUpdate, onDelete, onClick }) {
       {item.review && (
         <p className="mt-3 pt-3 border-t border-border text-sm text-text-secondary line-clamp-2">{item.review}</p>
       )}
+
+      {/* Status action bar — the core loop, one tap from the card */}
+      <div className="mt-3 pt-3 border-t border-border flex items-center justify-between gap-2">
+        <PrimaryAction item={item} onUpdate={onUpdate} onFinish={onFinish} />
+
+        {/* Overflow menu for off-path moves (Dropped, jump back, etc.) */}
+        <div className="relative">
+          <button
+            onClick={(e) => { e.stopPropagation(); setMenuOpen((o) => !o) }}
+            className="p-1.5 rounded-lg text-text-muted hover:text-text-secondary hover:bg-bg-hover transition-colors"
+            title="Change status"
+          >
+            <MoreHorizontal size={16} />
+          </button>
+          {menuOpen && (
+            <>
+              {/* click-away backdrop */}
+              <div
+                className="fixed inset-0 z-10"
+                onClick={(e) => { e.stopPropagation(); setMenuOpen(false) }}
+              />
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="absolute right-0 bottom-full mb-1 z-20 w-40 bg-bg-secondary border border-border rounded-xl shadow-xl py-1"
+              >
+                <p className="px-3 py-1 text-[10px] uppercase tracking-wide text-text-muted">Move to</p>
+                {STATUS_OPTIONS.map((s) => (
+                  <button
+                    key={s.value}
+                    onClick={() => setStatus(s.value)}
+                    className={`w-full text-left px-3 py-1.5 text-xs flex items-center justify-between hover:bg-bg-hover transition-colors ${
+                      s.value === item.status ? 'text-accent-primary font-medium' : 'text-text-secondary'
+                    }`}
+                  >
+                    {s.label}
+                    {s.value === item.status && <Check size={12} />}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
       {quickLinks.length > 0 && (
         <div className="mt-3 pt-3 border-t border-border flex flex-wrap gap-1.5">
           {quickLinks.map((link) => (
