@@ -104,11 +104,18 @@ function ItemRow({ item, onClick }) {
  */
 export default function CatalogInsights({ items, onItemClick, defaultOpen = false, compact = false }) {
   const [open, setOpen] = useState(defaultOpen)
-  const [period, setPeriod] = useState('month')
+  const [period, setPeriod] = useState(null) // null = follow the smart default below
 
   const rollup = useMemo(() => getActivityRollup(items), [items])
-  const narrative = useMemo(() => buildNarrative(items, period), [items, period])
-  const activity = useMemo(() => getActivityByType(items, period), [items, period])
+  // Open on the most granular period that actually has activity, so the panel
+  // never shows an all-zero "This month" at the very start of a month/week.
+  const activePeriod = period ?? (
+    (rollup.week.added || rollup.week.finished) ? 'week'
+      : (rollup.month.added || rollup.month.finished) ? 'month'
+      : 'year'
+  )
+  const narrative = useMemo(() => buildNarrative(items, activePeriod), [items, activePeriod])
+  const activity = useMemo(() => getActivityByType(items, activePeriod), [items, activePeriod])
   const topRated = useMemo(() => getTopRated(items, 5, 4), [items])
   const recentStars = useMemo(() => getRecentHighlyRated(items, 5, 30, 4), [items])
 
@@ -137,7 +144,7 @@ export default function CatalogInsights({ items, onItemClick, defaultOpen = fals
                 key={p.v}
                 onClick={() => setPeriod(p.v)}
                 className={`px-3 py-1 text-xs rounded-md transition-colors ${
-                  period === p.v ? 'bg-bg-secondary text-text-primary font-medium' : 'text-text-muted hover:text-text-secondary'
+                  activePeriod === p.v ? 'bg-bg-secondary text-text-primary font-medium' : 'text-text-muted hover:text-text-secondary'
                 }`}
               >
                 {p.l}

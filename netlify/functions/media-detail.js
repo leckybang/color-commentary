@@ -18,8 +18,17 @@ const GBOOKS_KEY = process.env.VITE_GOOGLE_BOOKS_API_KEY || process.env.GOOGLE_B
 const TMDB_IMG = 'https://image.tmdb.org/t/p/w200'
 const MAX_RELATED = 6
 
-function clip(s, n = 600) {
-  return typeof s === 'string' ? s.trim().slice(0, n) : ''
+// Trim to a length but end on a sentence/word boundary with an ellipsis, so
+// descriptions never cut off mid-word.
+function clip(s, n = 700) {
+  if (typeof s !== 'string') return ''
+  const t = s.trim()
+  if (t.length <= n) return t
+  const slice = t.slice(0, n)
+  const lastSentence = slice.lastIndexOf('. ')
+  const lastSpace = slice.lastIndexOf(' ')
+  const cut = lastSentence > n * 0.6 ? lastSentence + 1 : (lastSpace > 0 ? lastSpace : n)
+  return t.slice(0, cut).trim().replace(/[.,;:\s]+$/, '') + '…'
 }
 
 // Normalize a title for dedup: drop parentheticals, edition suffixes, and
@@ -114,15 +123,29 @@ async function booksDetail(item) {
   const withDesc = editions.find((v) => v.description) || vi
   const withRating = editions.find((v) => v.averageRating > 0)
 
-  const author = (vi.authors && vi.authors[0]) || item.creator || ''
+  // Authoritative author: trust the user's own creator field first (it's the
+  // book they actually logged), then the described edition's author. Google
+  // Books' first hit can be a wrong same-title book, which is what produced
+  // bogus "More by <stranger>" lists.
+  const author = (item.creator && item.creator.trim())
+    || (withDesc.authors && withDesc.authors[0])
+    || (vi.authors && vi.authors[0])
+    || ''
   let related = []
   if (author) {
     const more = await getJson(
       `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(`inauthor:"${author}"`)}&maxResults=20&orderBy=relevance${keyParam}`
     )
+    const authorNorm = author.toLowerCase()
     const candidates = (more?.items || [])
       .map((b) => b.volumeInfo)
       .filter((v) => v && v.title)
+      // inauthor: is fuzzy and leaks other people's books — keep only volumes
+      // actually credited to this author.
+      .filter((v) => (v.authors || []).some((a) => {
+        const an = a.toLowerCase()
+        return an.includes(authorNorm) || authorNorm.includes(an)
+      }))
       .map((v) => ({
         title: v.title,
         creator: (v.authors && v.authors[0]) || author,
