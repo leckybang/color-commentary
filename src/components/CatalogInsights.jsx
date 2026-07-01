@@ -119,6 +119,19 @@ export default function CatalogInsights({ items, onItemClick, defaultOpen = fals
   const topRated = useMemo(() => getTopRated(items, 5, 4), [items])
   const recentStars = useMemo(() => getRecentHighlyRated(items, 5, 30, 4), [items])
 
+  // Collapsed-header summary: lead with the smallest non-empty "added" window
+  // (never a row of zeros) plus what's in progress. This line is all most
+  // people see, so it has to carry a real signal on its own.
+  const inProgress = useMemo(() => items.filter((i) => i.status === 'watching').length, [items])
+  const headerSummary = (() => {
+    const added = rollup.week.added > 0 ? `${rollup.week.added} added this week`
+      : rollup.month.added > 0 ? `${rollup.month.added} added this month`
+      : rollup.year.added > 0 ? `${rollup.year.added} added this year`
+      : null
+    const bits = [added, inProgress > 0 ? `${inProgress} in progress` : null].filter(Boolean)
+    return bits.length ? bits.join(' · ') : (items.length ? `${items.length} in your library` : 'Nothing logged yet')
+  })()
+
   return (
     <div className="bg-bg-secondary border border-border rounded-2xl overflow-hidden">
       <button
@@ -129,7 +142,7 @@ export default function CatalogInsights({ items, onItemClick, defaultOpen = fals
           <BarChart3 size={18} className="text-accent-primary shrink-0" />
           <h2 className="font-semibold text-text-primary">Insights</h2>
           <span className="text-xs text-text-muted truncate">
-            {rollup.week.added} this week · {rollup.month.added} this month · {rollup.year.added} this year
+            {headerSummary}
           </span>
         </div>
         {open ? <ChevronUp size={16} className="text-text-muted shrink-0" /> : <ChevronDown size={16} className="text-text-muted shrink-0" />}
