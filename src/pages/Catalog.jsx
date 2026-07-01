@@ -10,6 +10,7 @@ import Modal from '../components/common/Modal'
 import ExternalLinks from '../components/common/ExternalLinks'
 import MediaPickerInput from '../components/common/MediaPickerInput'
 import ItemLightbox from '../components/ItemLightbox'
+import Celebration from '../components/common/Celebration'
 import CatalogInsights from '../components/CatalogInsights'
 import QuickAdd from '../components/QuickAdd'
 import { filterCatalog, sortCatalog, MEDIA_TYPES, STATUS_OPTIONS, getMediaColor } from '../utils/filterUtils'
@@ -45,6 +46,21 @@ export default function Catalog() {
   const [lightboxItem, setLightboxItem] = useState(null)
   const [saveAttempted, setSaveAttempted] = useState(false)
   const [dragIndex, setDragIndex] = useState(null)
+  const [celebrating, setCelebrating] = useState(null)
+
+  // Marking something Finished is the payoff of the whole app — set the
+  // completion date, drop it from Next Up, and fire the celebration moment.
+  const handleFinish = (item) => {
+    updateItem(item.id, { status: 'finished', dateConsumed: new Date().toISOString() })
+    if (isInNextUp(item.id)) removeFromNextUp(item.id)
+    setCelebrating(item)
+  }
+
+  // The lightbox holds a snapshot from when it opened; re-derive from the live
+  // catalog so status changes made inside it show up immediately.
+  const liveLightboxItem = lightboxItem
+    ? items.find((i) => i.id === lightboxItem.id) || lightboxItem
+    : null
 
   // Auto-open the Add modal when navigated here with ?add=1 (e.g. Dashboard's Log Media button)
   useEffect(() => {
@@ -223,7 +239,7 @@ export default function Catalog() {
     const pinned = isInNextUp(item.id)
     return (
       <div key={item.id} className="relative group">
-        <MediaCard item={item} onClick={openLightbox} />
+        <MediaCard item={item} onClick={openLightbox} onUpdate={updateItem} onFinish={handleFinish} />
         {item.status === 'want' && (
           <button
             type="button"
@@ -460,13 +476,26 @@ export default function Catalog() {
         </>
       )}
 
-      {/* Item detail + D/F/F lightbox */}
+      {/* Item detail + media-info lightbox. Feed it the live item so status
+          changes made inside it reflect immediately. */}
       <ItemLightbox
-        item={lightboxItem}
-        isOpen={!!lightboxItem}
+        item={liveLightboxItem}
+        isOpen={!!liveLightboxItem}
         onClose={() => setLightboxItem(null)}
         onEdit={openEdit}
+        onUpdate={updateItem}
+        onFinish={handleFinish}
         addItem={addItem}
+      />
+
+      {/* Celebration when something is marked Finished.
+          key remounts it per item so each finish starts with a fresh rating prompt. */}
+      <Celebration
+        key={celebrating?.id || 'none'}
+        item={celebrating}
+        onRate={(rating) => celebrating && updateItem(celebrating.id, { rating })}
+        onReview={(review) => celebrating && updateItem(celebrating.id, { review })}
+        onClose={() => setCelebrating(null)}
       />
 
       {/* Add/Edit Modal */}
