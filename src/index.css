@@ -48,3 +48,17 @@ h1, h2, h3 {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-text-muted);
 }
+
+/* Celebration pop-in (used by Celebration.jsx) */
+@keyframes cc-pop {
+  0%   { transform: scale(0.85); opacity: 0; }
+  60%  { transform: scale(1.03); opacity: 1; }
+  100% { transform: scale(1);    opacity: 1; }
+}
+
+/* Card status-advance flourish (used by MediaCard.jsx) */
+@keyframes cc-advance {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}

@@ -11,8 +11,7 @@ import { formatDate } from '../utils/dateUtils'
 import CoverArt from '../components/common/CoverArt'
 import MediaPickerInput from '../components/common/MediaPickerInput'
 import CalibrationOnboarding from '../components/CalibrationOnboarding'
-import CalibrationWidget from '../components/CalibrationWidget'
-import CatalogInsights from '../components/CatalogInsights'
+import InsightsHero from '../components/InsightsHero'
 import QuickAdd from '../components/QuickAdd'
 import { CALIBRATION_QUESTIONS } from '../data/calibrationData'
 
@@ -38,7 +37,7 @@ function getGreeting(name) {
 export default function Dashboard() {
   const { user } = useAuth()
   const { items, getStats, addItem } = useCatalog()
-  const { profile, isProfileEmpty, addTag, saveProfile } = useTasteProfile()
+  const { profile, isProfileEmpty, saveProfile } = useTasteProfile()
   const { radar, loading: radarLoading, isDemo: radarIsDemo } = useWeeklyRadar()
   const { notes, addNote, deleteNote } = useScratchpad()
   const [noteText, setNoteText] = useState('')
@@ -91,16 +90,6 @@ export default function Dashboard() {
   // shows up further down anyway.)
   const showBuildProfile = isProfileEmpty()
 
-  // Show the Taste Check beside Quick Add only when it's actually available:
-  // non-demo user who hasn't dismissed it for the day. Mirrors the widget's
-  // own daily-dismiss logic so the two-column layout doesn't leave a gap.
-  const calibrationDismissed = useMemo(() => {
-    if (!user || user.uid?.startsWith('demo')) return true
-    const d = new Date()
-    return !!localStorage.getItem(`cc_calibration_${d.getFullYear()}-${d.getMonth()}-${d.getDate()}_${user.uid}`)
-  }, [user])
-  const showCalibration = !!user && !user.uid?.startsWith('demo') && !calibrationDismissed
-
   const handleAddNote = () => {
     if (!noteText.trim()) return
     const payload = noteMeta
@@ -147,16 +136,12 @@ export default function Dashboard() {
         <p className="text-text-secondary">Here's the vibe check on your media universe.</p>
       </div>
 
-      {/* ─── Quick Add + Taste Check, side-by-side on desktop ─── */}
-      <div
-        className={`grid grid-cols-1 gap-4 mb-6 items-start ${
-          showCalibration ? 'lg:grid-cols-2' : ''
-        }`}
-      >
+      {/* ─── Insights — front and center + shareable ─── */}
+      <InsightsHero items={items} displayName={user?.displayName} />
+
+      {/* ─── Quick Add ─── */}
+      <div className="mb-6">
         <QuickAdd addItem={addItem} />
-        {showCalibration && (
-          <CalibrationWidget user={user} profile={profile} addTag={addTag} />
-        )}
       </div>
 
       {/* Build-profile nudge (only when empty) */}
@@ -202,10 +187,7 @@ export default function Dashboard() {
         })}
       </div>
 
-      {/* ─── Insights ─── */}
-      <div className="mb-8">
-        <CatalogInsights items={items} />
-      </div>
+
 
       {/* ─── Main Grid ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
