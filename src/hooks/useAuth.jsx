@@ -117,7 +117,12 @@ export function AuthProvider({ children }) {
     if (!isSupabaseConfigured) return
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin },
+      options: {
+        redirectTo: window.location.origin,
+        // Always show Google's account picker instead of silently reusing
+        // whatever account the device browser is already signed into.
+        queryParams: { prompt: 'select_account' },
+      },
     })
     if (error) throw error
   }
