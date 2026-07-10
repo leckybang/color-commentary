@@ -8,7 +8,7 @@ const FEATURES = [
     icon: Radar,
     color: 'var(--color-accent-movies)',
     title: 'Weekly Radar',
-    desc: 'A personalized dispatch of new releases from someone who actually gets your taste.',
+    desc: "See each week's hyped releases and critics' darlings.",
   },
   {
     icon: BookMarked,
@@ -82,7 +82,7 @@ export default function Login() {
             </h1>
           </div>
           <p className="text-text-secondary text-base max-w-xs">
-            Every album, film, show &amp; book you love — one gorgeous catalog.
+            Track every book, movie, show, and album in one place, and stay on top of new releases.
           </p>
         </div>
 

@@ -13,11 +13,18 @@ const H = 1350
 
 const SITE_URL = 'color-commentary.netlify.app'
 
+const INK = '#1b1a16'
+const PORCELAIN = '#f0efea'
+const CARD = '#fbfaf7'
+const PINK = '#d95f8f'
+const SEC = '#54524a'
+const MUTED = '#8f8d81'
+
 const TYPE_COLORS = {
-  music: '#d4a0ff',
-  movie: '#ff7a8a',
-  tv: '#7ab8ff',
-  book: '#7fe0a0',
+  music: '#a88ff0',
+  movie: '#f2799f',
+  tv: '#7fadea',
+  book: '#8fae4e',
 }
 const TYPE_LABELS = { music: 'Music', movie: 'Film', tv: 'TV', book: 'Book' }
 
@@ -62,27 +69,25 @@ function coverSvg({ dataUrl, type, x, y, w, h, clipId }) {
     return `
       <clipPath id="${clipId}"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="12"/></clipPath>
       <image href="${dataUrl}" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="xMidYMid slice" clip-path="url(#${clipId})"/>
-      <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="12" fill="none" stroke="#ffffff" stroke-opacity="0.12" stroke-width="2"/>`
+      <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="12" fill="none" stroke="${INK}" stroke-width="2"/>`
   }
   return `
-    <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="12" fill="${color}" fill-opacity="0.18"/>
-    <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="12" fill="none" stroke="${color}" stroke-opacity="0.4" stroke-width="2"/>
-    <text x="${x + w / 2}" y="${y + h / 2 + 12}" text-anchor="middle" font-family="Georgia, serif" font-size="36" font-weight="bold" fill="${color}">${escapeXml((TYPE_LABELS[type] || '?')[0])}</text>`
+    <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="12" fill="${color}" fill-opacity="0.25"/>
+    <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="12" fill="none" stroke="${INK}" stroke-width="2"/>
+    <text x="${x + w / 2}" y="${y + h / 2 + 12}" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="36" font-weight="bold" fill="${INK}">${escapeXml((TYPE_LABELS[type] || '?')[0])}</text>`
 }
 
-/** The app logo — same 2x2 palette as the favicon, so the card matches. */
+/** The app logo — the wordmark's 2x2 pastel dot grid. */
 function logoSvg(x, y, size) {
-  const s = size / 48
-  const r = (n) => (n * s).toFixed(2)
+  const tile = (size - 6) / 2
+  const rx = size * 0.22
+  const sq = (tx, ty, color) => `<rect x="${tx}" y="${ty}" width="${tile}" height="${tile}" rx="${rx}" fill="${color}"/>`
   return `
     <g transform="translate(${x} ${y})">
-      <rect width="${size}" height="${size}" rx="${r(11)}" fill="#110d18"/>
-      <rect x="${r(9)}" y="${r(9)}" width="${r(14.5)}" height="${r(14.5)}" rx="${r(4.5)}" fill="#a78bfa"/>
-      <rect x="${r(24.5)}" y="${r(9)}" width="${r(14.5)}" height="${r(14.5)}" rx="${r(4.5)}" fill="#fb7185"/>
-      <rect x="${r(9)}" y="${r(24.5)}" width="${r(14.5)}" height="${r(14.5)}" rx="${r(4.5)}" fill="#22d3ee"/>
-      <rect x="${r(24.5)}" y="${r(24.5)}" width="${r(14.5)}" height="${r(14.5)}" rx="${r(4.5)}" fill="#34d399"/>
-      <circle cx="${r(24)}" cy="${r(24)}" r="${r(2.4)}" fill="#110d18"/>
-      <circle cx="${r(24)}" cy="${r(24)}" r="${r(1.3)}" fill="#ffffff"/>
+      ${sq(0, 0, TYPE_COLORS.music)}
+      ${sq(tile + 6, 0, TYPE_COLORS.movie)}
+      ${sq(0, tile + 6, TYPE_COLORS.tv)}
+      ${sq(tile + 6, tile + 6, TYPE_COLORS.book)}
     </g>`
 }
 
@@ -97,17 +102,17 @@ function buildSvg(insights, coverMap) {
     const stars = '★'.repeat(f.rating) + '☆'.repeat(Math.max(0, 5 - f.rating))
     return `
       <g transform="translate(90 ${y})">
-        <rect x="0" y="0" width="900" height="142" rx="20" fill="#ffffff" fill-opacity="0.05"/>
-        <rect x="0" y="0" width="8" height="142" rx="4" fill="${color}"/>
+        <rect x="0" y="0" width="900" height="142" rx="20" fill="${CARD}" stroke="${INK}" stroke-width="2.5"/>
+        <rect x="0" y="14" width="9" height="114" rx="4.5" fill="${color}"/>
         ${coverSvg({ dataUrl: coverMap.get(f.id), type: f.type, x: 26, y: 12, w: 86, h: 118, clipId: `fave-cov-${i}` })}
-        <text x="138" y="60" font-family="Georgia, serif" font-size="38" font-weight="bold" fill="#ede8f5">${escapeXml(truncate(f.title, 27))}</text>
-        <text x="138" y="102" font-family="Helvetica, Arial, sans-serif" font-size="26" fill="#a99fc0">${escapeXml(truncate(f.creator || TYPE_LABELS[f.type] || '', 34))}</text>
-        <text x="872" y="84" text-anchor="end" font-family="Helvetica, Arial, sans-serif" font-size="34" fill="${color}" letter-spacing="2">${stars}</text>
+        <text x="138" y="60" font-family="Helvetica, Arial, sans-serif" font-size="36" font-weight="bold" fill="${INK}" letter-spacing="-0.5">${escapeXml(truncate(f.title, 28))}</text>
+        <text x="138" y="102" font-family="Helvetica, Arial, sans-serif" font-size="26" fill="${SEC}">${escapeXml(truncate(f.creator || TYPE_LABELS[f.type] || '', 34))}</text>
+        <text x="872" y="84" text-anchor="end" font-family="Helvetica, Arial, sans-serif" font-size="34" fill="${PINK}" letter-spacing="2">${stars}</text>
       </g>`
   }).join('')
 
   const faveHeader = faves.length > 0
-    ? `<text x="90" y="628" font-family="Helvetica, Arial, sans-serif" font-size="30" font-weight="bold" fill="#6e6488" letter-spacing="4">FAVORITES</text>`
+    ? `<text x="90" y="628" font-family="Helvetica, Arial, sans-serif" font-size="28" font-weight="bold" fill="${MUTED}" letter-spacing="5">FAVORITES</text>`
     : ''
 
   // Five-star spotlight — show WHAT it was, with its cover.
@@ -117,50 +122,42 @@ function buildSvg(insights, coverMap) {
     const extra = fiveStars.length > 1 ? `  ·  +${fiveStars.length - 1} more` : ''
     fiveStarBlock = `
       <g transform="translate(90 1148)">
-        <rect x="0" y="0" width="900" height="126" rx="20" fill="#f5c04a" fill-opacity="0.10"/>
-        <rect x="0" y="0" width="900" height="126" rx="20" fill="none" stroke="#f5c04a" stroke-opacity="0.35" stroke-width="2"/>
+        <rect x="0" y="0" width="900" height="126" rx="20" fill="#f0b429" fill-opacity="0.16"/>
+        <rect x="0" y="0" width="900" height="126" rx="20" fill="none" stroke="${INK}" stroke-width="2.5"/>
         ${coverSvg({ dataUrl: coverMap.get(pick.id), type: pick.type, x: 22, y: 14, w: 72, h: 98, clipId: 'fivestar-cov' })}
-        <text x="118" y="46" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="bold" fill="#f5c04a" letter-spacing="4">FIVE-STAR PICK${escapeXml(extra)}</text>
-        <text x="118" y="92" font-family="Georgia, serif" font-size="34" font-weight="bold" fill="#ede8f5">${escapeXml(truncate(pick.title, 30))}</text>
-        <text x="872" y="76" text-anchor="end" font-family="Helvetica, Arial, sans-serif" font-size="30" fill="#f5c04a" letter-spacing="2">★★★★★</text>
+        <text x="118" y="46" font-family="Helvetica, Arial, sans-serif" font-size="21" font-weight="bold" fill="#a16207" letter-spacing="4">FIVE-STAR PICK${escapeXml(extra)}</text>
+        <text x="118" y="92" font-family="Helvetica, Arial, sans-serif" font-size="33" font-weight="bold" fill="${INK}" letter-spacing="-0.5">${escapeXml(truncate(pick.title, 30))}</text>
+        <text x="872" y="76" text-anchor="end" font-family="Helvetica, Arial, sans-serif" font-size="30" fill="#d97706" letter-spacing="2">★★★★★</text>
       </g>`
   } else if (topGenre) {
-    fiveStarBlock = `<text x="90" y="1220" font-family="Helvetica, Arial, sans-serif" font-size="30" fill="#a99fc0">mostly ${escapeXml(topGenre)}</text>`
+    fiveStarBlock = `<text x="90" y="1220" font-family="Helvetica, Arial, sans-serif" font-size="30" fill="${SEC}">mostly ${escapeXml(topGenre)}</text>`
   }
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
-    <defs>
-      <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stop-color="#1a1023"/>
-        <stop offset="0.55" stop-color="#2a1840"/>
-        <stop offset="1" stop-color="#130d1c"/>
-      </linearGradient>
-      <radialGradient id="glow" cx="0.5" cy="0.32" r="0.6">
-        <stop offset="0" stop-color="#c49bff" stop-opacity="0.35"/>
-        <stop offset="1" stop-color="#c49bff" stop-opacity="0"/>
-      </radialGradient>
-    </defs>
-    <rect width="${W}" height="${H}" fill="url(#bg)"/>
-    <rect width="${W}" height="${H}" fill="url(#glow)"/>
+    <rect width="${W}" height="${H}" fill="${PORCELAIN}"/>
+    <rect x="24" y="24" width="${W - 48}" height="${H - 48}" rx="34" fill="none" stroke="${INK}" stroke-width="3"/>
 
-    <!-- Wordmark with the real app logo -->
-    ${logoSvg(90, 78, 64)}
-    <text x="174" y="122" font-family="Georgia, serif" font-size="38" font-weight="bold" fill="#ede8f5" letter-spacing="1">Color Commentary</text>
+    <!-- Wordmark: pastel dot grid + stacked lowercase, pink underline -->
+    ${logoSvg(90, 76, 66)}
+    <text x="176" y="106" font-family="Helvetica, Arial, sans-serif" font-size="35" font-weight="bold" fill="${INK}" letter-spacing="-1">color</text>
+    <text x="176" y="142" font-family="Helvetica, Arial, sans-serif" font-size="35" font-weight="bold" fill="${INK}" letter-spacing="-1">commentary</text>
+    <rect x="176" y="150" width="212" height="6" rx="3" fill="${PINK}"/>
 
     <!-- Big stat -->
-    <text x="90" y="420" font-family="Georgia, serif" font-size="260" font-weight="bold" fill="#ffffff">${count}</text>
-    <text x="90" y="490" font-family="Helvetica, Arial, sans-serif" font-size="46" fill="#d4a0ff">${escapeXml(periodText)}</text>
+    <text x="86" y="420" font-family="Helvetica, Arial, sans-serif" font-size="250" font-weight="bold" fill="${INK}" letter-spacing="-10">${count}</text>
+    <text x="90" y="486" font-family="Helvetica, Arial, sans-serif" font-size="44" font-weight="bold" fill="${PINK}">${escapeXml(periodText)}</text>
 
     <!-- Breakdown -->
-    ${breakdown ? `<text x="90" y="566" font-family="Helvetica, Arial, sans-serif" font-size="38" font-weight="bold" fill="#ede8f5">${escapeXml(breakdown)}</text>` : ''}
+    ${breakdown ? `<text x="90" y="560" font-family="Helvetica, Arial, sans-serif" font-size="36" font-weight="bold" fill="${SEC}">${escapeXml(breakdown)}</text>` : ''}
 
     ${faveHeader}
     ${faveRows}
 
     ${fiveStarBlock}
 
-    <!-- Footer: where to find the app -->
-    <text x="990" y="1316" text-anchor="end" font-family="Helvetica, Arial, sans-serif" font-size="28" fill="#8d82a8">${SITE_URL}</text>
+    <!-- Footer: where to find the app, ink pill -->
+    <rect x="586" y="1286" width="404" height="50" rx="25" fill="${INK}"/>
+    <text x="966" y="1319" text-anchor="end" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="bold" fill="${PORCELAIN}">${SITE_URL}</text>
   </svg>`
 }
 

@@ -1,30 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 180 180" fill="none">
-  <defs>
-    <radialGradient id="bgGlow" cx="50%" cy="40%" r="70%">
-      <stop offset="0%" stop-color="#2a1a3e" />
-      <stop offset="100%" stop-color="#0e0c15" />
-    </radialGradient>
-    <radialGradient id="paletteGlow" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#a78bfa" stop-opacity="0.55" />
-      <stop offset="100%" stop-color="#a78bfa" stop-opacity="0" />
-    </radialGradient>
-  </defs>
+  <!-- Porcelain field (iOS masks its own corners) -->
+  <rect width="180" height="180" fill="#f0efea"/>
 
-  <!-- iOS will mask but corners are still nice -->
-  <rect width="180" height="180" rx="40" fill="url(#bgGlow)" />
-
-  <!-- Glow behind the palette -->
-  <circle cx="90" cy="90" r="62" fill="url(#paletteGlow)" />
-
-  <!-- 2x2 palette of the four media-type colors -->
+  <!-- 2x2 palette of the four media-type colors, wordmark-style corner radii -->
   <g>
-    <rect x="34" y="34" width="56" height="56" rx="16" fill="#a78bfa"/>
-    <rect x="90" y="34" width="56" height="56" rx="16" fill="#fb7185"/>
-    <rect x="34" y="90" width="56" height="56" rx="16" fill="#22d3ee"/>
-    <rect x="90" y="90" width="56" height="56" rx="16" fill="#34d399"/>
+    <rect x="34" y="34" width="54" height="54" rx="16" fill="#a88ff0"/>
+    <rect x="92" y="34" width="54" height="54" rx="16" fill="#f2799f"/>
+    <rect x="34" y="92" width="54" height="54" rx="16" fill="#7fadea"/>
+    <rect x="92" y="92" width="54" height="54" rx="16" fill="#8fae4e"/>
   </g>
 
-  <!-- Center dot — the "commentary" -->
-  <circle cx="90" cy="90" r="9" fill="#0e0c15"/>
-  <circle cx="90" cy="90" r="4.5" fill="#ffffff"/>
+  <!-- Ink dot at the seam — the "commentary" -->
+  <circle cx="90" cy="90" r="10" fill="#1b1a16"/>
+  <circle cx="90" cy="90" r="4.5" fill="#f0efea"/>
 </svg>
