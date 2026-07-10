@@ -77,7 +77,7 @@ export function useFriendsFeed(limit = 25) {
     Promise.resolve().then(() => setLoading(true))
     supabase
       .from('catalog_items')
-      .select('id, user_id, title, creator, type, status, rating, cover_url, date_added, date_consumed')
+      .select('id, user_id, title, creator, type, genre, year, status, rating, cover_url, date_added, date_consumed')
       .in('user_id', following.map((f) => f.userId))
       .order('date_added', { ascending: false })
       .limit(limit)
@@ -101,6 +101,8 @@ export function useFriendsFeed(limit = 25) {
                 type: row.type,
                 status: row.status || 'want',
                 rating: row.rating || 0,
+                genre: row.genre || '',
+                year: row.year || '',
                 coverUrl: row.cover_url || '',
                 at: row.date_consumed || row.date_added,
               }

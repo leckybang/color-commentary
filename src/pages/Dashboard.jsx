@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { Music, Film, Tv, BookOpen, Radar, Star, CalendarPlus, Plus, ArrowRight, Sparkles, Library, MessageCircle, X, Send } from 'lucide-react'
+import { Music, Film, Tv, BookOpen, Radar, Star, CalendarPlus, Plus, ArrowRight, Sparkles, Library, MessageCircle, Users, X, Send } from 'lucide-react'
 import { useCatalog } from '../hooks/useCatalog'
 import { useTasteProfile } from '../hooks/useTasteProfile'
 import { useScratchpad } from '../hooks/useScratchpad'
@@ -13,6 +13,8 @@ import MediaPickerInput from '../components/common/MediaPickerInput'
 import CalibrationOnboarding from '../components/CalibrationOnboarding'
 import InsightsHero from '../components/InsightsHero'
 import QuickAdd from '../components/QuickAdd'
+import FriendsFeedRows from '../components/FriendsFeedRows'
+import { useFriendsFeed } from '../hooks/useFriendsFeed'
 import { CALIBRATION_QUESTIONS } from '../data/calibrationData'
 
 const SCRATCHPAD_TYPE_TO_SEARCH = {
@@ -39,6 +41,7 @@ export default function Dashboard() {
   const { profile, isProfileEmpty, saveProfile } = useTasteProfile()
   const { radar, loading: radarLoading, isDemo: radarIsDemo } = useWeeklyRadar()
   const { notes, addNote, deleteNote } = useScratchpad()
+  const friendsFeed = useFriendsFeed(6)
   const [noteText, setNoteText] = useState('')
   const [noteType, setNoteType] = useState('movie')
   const [noteMeta, setNoteMeta] = useState(null) // from picked search result
@@ -114,6 +117,11 @@ export default function Dashboard() {
       setNoteText(result.title)
     }
   }
+
+  const inCatalog = (title, type) =>
+    items.some(
+      (i) => i.type === type && i.title.trim().toLowerCase() === String(title).trim().toLowerCase()
+    )
 
   return (
     <div>
@@ -317,6 +325,34 @@ export default function Dashboard() {
               </div>
             ) : (
               <p className="text-xs text-text-muted italic text-center py-4">Empty. For now. Next time someone corners you at a party with a rec, this is your escape plan.</p>
+            )}
+          </div>
+
+          {/* Fresh from friends — latest adds/finishes from people you follow */}
+          <div className="ink-card bg-bg-secondary rounded-2xl p-5">
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2">
+                <Users size={18} className="text-accent-primary" />
+                <h2 className="font-semibold text-text-primary">Fresh from friends</h2>
+              </div>
+              <Link to="/friends" className="text-sm text-accent-primary hover:underline flex items-center gap-1">
+                See all <ArrowRight size={14} />
+              </Link>
+            </div>
+            <p className="text-xs text-text-muted mb-2">Tap Add to grab something for your catalog.</p>
+            {friendsFeed.items.length > 0 ? (
+              <FriendsFeedRows
+                items={friendsFeed.items}
+                addItem={addItem}
+                inCatalog={inCatalog}
+                compact
+              />
+            ) : (
+              <p className="text-xs text-text-muted italic text-center py-4">
+                {friendsFeed.hasFriends
+                  ? 'Nothing from your friends yet — check back soon.'
+                  : 'Follow some friends and their latest picks show up here.'}
+              </p>
             )}
           </div>
         </div>

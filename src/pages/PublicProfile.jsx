@@ -11,6 +11,7 @@ import { determineArchetype } from '../utils/archetypes'
 import { getMediaColor } from '../utils/filterUtils'
 import CoverArt from '../components/common/CoverArt'
 import EmojiPicker from '../components/common/EmojiPicker'
+import { AddFromFriendButton } from '../components/FriendsFeedRows'
 import { isSupabaseConfigured } from '../lib/supabase'
 
 // Inline stats so we can compute over either the owner's catalog or a
@@ -39,7 +40,7 @@ export default function PublicProfile({ isSelf }) {
   const { user } = useAuth()
   const { profile } = useTasteProfile()
   const myProfile = usePublicProfile()
-  const { items: ownItems } = useCatalog()
+  const { items: ownItems, addItem } = useCatalog()
   const friendsApi = useFriends()
 
   // Fetch a Supabase profile when viewing someone else's slug
@@ -111,6 +112,12 @@ export default function PublicProfile({ isSelf }) {
   // The catalog backing the visible sections — yours when looking at yourself,
   // their catalog when looking at someone else (gated by RLS to public users).
   const effectiveItems = isOwnProfile ? ownItems : friendItems
+  const inCatalog = (title, type) =>
+    ownItems.some(
+      (i) => i.type === type && i.title.trim().toLowerCase() === String(title).trim().toLowerCase()
+    )
+  // One-tap copy into the viewer's catalog — only on someone ELSE's profile.
+  const canGrab = !isOwnProfile && !!user
   const stats = computeStats(effectiveItems)
   const currentFavorites = [...effectiveItems]
     .filter((i) => (i.rating || 0) >= 4)
@@ -257,6 +264,11 @@ export default function PublicProfile({ isSelf }) {
                     <span className="text-xs text-amber-500">{item.rating}</span>
                   </div>
                 )}
+                {canGrab && (
+                  <div className="flex justify-center mt-1.5">
+                    <AddFromFriendButton item={item} addItem={addItem} inCatalog={inCatalog} />
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -265,7 +277,7 @@ export default function PublicProfile({ isSelf }) {
             <p className="text-sm">
               {isOwnProfile
                 ? 'Rate a few things 4 stars or higher and they\'ll show up here.'
-                : friendLoading ? 'Loading…' : `${displayProfile.displayName?.split(' ')[0] || 'They'} haven't 4★'d anything yet.`}
+                : friendLoading ? 'Loading…' : (displayProfile.displayName ? `${displayProfile.displayName.split(' ')[0]} hasn't 4★'d anything yet.` : "They haven't 4★'d anything yet.")}
             </p>
             {isOwnProfile && (
               <Link to="/catalog" className="text-xs text-accent-primary hover:underline mt-1 inline-block">
@@ -304,6 +316,7 @@ export default function PublicProfile({ isSelf }) {
                   >
                     {item.type}
                   </span>
+                  {canGrab && <AddFromFriendButton item={item} addItem={addItem} inCatalog={inCatalog} />}
                 </div>
               )
             })}
@@ -313,7 +326,7 @@ export default function PublicProfile({ isSelf }) {
             <p className="text-sm">
               {isOwnProfile
                 ? 'Nothing in the catalog yet.'
-                : friendLoading ? 'Loading…' : `${displayProfile.displayName?.split(' ')[0] || 'They'} haven't logged anything yet.`}
+                : friendLoading ? 'Loading…' : (displayProfile.displayName ? `${displayProfile.displayName.split(' ')[0]} hasn't logged anything yet.` : "They haven't logged anything yet.")}
             </p>
             {isOwnProfile && (
               <Link to="/" className="text-xs text-accent-primary hover:underline mt-1 inline-block">
