@@ -4,6 +4,46 @@ Run these in your **Supabase SQL Editor** to keep your database schema up to dat
 
 ---
 
+## 2026-07 — Friends: missing profile columns + tightened read policies ✅ APPLIED
+
+> Applied directly to the live project as migration `friends_profile_settings_and_policies` on 2026-07-10. Kept here for reference.
+
+```sql
+-- Profile settings the app writes but the table never had (their absence made
+-- every profile upsert fail, so username/bio/emoji/is_public never synced).
+ALTER TABLE profiles
+  ADD COLUMN IF NOT EXISTS avatar_emoji TEXT,
+  ADD COLUMN IF NOT EXISTS email_radar BOOLEAN DEFAULT false;
+
+-- Case-insensitive unique usernames; also speeds up /u/:username lookups.
+CREATE UNIQUE INDEX IF NOT EXISTS profiles_username_lower_idx
+  ON profiles (LOWER(username))
+  WHERE username IS NOT NULL;
+
+-- Tighten profile reads. Previously USING (true): every profile (and email)
+-- was readable by anyone with the anon key. Now: public profiles, your own,
+-- or someone you're in a follow relationship with.
+DROP POLICY IF EXISTS "Profiles publicly readable" ON profiles;
+DROP POLICY IF EXISTS "Anyone can read public profiles" ON profiles;
+CREATE POLICY "Public, own, or followed profiles readable"
+  ON profiles FOR SELECT
+  USING (
+    is_public = true
+    OR id = auth.uid()
+    OR EXISTS (
+      SELECT 1 FROM follows
+      WHERE (follows.follower_id = auth.uid() AND follows.following_id = profiles.id)
+         OR (follows.following_id = auth.uid() AND follows.follower_id = profiles.id)
+    )
+  );
+
+-- The follow graph doesn't need to be world-readable; the app only ever reads
+-- your own edges (as follower or followee), which the remaining policies cover.
+DROP POLICY IF EXISTS "Follows publicly readable" ON follows;
+```
+
+---
+
 ## 2026-04 — Add avatar emoji + email radar + username lookup
 
 ```sql

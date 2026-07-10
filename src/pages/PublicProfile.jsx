@@ -11,6 +11,7 @@ import { determineArchetype } from '../utils/archetypes'
 import { getMediaColor } from '../utils/filterUtils'
 import CoverArt from '../components/common/CoverArt'
 import EmojiPicker from '../components/common/EmojiPicker'
+import FriendsPanel from '../components/FriendsPanel'
 import { isSupabaseConfigured } from '../lib/supabase'
 
 // Inline stats so we can compute over either the owner's catalog or a
@@ -324,6 +325,9 @@ export default function PublicProfile({ isSelf }) {
         )}
       </div>
 
+      {/* Friends — find, follow, and visit people. Own profile only. */}
+      {isOwnProfile && isSelf && <FriendsPanel />}
+
       {/* Taste DNA & Taste Map are hidden here for now — they live in the
           Taste tab (Taste Calibrator). */}
 
@@ -340,6 +344,17 @@ export default function PublicProfile({ isSelf }) {
   if (showSelfWrapper) {
     return (
       <div className="min-h-screen p-4 md:p-8" style={{ backgroundColor: 'var(--color-bg-primary)', color: 'var(--color-text-primary)' }}>
+        {/* Signed-in viewers get a way back into the app from this standalone page */}
+        {user && (
+          <div className="max-w-2xl mx-auto mb-5">
+            <Link
+              to="/me"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-text-secondary hover:text-text-primary transition-colors"
+            >
+              ← Back to your universe
+            </Link>
+          </div>
+        )}
         {content}
       </div>
     )
