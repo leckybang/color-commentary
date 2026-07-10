@@ -2,32 +2,61 @@
  * InsightsHero — the first thing you see on the dashboard.
  *
  * Turns your catalog into a "look what you did" moment: a big finished-count,
- * a breakdown by medium, your favorites, and a one-tap shareable image card.
+ * a breakdown by medium, your favorites, and a shareable image card. Pressing
+ * Share builds the card and shows a photo preview first, with the option to
+ * download it before (or instead of) sending it anywhere.
  */
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Sparkles, Share2, Star, Loader2, ArrowRight, Check } from 'lucide-react'
+import { Trophy, Share2, Star, Loader2, ArrowRight, Download } from 'lucide-react'
 import CoverArt from './common/CoverArt'
+import Modal from './common/Modal'
 import { getMediaColor } from '../utils/filterUtils'
 import { computeInsights, insightsHeadline } from '../utils/insights'
-import { shareInsightCard } from '../utils/shareCard'
+import { buildInsightCard, shareCardBlob, canShareFile, downloadBlob } from '../utils/shareCard'
 
-export default function InsightsHero({ items, displayName }) {
+export default function InsightsHero({ items }) {
   const insights = useMemo(() => computeInsights(items), [items])
-  const [shareState, setShareState] = useState('idle') // idle | working | done
+  const [building, setBuilding] = useState(false)
+  const [card, setCard] = useState(null) // { blob, filename, url }
+  const cardUrlRef = useRef(null)
+
+  // Revoke the preview object URL when it's replaced or on unmount.
+  useEffect(() => {
+    cardUrlRef.current = card?.url || null
+    return () => {
+      if (cardUrlRef.current) URL.revokeObjectURL(cardUrlRef.current)
+    }
+  }, [card])
 
   const handleShare = async () => {
-    if (shareState === 'working') return
-    setShareState('working')
+    if (building) return
+    setBuilding(true)
     try {
-      await shareInsightCard(insights, { displayName })
-      setShareState('done')
-      setTimeout(() => setShareState('idle'), 2200)
+      const { blob, filename } = await buildInsightCard(insights)
+      setCard({ blob, filename, url: URL.createObjectURL(blob) })
     } catch (err) {
       console.error('Share card failed', err)
-      setShareState('idle')
+    } finally {
+      setBuilding(false)
     }
+  }
+
+  const closePreview = () => setCard(null)
+
+  const handleDownload = () => {
+    if (card) downloadBlob(card.blob, card.filename)
+  }
+
+  const handleSendToShare = async () => {
+    if (!card) return
+    const result = await shareCardBlob(card.blob, card.filename)
+    if (result === 'unsupported') {
+      // No native share sheet (most desktops) — fall back to download.
+      downloadBlob(card.blob, card.filename)
+    }
+    if (result === 'shared') closePreview()
   }
 
   // Empty state — no finishes yet. Keep it inviting, not a dead zone.
@@ -35,7 +64,7 @@ export default function InsightsHero({ items, displayName }) {
     return (
       <div className="relative overflow-hidden rounded-2xl mb-6 p-6 border border-accent-primary/20 bg-gradient-to-br from-accent-primary/10 via-bg-secondary to-bg-secondary">
         <div className="flex items-center gap-2 mb-2">
-          <Sparkles size={18} className="text-accent-primary" />
+          <Trophy size={18} className="text-accent-primary" />
           <h2 className="font-semibold text-text-primary">Your Insights</h2>
         </div>
         <p className="text-sm text-text-secondary mb-4 max-w-md">
@@ -52,6 +81,7 @@ export default function InsightsHero({ items, displayName }) {
   }
 
   const headline = insightsHeadline(insights)
+  const shareSupported = card ? canShareFile(card.blob, card.filename) : false
 
   return (
     <div className="relative overflow-hidden rounded-2xl mb-6 border border-accent-primary/25 bg-gradient-to-br from-accent-primary/15 via-bg-secondary to-bg-secondary shadow-lg shadow-accent-primary/5">
@@ -61,20 +91,18 @@ export default function InsightsHero({ items, displayName }) {
       <div className="relative p-6">
         <div className="flex items-start justify-between gap-4 mb-4">
           <div className="flex items-center gap-2">
-            <Sparkles size={18} className="text-accent-primary" />
+            <Trophy size={18} className="text-accent-primary" />
             <h2 className="font-semibold text-text-primary">
               {insights.usingMonth ? `${insights.monthLabel} so far` : 'Your Insights'}
             </h2>
           </div>
           <button
             onClick={handleShare}
-            disabled={shareState === 'working'}
+            disabled={building}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-accent-primary text-white hover:bg-accent-hover transition-all active:scale-95 disabled:opacity-60 shadow-md shadow-accent-primary/30"
           >
-            {shareState === 'working' ? (
+            {building ? (
               <><Loader2 size={13} className="animate-spin" /> Making…</>
-            ) : shareState === 'done' ? (
-              <><Check size={13} /> Ready!</>
             ) : (
               <><Share2 size={13} /> Share</>
             )}
@@ -143,6 +171,35 @@ export default function InsightsHero({ items, displayName }) {
           </div>
         )}
       </div>
+
+      {/* Preview-before-share: see the photo, download it, then send it. */}
+      <Modal isOpen={!!card} onClose={closePreview} title="Your share card" maxWidth="440px">
+        {card && (
+          <div>
+            <img
+              src={card.url}
+              alt="Preview of your insights share card"
+              className="w-full rounded-xl border border-border shadow-lg mb-4"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={handleDownload}
+                className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium border border-border text-text-primary hover:bg-bg-hover transition-colors"
+              >
+                <Download size={15} />
+                Download
+              </button>
+              <button
+                onClick={handleSendToShare}
+                className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-semibold bg-accent-primary text-white hover:bg-accent-hover transition-colors shadow-md shadow-accent-primary/30"
+              >
+                <Share2 size={15} />
+                {shareSupported ? 'Share' : 'Save image'}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }

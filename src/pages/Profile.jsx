@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Music, Film, Tv, BookOpen, Check, SlidersHorizontal, Palette, Plus, X, Globe, Lock, Eye, ArrowUp, ArrowDown, Mail, Save } from 'lucide-react'
+import { Music, Film, Tv, BookOpen, Check, SlidersHorizontal, Palette, Plus, X, Globe, Eye, Save } from 'lucide-react'
 import TagInput from '../components/common/TagInput'
 import SpectrumSlider from '../components/common/SpectrumSlider'
 import CoverArt from '../components/common/CoverArt'
@@ -11,7 +11,6 @@ import { useTheme } from '../hooks/useTheme'
 import { useHeavyRotation } from '../hooks/useHeavyRotation'
 import { usePublicProfile } from '../hooks/usePublicProfile'
 import { useCatalog } from '../hooks/useCatalog'
-import { isSupabaseConfigured } from '../lib/supabase'
 
 const CATEGORIES = [
   {
@@ -350,25 +349,6 @@ export default function Profile({ hidePublicProfile = false, hideHeader = false 
             </button>
           </div>
 
-          {/* Email opt-in */}
-          <div className="flex items-center justify-between pt-4 border-t border-border">
-            <div className="flex items-start gap-3">
-              <Mail size={18} className="text-accent-primary mt-0.5 shrink-0" />
-              <div>
-                <p className="text-sm font-medium text-text-primary">Email me my Weekly Radar</p>
-                <p className="text-xs text-text-muted">Every Monday morning, get a personalized dispatch in your inbox.</p>
-                {publicProfile.emailRadar && !isSupabaseConfigured && (
-                  <p className="text-xs text-amber-500 mt-1">⚠️ Requires Supabase + a scheduled function to actually send. See docs/EMAIL_RADAR_SETUP.md.</p>
-                )}
-              </div>
-            </div>
-            <button
-              onClick={publicProfile.toggleEmailRadar}
-              className={`w-12 h-7 rounded-full transition-colors relative shrink-0 ml-3 ${publicProfile.emailRadar ? 'bg-accent-primary' : 'bg-bg-tertiary border border-border'}`}
-            >
-              <div className={`w-5 h-5 rounded-full bg-white absolute top-1 transition-transform ${publicProfile.emailRadar ? 'translate-x-6' : 'translate-x-1'}`} />
-            </button>
-          </div>
         </div>
       </div>}
 

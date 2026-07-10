@@ -1,32 +1,42 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Headphones, Eye, BookOpen, Check, Plus, ArrowRight, X } from 'lucide-react'
+import { Music, Film, Tv, BookOpen, Check, Plus, ArrowRight, X } from 'lucide-react'
 import MediaPickerInput from './common/MediaPickerInput'
 import { getMediaColor } from '../utils/filterUtils'
 
-// Activity-framed rows. Each maps to the catalog media type(s) it searches.
+// Media-type rows — same Music / Movies / TV / Books split as the
+// "Someone Told Me About..." card, so entry feels consistent everywhere.
 const ROWS = [
   {
-    key: 'listening',
-    label: 'Listening to',
-    icon: Headphones,
+    key: 'music',
+    label: 'Music',
+    icon: Music,
     color: 'var(--color-accent-music)',
     placeholder: 'An album, artist, or track…',
     preferredTypes: ['music'],
     defaultType: 'music',
   },
   {
-    key: 'watching',
-    label: 'Watching',
-    icon: Eye,
+    key: 'movie',
+    label: 'Movies',
+    icon: Film,
     color: 'var(--color-accent-movies)',
-    placeholder: 'A movie or show…',
-    preferredTypes: ['movie', 'tv'],
+    placeholder: 'A movie…',
+    preferredTypes: ['movie'],
     defaultType: 'movie',
   },
   {
-    key: 'reading',
-    label: 'Reading',
+    key: 'tv',
+    label: 'TV',
+    icon: Tv,
+    color: 'var(--color-accent-tv)',
+    placeholder: 'A show…',
+    preferredTypes: ['tv'],
+    defaultType: 'tv',
+  },
+  {
+    key: 'book',
+    label: 'Books',
     icon: BookOpen,
     color: 'var(--color-accent-books)',
     placeholder: 'A book…',
@@ -44,7 +54,7 @@ const STATUS_CHOICES = [
 /**
  * QuickAdd — compact entry point.
  *
- * UX: three small pills (Listening to / Watching / Reading). Click one to
+ * UX: four small pills (Music / Movies / TV / Books). Click one to
  * expand into an inline panel with: status toggle, search input, optional
  * genre. After an add, the panel collapses back to pills.
  *
@@ -134,7 +144,7 @@ export default function QuickAdd({ addItem, onAdded }) {
       </div>
 
       {/* Compact pills */}
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {ROWS.map((row) => {
           const Icon = row.icon
           const isOpen = openKey === row.key

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Plus, LayoutGrid, List, Music, Film, Tv, BookOpen, Trash2, Pin, PinOff, GripVertical, ArrowUp, ArrowDown, Sparkles, Target, Library, Play, Check, X } from 'lucide-react'
+import { Plus, LayoutGrid, List, Music, Film, Tv, BookOpen, Trash2, Pin, PinOff, GripVertical, ArrowUp, ArrowDown, Sparkles, SlidersHorizontal, Target, Library, Play, Check, X } from 'lucide-react'
 import { useCatalog } from '../hooks/useCatalog'
 import { useNextUp } from '../hooks/useNextUp'
 import MediaCard from '../components/common/MediaCard'
@@ -383,7 +383,7 @@ export default function Catalog() {
       <details className="mb-6 group">
         <summary className="cursor-pointer list-none flex items-center justify-between text-xs text-text-muted hover:text-text-secondary transition-colors px-1 py-1.5 select-none">
           <span className="flex items-center gap-1.5">
-            <List size={12} />
+            <SlidersHorizontal size={13} />
             Filter or search what's already here
           </span>
           <span className="text-text-muted/60 group-open:rotate-180 transition-transform">▾</span>

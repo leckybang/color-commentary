@@ -78,6 +78,24 @@ function ProportionBar({ by }) {
   )
 }
 
+// Numbers lead the hierarchy: "You've read 1 book this week" renders the 1
+// big and bold so the stat pops before the sentence does.
+function NarrativeLine({ line }) {
+  return (
+    <p className="text-sm text-text-secondary leading-relaxed">
+      {line.split(/(\d+)/).map((part, i) =>
+        /^\d+$/.test(part) ? (
+          <span key={i} className="text-2xl font-extrabold text-text-primary align-baseline px-0.5">
+            {part}
+          </span>
+        ) : (
+          <span key={i}>{part}</span>
+        )
+      )}
+    </p>
+  )
+}
+
 function ItemRow({ item, onClick }) {
   return (
     <button
@@ -123,6 +141,19 @@ export default function CatalogInsights({ items, onItemClick, defaultOpen = fals
   // (never a row of zeros) plus what's in progress. This line is all most
   // people see, so it has to carry a real signal on its own.
   const inProgress = useMemo(() => items.filter((i) => i.status === 'watching').length, [items])
+  // Tiny cover-stack preview of the goodies inside — top-rated first, then
+  // most recent, so the collapsed row hints at what's behind it.
+  const previewItems = useMemo(() => {
+    const seen = new Set()
+    const picks = []
+    for (const item of [...topRated, ...items]) {
+      if (seen.has(item.id)) continue
+      seen.add(item.id)
+      picks.push(item)
+      if (picks.length >= 4) break
+    }
+    return picks
+  }, [topRated, items])
   const headerSummary = (() => {
     const added = rollup.week.added > 0 ? `${rollup.week.added} added this week`
       : rollup.month.added > 0 ? `${rollup.month.added} added this month`
@@ -145,7 +176,30 @@ export default function CatalogInsights({ items, onItemClick, defaultOpen = fals
             {headerSummary}
           </span>
         </div>
-        {open ? <ChevronUp size={16} className="text-text-muted shrink-0" /> : <ChevronDown size={16} className="text-text-muted shrink-0" />}
+        <div className="flex items-center gap-3 shrink-0">
+          {!open && previewItems.length > 0 && (
+            <div className="hidden sm:flex -space-x-2">
+              {previewItems.map((item) => {
+                const color = TYPE_META[item.type]?.color || 'var(--color-accent-primary)'
+                return (
+                  <div
+                    key={item.id}
+                    className="w-7 h-9 rounded-md overflow-hidden ring-2 ring-bg-secondary shadow-sm flex items-center justify-center"
+                    style={{ backgroundColor: `color-mix(in srgb, ${color} 25%, var(--color-bg-tertiary))` }}
+                    title={item.title}
+                  >
+                    {item.coverUrl ? (
+                      <img src={item.coverUrl} alt="" className="w-full h-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
+                    ) : (
+                      <span className="text-[10px] font-bold" style={{ color }}>{(item.title || '?')[0]}</span>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+          {open ? <ChevronUp size={16} className="text-text-muted" /> : <ChevronDown size={16} className="text-text-muted" />}
+        </div>
       </button>
 
       {open && (
@@ -165,13 +219,10 @@ export default function CatalogInsights({ items, onItemClick, defaultOpen = fals
             ))}
           </div>
 
-          {/* Narrative headline */}
-          <div className="space-y-1">
+          {/* Narrative headline — numbers big, words small */}
+          <div className="space-y-1.5">
             {narrative.lines.map((line, i) => (
-              <p key={i} className="text-sm text-text-primary leading-snug">
-                {i === 0 ? <span className="text-base">🎯 </span> : null}
-                {line}
-              </p>
+              <NarrativeLine key={i} line={line} />
             ))}
           </div>
 

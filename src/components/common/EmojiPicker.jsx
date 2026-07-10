@@ -11,23 +11,25 @@ const EMOJI_CATEGORIES = {
   'Nature': ['🌿', '🍄', '🌷', '🌺', '🌹', '🌵', '🌳', '🍀', '🐚', '⭐', '🌟', '☀️', '⚡', '🔥'],
 }
 
-export default function EmojiPicker({ value, onChange }) {
+export default function EmojiPicker({ value, onChange, size = 'md', align = 'left', fallback = null }) {
   const [open, setOpen] = useState(false)
   const [category, setCategory] = useState('Vibes')
 
+  const triggerSize = size === 'lg' ? 'w-24 h-24 text-5xl' : 'w-20 h-20 text-4xl'
+
   return (
-    <div>
+    <div className={align === 'center' ? 'flex flex-col items-center' : ''}>
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="w-20 h-20 rounded-full bg-bg-tertiary border-2 border-border hover:border-accent-primary flex items-center justify-center text-4xl transition-colors"
+        className={`${triggerSize} rounded-full bg-bg-tertiary border-2 border-border hover:border-accent-primary flex items-center justify-center transition-colors`}
         title="Pick an avatar emoji"
       >
-        {value || <Smile size={24} className="text-text-muted" />}
+        {value || fallback || <Smile size={24} className="text-text-muted" />}
       </button>
 
       {open && (
-        <div className="mt-3 bg-bg-secondary border border-border rounded-xl p-3 max-w-md">
+        <div className={`mt-3 bg-bg-secondary border border-border rounded-xl p-3 max-w-md ${align === 'center' ? 'text-left' : ''}`}>
           {/* Category tabs */}
           <div className="flex gap-1 mb-3 overflow-x-auto pb-1">
             {Object.keys(EMOJI_CATEGORIES).map(cat => (

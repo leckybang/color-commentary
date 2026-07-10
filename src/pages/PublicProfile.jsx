@@ -1,5 +1,5 @@
 import { useParams, Link } from 'react-router-dom'
-import { Music, Film, Tv, BookOpen, Lock, Settings, Star, UserPlus, UserMinus, Check } from 'lucide-react'
+import { Lock, Settings, Star, UserPlus, UserMinus, Check } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { useTasteProfile } from '../hooks/useTasteProfile'
 import { usePublicProfile } from '../hooks/usePublicProfile'
@@ -10,13 +10,8 @@ import { useFriends } from '../hooks/useFriends'
 import { determineArchetype } from '../utils/archetypes'
 import { getMediaColor } from '../utils/filterUtils'
 import CoverArt from '../components/common/CoverArt'
-import SpectrumSlider from '../components/common/SpectrumSlider'
+import EmojiPicker from '../components/common/EmojiPicker'
 import { isSupabaseConfigured } from '../lib/supabase'
-
-const SPECTRUMS = [
-  { key: 'mainstream-obscure', leftLabel: 'Mainstream', rightLabel: 'Obscure' },
-  { key: 'comfort-challenge', leftLabel: 'Comfort', rightLabel: 'Challenge' },
-]
 
 // Inline stats so we can compute over either the owner's catalog or a
 // friend's catalog (useCatalog.getStats is hard-wired to the signed-in user).
@@ -150,7 +145,24 @@ export default function PublicProfile({ isSelf }) {
     <div className="max-w-2xl mx-auto">
       {/* Header */}
       <div className="text-center mb-8">
-        {displayProfile.avatarEmoji ? (
+        {isOwnProfile && isSelf ? (
+          // Your avatar IS the picker — tap it, choose an emoji, it saves and
+          // shows up everywhere (sidebar, settings, public page).
+          <div className="mb-4 flex flex-col items-center">
+            <EmojiPicker
+              value={myProfile.avatarEmoji}
+              onChange={myProfile.setAvatarEmoji}
+              size="lg"
+              align="center"
+              fallback={
+                <span className="text-4xl font-bold text-accent-primary">
+                  {displayProfile.displayName?.[0]?.toUpperCase() || '?'}
+                </span>
+              }
+            />
+            <p className="text-[11px] text-text-muted mt-2">Tap to pick your emoji</p>
+          </div>
+        ) : displayProfile.avatarEmoji ? (
           <div className="w-24 h-24 rounded-full bg-bg-tertiary border-2 border-border flex items-center justify-center text-5xl mx-auto mb-4">
             {displayProfile.avatarEmoji}
           </div>
@@ -307,115 +319,8 @@ export default function PublicProfile({ isSelf }) {
         )}
       </div>
 
-      {/* Taste DNA & Taste Map — PRIVATE: owner only. Friends/strangers never see this. */}
-      {isOwnProfile && (
-        <>
-          <div className="bg-bg-secondary border border-border rounded-2xl p-6 mb-6">
-            <div className="flex items-center gap-2 mb-1">
-              <h2 className="text-lg font-semibold text-text-primary">Taste DNA</h2>
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-bg-tertiary text-text-muted flex items-center gap-1">
-                <Lock size={9} /> Private
-              </span>
-            </div>
-            <p className="text-xs text-text-muted mb-4">Only you can see this.</p>
-            <div className="space-y-6">
-              {SPECTRUMS.map((spectrum) => (
-                <SpectrumSlider
-                  key={spectrum.key}
-                  leftLabel={spectrum.leftLabel}
-                  rightLabel={spectrum.rightLabel}
-                  value={profile.spectrums?.[spectrum.key] ?? 50}
-                  onChange={() => {}}
-                  readonly
-                  color="var(--color-accent-primary)"
-                />
-              ))}
-            </div>
-          </div>
-
-          <div className="bg-bg-secondary border border-border rounded-2xl p-6">
-            <div className="flex items-center gap-2 mb-1">
-              <h2 className="text-lg font-semibold text-text-primary">Taste Map</h2>
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-bg-tertiary text-text-muted flex items-center gap-1">
-                <Lock size={9} /> Private
-              </span>
-            </div>
-            <p className="text-xs text-text-muted mb-4">Everything your Taste Calibrator picks and catalog have taught us. Only you can see this.</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {[
-                { key: 'music', label: 'Music', icon: Music, color: 'var(--color-accent-music)', nameFields: ['artists'], extraFields: ['albums'] },
-                { key: 'movies', label: 'Movies', icon: Film, color: 'var(--color-accent-movies)', nameFields: ['directors', 'actors'], extraFields: ['films'] },
-                { key: 'tv', label: 'TV', icon: Tv, color: 'var(--color-accent-tv)', nameFields: ['shows', 'creators'], extraFields: [] },
-                { key: 'books', label: 'Books', icon: BookOpen, color: 'var(--color-accent-books)', nameFields: ['authors'], extraFields: ['books'] },
-              ].map((cat) => {
-                const { key, label, color, nameFields, extraFields } = cat
-                const Icon = cat.icon
-                const stated = profile[key]?.genres || []
-                const catType = { music: 'music', movies: 'movie', tv: 'tv', books: 'book' }[key]
-                const catalogGenreCounts = {}
-                for (const item of effectiveItems) {
-                  if (item.type !== catType || !item.genre) continue
-                  for (const g of String(item.genre).split(/[,/]+/).map((s) => s.trim()).filter(Boolean)) {
-                    catalogGenreCounts[g] = (catalogGenreCounts[g] || 0) + 1
-                  }
-                }
-                const fromCatalog = Object.entries(catalogGenreCounts)
-                  .sort((a, b) => b[1] - a[1])
-                  .map(([g]) => g)
-                const mergedGenres = [...stated]
-                for (const g of fromCatalog)
-                  if (!mergedGenres.some((m) => m.toLowerCase() === g.toLowerCase())) mergedGenres.push(g)
-
-                const names = []
-                for (const f of [...nameFields, ...extraFields]) {
-                  for (const n of profile[key]?.[f] || []) {
-                    if (!names.some((x) => x.toLowerCase() === String(n).toLowerCase())) names.push(n)
-                  }
-                }
-                const isEmpty = names.length === 0 && mergedGenres.length === 0
-                return (
-                  <div key={key} className="rounded-xl border p-4" style={{ borderColor: `color-mix(in srgb, ${color} 30%, transparent)` }}>
-                    <div className="flex items-center gap-1.5 mb-3">
-                      <Icon size={14} style={{ color }} />
-                      <span className="text-sm font-semibold" style={{ color }}>{label}</span>
-                    </div>
-                    {names.length > 0 && (
-                      <div className="mb-3">
-                        <p className="text-[10px] uppercase tracking-wide text-text-muted mb-1.5">
-                          {nameFields.includes('directors') ? 'Directors & actors' : nameFields.includes('shows') ? 'Shows & creators' : nameFields.includes('authors') ? 'Authors' : 'Artists'}
-                        </p>
-                        <div className="flex flex-wrap gap-1">
-                          {names.slice(0, 20).map((n) => (
-                            <span key={n} className="text-xs px-2 py-0.5 rounded-full bg-bg-tertiary text-text-secondary border border-border">
-                              {n}
-                            </span>
-                          ))}
-                          {names.length > 20 && (
-                            <span className="text-xs px-2 py-0.5 text-text-muted">+{names.length - 20}</span>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    {mergedGenres.length > 0 ? (
-                      <div>
-                        <p className="text-[10px] uppercase tracking-wide text-text-muted mb-1.5">Genres</p>
-                        <div className="flex flex-wrap gap-1">
-                          {mergedGenres.map((g) => (
-                            <span key={g} className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: `color-mix(in srgb, ${color} 15%, transparent)`, color }}>
-                              {g}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    ) : null}
-                    {isEmpty && <p className="text-xs text-text-muted italic">Nothing here yet — keep using the Taste Check.</p>}
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        </>
-      )}
+      {/* Taste DNA & Taste Map are hidden here for now — they live in the
+          Taste tab (Taste Calibrator). */}
 
       {/* Friend view footer — privacy note */}
       {!isOwnProfile && (

@@ -79,7 +79,11 @@ export function computeInsights(items = []) {
   const topGenreEntry = Object.entries(genreCounts).sort((a, b) => b[1] - a[1])[0]
   const topGenre = topGenreEntry && topGenreEntry[1] >= 2 ? topGenreEntry[0] : null
 
-  const fiveStarCount = scope.filter((i) => i.rating === 5).length
+  // Five-star picks, most recent first — the share card spotlights the top one.
+  const fiveStars = scope
+    .filter((i) => i.rating === 5)
+    .sort((a, b) => finishedDate(b) - finishedDate(a))
+  const fiveStarCount = fiveStars.length
 
   return {
     hasData: finished.length > 0,
@@ -91,6 +95,7 @@ export function computeInsights(items = []) {
     breakdown: breakdownPhrase(byType),
     faves,
     topGenre,
+    fiveStars,
     fiveStarCount,
     totalFinished: finished.length,
     finishedThisYear: finishedThisYear.length,

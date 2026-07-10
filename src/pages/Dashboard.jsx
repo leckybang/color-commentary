@@ -133,11 +133,11 @@ export default function Dashboard() {
         <h1 className="text-2xl md:text-3xl font-bold text-text-primary mb-2">
           {getGreeting(user?.displayName)}
         </h1>
-        <p className="text-text-secondary">Here's the vibe check on your media universe.</p>
+        <p className="text-text-secondary">The latest in your media consumption quest.</p>
       </div>
 
       {/* ─── Insights — front and center + shareable ─── */}
-      <InsightsHero items={items} displayName={user?.displayName} />
+      <InsightsHero items={items} />
 
       {/* ─── Quick Add ─── */}
       <div className="mb-6">
@@ -200,7 +200,7 @@ export default function Dashboard() {
               <MessageCircle size={18} className="text-accent-primary" />
               <h2 className="font-semibold text-text-primary">Someone Told Me About...</h2>
             </div>
-            <p className="text-xs text-text-muted mb-3">For when someone says "you HAVE to watch this" and you need to write it down before your brain deletes it.</p>
+            <p className="text-xs text-text-muted mb-3">Your parking lot for when you are vetting recommendations to add to your catalog.</p>
 
             {/* Type toggle — determines which API to search */}
             <div className="flex gap-1 mb-3">

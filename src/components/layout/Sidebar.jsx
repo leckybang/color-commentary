@@ -1,13 +1,13 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, Library, Radar, LogOut, Users, User } from 'lucide-react'
+import { LayoutDashboard, Library, Radar, LogOut, User } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { usePublicProfile } from '../../hooks/usePublicProfile'
 
+// People is hidden for now — the /people route still works if linked directly.
 const NAV_ITEMS = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/radar', icon: Radar, label: 'Radar' },
   { to: '/catalog', icon: Library, label: 'Catalog' },
-  { to: '/people', icon: Users, label: 'People' },
   { to: '/me', icon: User, label: 'Profile' },
 ]
 
