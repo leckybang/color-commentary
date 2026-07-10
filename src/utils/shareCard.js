@@ -236,8 +236,8 @@ function buildSvg(insights, coverMap, username, fontDataUrl) {
       const pillW = Math.min(940, 56 + label.length * 12.6)
       const pillX = (W - pillW) / 2
       return `
-        <rect x="${pillX}" y="1278" width="${pillW}" height="54" rx="27" fill="${INK}"/>
-        <text x="${W / 2}" y="1313" text-anchor="middle" font-family="${DISPLAY_FONT}" font-size="23" font-weight="700" fill="${PORCELAIN}">${escapeXml(label)}</text>`
+        <rect x="${pillX}" y="1244" width="${pillW}" height="54" rx="27" fill="${INK}"/>
+        <text x="${W / 2}" y="1279" text-anchor="middle" font-family="${DISPLAY_FONT}" font-size="23" font-weight="700" fill="${PORCELAIN}">${escapeXml(label)}</text>`
     })()}
   </svg>`
 }
