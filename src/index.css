@@ -1,25 +1,25 @@
 @import "tailwindcss";
 
 @theme {
-  /* Default: Pastel Press — warm cream, pastel accents, ink type */
-  --color-bg-primary: #f7f2e6;
-  --color-bg-secondary: #fdfaf2;
-  --color-bg-tertiary: #efe8d6;
-  --color-bg-hover: #e9e0ca;
-  --color-border: #e0d6bd;
-  --color-text-primary: #211d16;
-  --color-text-secondary: #5f584a;
-  --color-text-muted: #98907c;
+  /* Default: Pastel Press — cool porcelain, pastel accents, ink outlines */
+  --color-bg-primary: #f0efea;
+  --color-bg-secondary: #fbfaf7;
+  --color-bg-tertiary: #e6e5dd;
+  --color-bg-hover: #dedcd1;
+  --color-border: #d5d3c6;
+  --color-text-primary: #1b1a16;
+  --color-text-secondary: #54524a;
+  --color-text-muted: #8f8d81;
   --color-accent-music: #a88ff0;
   --color-accent-movies: #f2799f;
   --color-accent-tv: #7fadea;
   --color-accent-books: #8fae4e;
   --color-accent-primary: #d95f8f;
   --color-accent-hover: #c14a79;
-  --color-nav-bg: #211d16;
-  --color-nav-text: #f7f2e6;
+  --color-nav-bg: #1b1a16;
+  --color-nav-text: #f5f4ef;
   --color-nav-active: #f6a8c5;
-  --font-heading: 'Libre Baskerville', 'Georgia', serif;
+  --font-heading: 'Bricolage Grotesque', sans-serif;
   --font-body: 'Karla', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
@@ -36,6 +36,17 @@ body {
 
 h1, h2, h3 {
   font-family: var(--font-heading);
+  letter-spacing: -0.02em;
+}
+
+/* Editorial Ink language: outlined blocks with a hard offset shadow. Both
+   derive from the theme's text color, so every theme keeps its own ink. */
+.ink-card {
+  border: 1.5px solid var(--color-text-primary) !important;
+  box-shadow: 5px 5px 0 color-mix(in srgb, var(--color-text-primary) 10%, transparent);
+}
+.ink-tile {
+  border: 1.5px solid var(--color-text-primary) !important;
 }
 
 ::-webkit-scrollbar {

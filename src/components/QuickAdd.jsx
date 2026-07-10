@@ -134,7 +134,7 @@ export default function QuickAdd({ addItem, onAdded }) {
   // with kind:'text'); covered by commit.
 
   return (
-    <div className="bg-bg-secondary border border-border rounded-2xl p-4 relative">
+    <div className="ink-card bg-bg-secondary rounded-2xl p-4 relative">
       <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
         <div className="flex items-center gap-2">
           <Plus size={16} className="text-accent-primary" />
@@ -152,14 +152,15 @@ export default function QuickAdd({ addItem, onAdded }) {
             <button
               key={row.key}
               onClick={() => (isOpen ? setOpenKey(null) : openPill(row.key))}
-              className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border text-sm font-medium transition-all"
+              className="flex items-center justify-center gap-2 px-3 py-2 rounded-full border-[1.5px] text-sm font-semibold transition-all"
               style={{
-                borderColor: isOpen ? `color-mix(in srgb, ${row.color} 55%, transparent)` : 'var(--color-border)',
-                backgroundColor: isOpen ? `color-mix(in srgb, ${row.color} 12%, transparent)` : 'transparent',
-                color: isOpen ? row.color : 'var(--color-text-secondary)',
+                borderColor: 'var(--color-text-primary)',
+                backgroundColor: isOpen ? `color-mix(in srgb, ${row.color} 22%, var(--color-bg-secondary))` : 'var(--color-bg-secondary)',
+                color: 'var(--color-text-primary)',
+                boxShadow: isOpen ? '3px 3px 0 color-mix(in srgb, var(--color-text-primary) 12%, transparent)' : 'none',
               }}
             >
-              <Icon size={14} />
+              <span className="w-2.5 h-2.5 rounded-[3px] shrink-0" style={{ backgroundColor: row.color }} aria-hidden="true" />
               {row.label}
             </button>
           )

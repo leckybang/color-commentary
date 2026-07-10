@@ -44,8 +44,15 @@ export default function Login() {
               <BookOpen size={24} className="text-accent-books" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-accent-music via-accent-movies to-accent-tv bg-clip-text text-transparent mb-2">
-            Color Commentary
+          <h1
+            className="text-4xl font-extrabold text-text-primary mb-2 leading-[0.95]"
+            style={{ fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: '-1px' }}
+          >
+            color{' '}
+            <span className="relative inline-block">
+              commentary
+              <span className="absolute left-0 right-0 -bottom-1 h-1 rounded-full bg-accent-primary" aria-hidden="true" />
+            </span>
           </h1>
           <p className="text-text-secondary text-lg">
             Your media universe, organized.

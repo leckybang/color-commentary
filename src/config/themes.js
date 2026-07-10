@@ -1,18 +1,18 @@
 export const THEMES = [
   {
     name: 'Pastel Press',
-    tagline: 'Warm cream, playful pastels, ink-black type — a Sunday zine for your brain',
+    tagline: 'Porcelain, playful pastels, ink outlines — an editorial zine for your brain',
     bg: {
-      primary: '#f7f2e6',
-      secondary: '#fdfaf2',
-      tertiary: '#efe8d6',
-      hover: '#e9e0ca',
+      primary: '#f0efea',
+      secondary: '#fbfaf7',
+      tertiary: '#e6e5dd',
+      hover: '#dedcd1',
     },
-    border: '#e0d6bd',
+    border: '#d5d3c6',
     text: {
-      primary: '#211d16',
-      secondary: '#5f584a',
-      muted: '#98907c',
+      primary: '#1b1a16',
+      secondary: '#54524a',
+      muted: '#8f8d81',
     },
     accents: {
       music: '#a88ff0',
@@ -23,14 +23,14 @@ export const THEMES = [
       hover: '#c14a79',
     },
     nav: {
-      bg: '#211d16',
-      text: '#f7f2e6',
+      bg: '#1b1a16',
+      text: '#f5f4ef',
       active: '#f6a8c5',
     },
-    gradient: 'linear-gradient(135deg, #f7f2e6 0%, #f3ecdb 50%, #faf5e9 100%)',
-    headingFont: "'Libre Baskerville', serif",
+    gradient: 'linear-gradient(135deg, #f0efea 0%, #ecebe4 50%, #f3f2ed 100%)',
+    headingFont: "'Bricolage Grotesque', sans-serif",
     bodyFont: "'Karla', sans-serif",
-    vibe: 'Cream paper, ink type, and candy-pastel color blocks. Feels like a wellness app and a picture book had a very stylish baby.',
+    vibe: 'Cool porcelain paper, ink outlines, and candy-pastel color blocks. Editorial-zine energy, zero beige-book-app vibes.',
   },
   {
     name: 'Velvet Darkroom',

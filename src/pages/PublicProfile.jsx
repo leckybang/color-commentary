@@ -228,14 +228,12 @@ export default function PublicProfile({ isSelf }) {
         ].map((s) => (
           <div
             key={s.label}
-            className="border rounded-2xl p-4 text-center"
-            style={{
-              backgroundColor: `color-mix(in srgb, ${s.color} 14%, var(--color-bg-secondary))`,
-              borderColor: `color-mix(in srgb, ${s.color} 30%, transparent)`,
-            }}
+            className="ink-tile relative overflow-hidden rounded-2xl p-4 text-center"
+            style={{ backgroundColor: `color-mix(in srgb, ${s.color} 16%, var(--color-bg-secondary))` }}
           >
-            <p className="text-2xl md:text-3xl font-bold text-text-primary leading-none">{s.value}</p>
-            <p className="text-xs text-text-muted mt-1.5">{s.label}</p>
+            <span className="absolute top-0 right-0 w-7 h-7 rounded-bl-2xl" style={{ backgroundColor: s.color }} aria-hidden="true" />
+            <p className="text-2xl md:text-3xl font-extrabold text-text-primary leading-none tracking-tight" style={{ fontFamily: 'var(--font-heading)' }}>{s.value}</p>
+            <p className="text-xs font-semibold text-text-secondary mt-1.5">{s.label}</p>
           </div>
         ))}
       </div>

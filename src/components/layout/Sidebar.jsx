@@ -38,13 +38,30 @@ export default function Sidebar() {
       {/* Desktop sidebar */}
       <aside className="hidden md:flex flex-col w-64 bg-bg-secondary border-r border-border h-screen sticky top-0">
         <div className="p-5 border-b border-border">
-          <h1 className="text-xl font-bold bg-gradient-to-r from-accent-music via-accent-movies to-accent-tv bg-clip-text text-transparent">
-            Color Commentary
-          </h1>
-          <p className="text-xs text-text-muted mt-1">Your media universe</p>
+          {/* Wordmark: palette dot-grid + stacked lowercase, pink underline */}
+          <div className="flex items-center gap-2.5">
+            <div className="grid grid-cols-2 gap-[3px] w-[26px] h-[26px] shrink-0" aria-hidden="true">
+              <span className="rounded-[6px_6px_6px_2px] bg-accent-music" />
+              <span className="rounded-[6px_6px_6px_2px] bg-accent-movies" />
+              <span className="rounded-[6px_6px_6px_2px] bg-accent-tv" />
+              <span className="rounded-[6px_6px_6px_2px] bg-accent-books" />
+            </div>
+            <h1
+              className="text-[19px] font-extrabold leading-[0.95] tracking-tight text-text-primary"
+              style={{ fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: '-0.5px' }}
+            >
+              color
+              <br />
+              <span className="relative inline-block">
+                commentary
+                <span className="absolute left-0 right-0 -bottom-0.5 h-[3px] rounded-full bg-accent-primary" aria-hidden="true" />
+              </span>
+            </h1>
+          </div>
+          <p className="text-[11px] text-text-muted mt-2.5">your media universe, annotated.</p>
         </div>
 
-        <nav className="flex-1 p-3 space-y-1">
+        <nav className="flex-1 p-3 space-y-1.5">
           {NAV_ITEMS.map((nav) => {
             const { to, label } = nav
             const Icon = nav.icon
@@ -53,11 +70,18 @@ export default function Sidebar() {
               key={to}
               to={to}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  isActive
-                    ? 'bg-accent-primary/15 text-accent-primary'
-                    : 'text-text-secondary hover:bg-bg-hover hover:text-text-primary'
+                `flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                  isActive ? '' : 'text-text-secondary hover:bg-bg-hover hover:text-text-primary'
                 }`
+              }
+              style={({ isActive }) =>
+                isActive
+                  ? {
+                      backgroundColor: 'var(--color-nav-bg)',
+                      color: 'var(--color-nav-text)',
+                      boxShadow: '3px 3px 0 var(--color-accent-primary)',
+                    }
+                  : undefined
               }
             >
               <Icon size={18} />

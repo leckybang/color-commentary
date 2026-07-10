@@ -164,7 +164,7 @@ export default function CatalogInsights({ items, onItemClick, defaultOpen = fals
   })()
 
   return (
-    <div className="bg-bg-secondary border border-border rounded-2xl overflow-hidden">
+    <div className="ink-card bg-bg-secondary rounded-2xl overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
         className="w-full flex items-center justify-between p-5 hover:bg-bg-hover/30 transition-colors"

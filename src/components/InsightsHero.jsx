@@ -58,7 +58,7 @@ function ScoreRing({ count, byType, label }) {
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span
           className="text-5xl font-bold text-text-primary leading-none"
-          style={{ fontFamily: "'Libre Baskerville', serif" }}
+          style={{ fontFamily: 'var(--font-heading)' }}
         >
           {count}
         </span>
@@ -114,7 +114,7 @@ export default function InsightsHero({ items }) {
   // Empty state — no finishes yet. Keep it inviting, not a dead zone.
   if (!insights.hasData) {
     return (
-      <div className="relative overflow-hidden rounded-2xl mb-6 p-6 border border-accent-primary/20 bg-gradient-to-br from-accent-primary/10 via-bg-secondary to-bg-secondary">
+      <div className="ink-card relative overflow-hidden rounded-2xl mb-6 p-6 bg-gradient-to-br from-accent-primary/10 via-bg-secondary to-bg-secondary">
         <div className="flex items-center gap-2 mb-2">
           <Trophy size={18} className="text-accent-primary" />
           <h2 className="font-semibold text-text-primary">Your Insights</h2>
@@ -136,7 +136,7 @@ export default function InsightsHero({ items }) {
   const shareSupported = card ? canShareFile(card.blob, card.filename) : false
 
   return (
-    <div className="relative overflow-hidden rounded-2xl mb-6 border border-accent-primary/25 bg-gradient-to-br from-accent-primary/15 via-bg-secondary to-bg-secondary shadow-lg shadow-accent-primary/5">
+    <div className="ink-card relative overflow-hidden rounded-2xl mb-6 bg-gradient-to-br from-accent-primary/10 via-bg-secondary to-bg-secondary">
       {/* soft glow */}
       <div className="pointer-events-none absolute -top-24 -right-16 w-72 h-72 rounded-full bg-accent-primary/20 blur-3xl" />
 
@@ -151,7 +151,8 @@ export default function InsightsHero({ items }) {
           <button
             onClick={handleShare}
             disabled={building}
-            className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold bg-accent-primary text-white hover:bg-accent-hover transition-all active:scale-95 disabled:opacity-60 shadow-md shadow-accent-primary/30"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-all active:scale-95 disabled:opacity-60"
+            style={{ backgroundColor: 'var(--color-nav-bg)', color: 'var(--color-nav-text)', boxShadow: '3px 3px 0 var(--color-accent-primary)' }}
           >
             {building ? (
               <><Loader2 size={13} className="animate-spin" /> Making…</>
@@ -171,7 +172,7 @@ export default function InsightsHero({ items }) {
           <div className="flex-1 text-center sm:text-left">
             <h3
               className="text-xl md:text-2xl font-bold text-text-primary leading-tight"
-              style={{ fontFamily: "'Libre Baskerville', serif" }}
+              style={{ fontFamily: 'var(--font-heading)' }}
             >
               {headline}
             </h3>
@@ -182,18 +183,18 @@ export default function InsightsHero({ items }) {
             {/* Quick fact chips */}
             <div className="flex flex-wrap justify-center sm:justify-start gap-2 mt-4">
               {insights.fiveStarCount > 0 && (
-                <span className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-amber-400/15 text-amber-500 font-medium">
+                <span className="inline-flex items-center gap-1 text-xs px-3 py-1 rounded-full font-bold text-text-primary border-[1.5px] border-text-primary" style={{ backgroundColor: '#ffd76e' }}>
                   <Star size={11} fill="currentColor" />
                   {insights.fiveStarCount} five-star {insights.fiveStarCount === 1 ? 'pick' : 'picks'}
                 </span>
               )}
               {insights.topGenre && (
-                <span className="text-xs px-2.5 py-1 rounded-full bg-bg-tertiary text-text-secondary font-medium">
+                <span className="text-xs px-3 py-1 rounded-full font-bold text-text-primary border-[1.5px] border-text-primary bg-bg-secondary">
                   Mostly {insights.topGenre}
                 </span>
               )}
               {insights.finishedThisYear > 0 && (
-                <span className="text-xs px-2.5 py-1 rounded-full bg-bg-tertiary text-text-secondary font-medium">
+                <span className="text-xs px-3 py-1 rounded-full font-bold text-text-primary border-[1.5px] border-text-primary bg-bg-secondary">
                   {insights.finishedThisYear} this year
                 </span>
               )}

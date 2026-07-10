@@ -29,9 +29,8 @@ const TYPE_ICONS = { music: Music, movie: Film, tv: Tv, book: BookOpen }
 function getGreeting(name) {
   const hour = new Date().getHours()
   const first = name?.split(' ')[0] || 'there'
-  if (hour < 12) return `Good morning, ${first}.`
-  if (hour < 17) return `Good afternoon, ${first}.`
-  return `Good evening, ${first}.`
+  const salutation = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+  return { salutation, first }
 }
 
 export default function Dashboard() {
@@ -130,9 +129,18 @@ export default function Dashboard() {
 
       {/* ─── Hero Greeting ─── */}
       <div className="mb-6">
-        <h1 className="text-2xl md:text-3xl font-bold text-text-primary mb-2">
-          {getGreeting(user?.displayName)}
-        </h1>
+        <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[2.5px] text-text-muted mb-1.5">
+          <span className="w-6 h-[3px] rounded-full bg-accent-primary inline-block" aria-hidden="true" />
+          {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+        </p>
+        {(() => {
+          const { salutation, first } = getGreeting(user?.displayName)
+          return (
+            <h1 className="text-3xl md:text-4xl font-extrabold text-text-primary mb-2 tracking-tight">
+              {salutation}, <span className="text-accent-primary">{first}.</span>
+            </h1>
+          )
+        })()}
         <p className="text-text-secondary">The latest in your media consumption quest.</p>
       </div>
 
@@ -169,22 +177,33 @@ export default function Dashboard() {
           const { label, value, color, to } = stat
           const Icon = stat.icon
           const tileStyle = {
-            backgroundColor: `color-mix(in srgb, ${color} 14%, var(--color-bg-secondary))`,
-            borderColor: `color-mix(in srgb, ${color} 30%, transparent)`,
+            backgroundColor: `color-mix(in srgb, ${color} 16%, var(--color-bg-secondary))`,
           }
           const inner = (
             <>
-              <Icon size={16} style={{ color }} />
-              <span className="text-2xl md:text-3xl font-bold text-text-primary leading-none">{value}</span>
-              <span className="text-xs text-text-muted">{label}</span>
+              <span
+                className="absolute top-0 right-0 w-8 h-8 rounded-bl-2xl"
+                style={{ backgroundColor: color }}
+                aria-hidden="true"
+              />
+              <span
+                className="text-3xl md:text-4xl font-extrabold text-text-primary leading-none tracking-tight"
+                style={{ fontFamily: 'var(--font-heading)' }}
+              >
+                {value}
+              </span>
+              <span className="text-xs font-semibold text-text-secondary flex items-center gap-1.5">
+                <Icon size={12} style={{ color: 'var(--color-text-secondary)' }} />
+                {label}
+              </span>
             </>
           )
           return to ? (
-            <Link key={label} to={to} className="border rounded-2xl p-3.5 flex flex-col items-center gap-1.5 hover:scale-[1.02] transition-transform" style={tileStyle}>
+            <Link key={label} to={to} className="ink-tile relative overflow-hidden rounded-2xl p-4 flex flex-col items-start gap-1.5 hover:scale-[1.02] transition-transform" style={tileStyle}>
               {inner}
             </Link>
           ) : (
-            <div key={label} className="border rounded-2xl p-3.5 flex flex-col items-center gap-1.5" style={tileStyle}>
+            <div key={label} className="ink-tile relative overflow-hidden rounded-2xl p-4 flex flex-col items-start gap-1.5" style={tileStyle}>
               {inner}
             </div>
           )
@@ -199,7 +218,7 @@ export default function Dashboard() {
         {/* Left column */}
         <div className="space-y-6">
           {/* Scratchpad */}
-          <div className="bg-bg-secondary border border-border rounded-2xl p-5">
+          <div className="ink-card bg-bg-secondary rounded-2xl p-5">
             <div className="flex items-center gap-2 mb-4">
               <MessageCircle size={18} className="text-accent-primary" />
               <h2 className="font-semibold text-text-primary">Someone Told Me About...</h2>
@@ -305,7 +324,7 @@ export default function Dashboard() {
         {/* Right column */}
         <div className="space-y-6">
           {/* Radar preview — one pick from each bucket */}
-          <div className="bg-bg-secondary border border-border rounded-2xl p-5">
+          <div className="ink-card bg-bg-secondary rounded-2xl p-5">
             <div className="flex items-center justify-between mb-1">
               <h2 className="font-semibold text-text-primary">Weekly Radar</h2>
               <Link to="/radar" className="text-sm text-accent-primary hover:underline flex items-center gap-1">
@@ -348,7 +367,7 @@ export default function Dashboard() {
           </div>
 
           {/* Recent in Catalog */}
-          <div className="bg-bg-secondary border border-border rounded-2xl p-5">
+          <div className="ink-card bg-bg-secondary rounded-2xl p-5">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-semibold text-text-primary">Recent in Catalog</h2>
               <Link to="/catalog" className="text-sm text-accent-primary hover:underline flex items-center gap-1">
