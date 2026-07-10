@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom'
 import { LayoutDashboard, Library, Radar, LogOut, User, Users, Plus } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { usePublicProfile } from '../../hooks/usePublicProfile'
+import { useNewFollowers } from '../../hooks/useNewFollowers'
 
 // People is hidden for now — the /people route still works if linked directly.
 const NAV_ITEMS = [
@@ -15,6 +16,10 @@ const NAV_ITEMS = [
 export default function Sidebar() {
   const { user, logout } = useAuth()
   const { avatarEmoji } = usePublicProfile()
+  const { newFollowerCount } = useNewFollowers()
+
+  // Pink dot on the Friends item when someone new has followed you.
+  const showDotFor = (to) => to === '/friends' && newFollowerCount > 0
 
   const renderMobileLink = (nav) => {
     const { to, label, mobile } = nav
@@ -28,7 +33,12 @@ export default function Sidebar() {
           color: isActive ? 'var(--color-nav-active)' : 'color-mix(in srgb, var(--color-nav-text) 65%, transparent)',
         })}
       >
-        <Icon size={18} />
+        <span className="relative inline-flex">
+          <Icon size={18} />
+          {showDotFor(to) && (
+            <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-accent-primary" aria-hidden="true" />
+          )}
+        </span>
         <span>{mobile || label}</span>
       </NavLink>
     )
@@ -85,8 +95,14 @@ export default function Sidebar() {
                   : undefined
               }
             >
-              <Icon size={18} />
+              <span className="relative inline-flex">
+                <Icon size={18} />
+                {showDotFor(to) && (
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-accent-primary ring-2 ring-bg-secondary" aria-hidden="true" />
+                )}
+              </span>
               {label}
+              {showDotFor(to) && <span className="sr-only">(new followers)</span>}
             </NavLink>
             )
           })}

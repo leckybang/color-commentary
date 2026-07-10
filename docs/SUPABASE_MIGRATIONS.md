@@ -4,6 +4,28 @@ Run these in your **Supabase SQL Editor** to keep your database schema up to dat
 
 ---
 
+## 2026-07 — Friend-of-friend discovery ✅ APPLIED
+
+> Applied as migration `public_following_lists_readable` on 2026-07-10.
+
+```sql
+-- Who a PUBLIC profile follows is visible. Uses a SECURITY DEFINER helper so
+-- the follows policy can consult profiles without recursing back into the
+-- profiles policy (which itself consults follows).
+CREATE OR REPLACE FUNCTION public.is_public_profile(uid uuid)
+RETURNS boolean LANGUAGE sql SECURITY DEFINER SET search_path = public STABLE
+AS $$ SELECT COALESCE((SELECT is_public FROM profiles WHERE id = uid), false) $$;
+
+REVOKE ALL ON FUNCTION public.is_public_profile(uuid) FROM public;
+GRANT EXECUTE ON FUNCTION public.is_public_profile(uuid) TO anon, authenticated;
+
+CREATE POLICY "Following lists of public profiles are readable"
+  ON follows FOR SELECT
+  USING (public.is_public_profile(follower_id));
+```
+
+---
+
 ## 2026-07 — Friends: missing profile columns + tightened read policies ✅ APPLIED
 
 > Applied directly to the live project as migration `friends_profile_settings_and_policies` on 2026-07-10. Kept here for reference.
