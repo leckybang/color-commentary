@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, Library, Radar, LogOut, User } from 'lucide-react'
+import { LayoutDashboard, Library, Radar, LogOut, User, Plus } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { usePublicProfile } from '../../hooks/usePublicProfile'
 
@@ -14,6 +14,24 @@ const NAV_ITEMS = [
 export default function Sidebar() {
   const { user, logout } = useAuth()
   const { avatarEmoji } = usePublicProfile()
+
+  const renderMobileLink = (nav) => {
+    const { to, label, mobile } = nav
+    const Icon = nav.icon
+    return (
+      <NavLink
+        key={to}
+        to={to}
+        className="flex flex-col items-center gap-0.5 px-2 py-2 text-[10px] font-medium transition-colors"
+        style={({ isActive }) => ({
+          color: isActive ? 'var(--color-nav-active)' : 'color-mix(in srgb, var(--color-nav-text) 65%, transparent)',
+        })}
+      >
+        <Icon size={18} />
+        <span>{mobile || label}</span>
+      </NavLink>
+    )
+  }
 
   return (
     <>
@@ -75,26 +93,25 @@ export default function Sidebar() {
         </div>
       </aside>
 
-      {/* Mobile bottom nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-bg-secondary border-t border-border z-40 px-1 py-1 flex justify-around">
-        {NAV_ITEMS.map((nav) => {
-          const { to, label, mobile } = nav
-          const Icon = nav.icon
-          return (
-          <NavLink
-            key={to}
-            to={to}
-            className={({ isActive }) =>
-              `flex flex-col items-center gap-0.5 px-2 py-2 text-[10px] font-medium transition-colors flex-1 ${
-                isActive ? 'text-accent-primary' : 'text-text-muted'
-              }`
-            }
-          >
-            <Icon size={18} />
-            <span>{mobile || label}</span>
-          </NavLink>
-          )
-        })}
+      {/* Mobile bottom nav — floating ink pill with a raised quick-add button */}
+      <nav
+        className="md:hidden fixed bottom-3 left-3 right-3 z-40 rounded-full px-4 py-1.5 flex items-center justify-around shadow-2xl"
+        style={{ backgroundColor: 'var(--color-nav-bg)', color: 'var(--color-nav-text)' }}
+      >
+        {NAV_ITEMS.slice(0, 2).map((nav) => renderMobileLink(nav))}
+        <NavLink
+          to="/catalog?add=1"
+          aria-label="Add to catalog"
+          className="flex items-center justify-center w-12 h-12 rounded-full -translate-y-4 shadow-lg active:scale-95 transition-transform ring-4"
+          style={{
+            backgroundColor: 'var(--color-nav-active)',
+            color: 'var(--color-nav-bg)',
+            '--tw-ring-color': 'var(--color-bg-primary)',
+          }}
+        >
+          <Plus size={22} strokeWidth={2.5} />
+        </NavLink>
+        {NAV_ITEMS.slice(2).map((nav) => renderMobileLink(nav))}
       </nav>
     </>
   )

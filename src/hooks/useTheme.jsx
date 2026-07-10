@@ -19,6 +19,10 @@ function applyTheme(theme) {
   root.setProperty('--color-accent-books', theme.accents.books)
   root.setProperty('--color-accent-primary', theme.accents.primary)
   root.setProperty('--color-accent-hover', theme.accents.hover)
+  // Ink-pill navigation colors — themes without a nav block get sane defaults.
+  root.setProperty('--color-nav-bg', theme.nav?.bg || theme.text.primary)
+  root.setProperty('--color-nav-text', theme.nav?.text || theme.bg.primary)
+  root.setProperty('--color-nav-active', theme.nav?.active || theme.accents.primary)
   if (theme.headingFont) root.setProperty('--font-heading', theme.headingFont)
   if (theme.bodyFont) root.setProperty('--font-body', theme.bodyFont)
 }

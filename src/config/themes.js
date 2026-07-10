@@ -1,5 +1,38 @@
 export const THEMES = [
   {
+    name: 'Pastel Press',
+    tagline: 'Warm cream, playful pastels, ink-black type — a Sunday zine for your brain',
+    bg: {
+      primary: '#f7f2e6',
+      secondary: '#fdfaf2',
+      tertiary: '#efe8d6',
+      hover: '#e9e0ca',
+    },
+    border: '#e0d6bd',
+    text: {
+      primary: '#211d16',
+      secondary: '#5f584a',
+      muted: '#98907c',
+    },
+    accents: {
+      music: '#a88ff0',
+      movies: '#f2799f',
+      tv: '#7fadea',
+      books: '#8fae4e',
+      primary: '#d95f8f',
+      hover: '#c14a79',
+    },
+    nav: {
+      bg: '#211d16',
+      text: '#f7f2e6',
+      active: '#f6a8c5',
+    },
+    gradient: 'linear-gradient(135deg, #f7f2e6 0%, #f3ecdb 50%, #faf5e9 100%)',
+    headingFont: "'Libre Baskerville', serif",
+    bodyFont: "'Karla', sans-serif",
+    vibe: 'Cream paper, ink type, and candy-pastel color blocks. Feels like a wellness app and a picture book had a very stylish baby.',
+  },
+  {
     name: 'Velvet Darkroom',
     tagline: 'Moody, cinematic, and intimate — like the back room of a vinyl bar',
     bg: {
@@ -21,6 +54,11 @@ export const THEMES = [
       books: '#7fe0a0',
       primary: '#c49bff',
       hover: '#b07af5',
+    },
+    nav: {
+      bg: '#0d0a12',
+      text: '#ede8f5',
+      active: '#c49bff',
     },
     gradient: 'linear-gradient(135deg, #110d18 0%, #1e1430 50%, #120e1a 100%)',
     headingFont: "'Libre Baskerville', serif",
@@ -50,6 +88,11 @@ export const THEMES = [
       primary: '#c4622a',
       hover: '#a8501d',
     },
+    nav: {
+      bg: '#2a2520',
+      text: '#f5f0e8',
+      active: '#e08c4f',
+    },
     gradient: 'linear-gradient(135deg, #f5f0e8 0%, #ebe0d0 50%, #f2ede5 100%)',
     headingFont: "'Libre Baskerville', serif",
     bodyFont: "'Karla', sans-serif",
@@ -77,6 +120,11 @@ export const THEMES = [
       books: '#33ff88',
       primary: '#ff2d8a',
       hover: '#e01070',
+    },
+    nav: {
+      bg: '#0a0a10',
+      text: '#e4e4f0',
+      active: '#ff2d8a',
     },
     gradient: 'linear-gradient(135deg, #050508 0%, #0a0515 50%, #050810 100%)',
     headingFont: "'Libre Baskerville', serif",

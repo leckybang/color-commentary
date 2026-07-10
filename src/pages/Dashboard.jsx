@@ -158,29 +158,33 @@ export default function Dashboard() {
       )}
       {!showBuildProfile && <div className="mb-2" />}
 
-      {/* ─── Stats Row ─── */}
+      {/* ─── Stats Row — pastel-tinted tiles, numbers lead ─── */}
       <div className="grid grid-cols-4 gap-3 mb-8">
         {[
-          { label: 'Cataloged', value: stats.total, icon: Library, to: '/catalog' },
-          { label: 'This Week', value: addedThisWeek, icon: CalendarPlus, color: 'var(--color-accent-primary)', to: '/catalog' },
+          { label: 'Cataloged', value: stats.total, icon: Library, color: 'var(--color-accent-tv)', to: '/catalog' },
+          { label: 'This Week', value: addedThisWeek, icon: CalendarPlus, color: 'var(--color-accent-music)', to: '/catalog' },
           { label: 'Avg Rating', value: stats.avgRating || '—', icon: Star, color: '#f59e0b' },
           { label: 'Finished', value: stats.byStatus.finished, icon: Sparkles, color: 'var(--color-accent-books)' },
         ].map((stat) => {
           const { label, value, color, to } = stat
           const Icon = stat.icon
+          const tileStyle = {
+            backgroundColor: `color-mix(in srgb, ${color} 14%, var(--color-bg-secondary))`,
+            borderColor: `color-mix(in srgb, ${color} 30%, transparent)`,
+          }
           const inner = (
             <>
-              <Icon size={16} style={{ color: color || 'var(--color-text-muted)' }} />
-              <span className="text-xl font-bold text-text-primary">{value}</span>
+              <Icon size={16} style={{ color }} />
+              <span className="text-2xl md:text-3xl font-bold text-text-primary leading-none">{value}</span>
               <span className="text-xs text-text-muted">{label}</span>
             </>
           )
           return to ? (
-            <Link key={label} to={to} className="bg-bg-secondary border border-border rounded-xl p-3 flex flex-col items-center gap-1 hover:border-accent-primary/30 transition-all">
+            <Link key={label} to={to} className="border rounded-2xl p-3.5 flex flex-col items-center gap-1.5 hover:scale-[1.02] transition-transform" style={tileStyle}>
               {inner}
             </Link>
           ) : (
-            <div key={label} className="bg-bg-secondary border border-border rounded-xl p-3 flex flex-col items-center gap-1">
+            <div key={label} className="border rounded-2xl p-3.5 flex flex-col items-center gap-1.5" style={tileStyle}>
               {inner}
             </div>
           )

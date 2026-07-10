@@ -16,6 +16,58 @@ import { getMediaColor } from '../utils/filterUtils'
 import { computeInsights, insightsHeadline } from '../utils/insights'
 import { buildInsightCard, shareCardBlob, canShareFile, downloadBlob } from '../utils/shareCard'
 
+/**
+ * ScoreRing — segmented pastel dial around the big finished-count, one arc
+ * per media type, sized proportionally to how much of the period it was.
+ */
+function ScoreRing({ count, byType, label }) {
+  const entries = ['music', 'movie', 'tv', 'book']
+    .map((t) => [t, byType?.[t] || 0])
+    .filter(([, n]) => n > 0)
+  const total = entries.reduce((s, [, n]) => s + n, 0) || 1
+  const size = 170
+  const R = 70
+  const C = 2 * Math.PI * R
+  const gap = entries.length > 1 ? 18 : 0 // degrees of breathing room per segment
+  let acc = -90 // start at 12 o'clock
+  const segs = entries.map(([type, n]) => {
+    const share = (n / total) * 360
+    const seg = { type, start: acc + gap / 2, sweep: Math.max(share - gap, 8) }
+    acc += share
+    return seg
+  })
+  return (
+    <div className="relative w-[170px] h-[170px] shrink-0 mx-auto sm:mx-0">
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="absolute inset-0">
+        {segs.map(({ type, start, sweep }) => (
+          <circle
+            key={type}
+            cx={size / 2}
+            cy={size / 2}
+            r={R}
+            fill="none"
+            stroke={getMediaColor(type)}
+            strokeWidth={15}
+            strokeLinecap="round"
+            strokeDasharray={`${(sweep / 360) * C} ${C}`}
+            transform={`rotate(${start} ${size / 2} ${size / 2})`}
+            opacity="0.9"
+          />
+        ))}
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span
+          className="text-5xl font-bold text-text-primary leading-none"
+          style={{ fontFamily: "'Libre Baskerville', serif" }}
+        >
+          {count}
+        </span>
+        <span className="text-[11px] text-text-muted mt-1.5">{label}</span>
+      </div>
+    </div>
+  )
+}
+
 export default function InsightsHero({ items }) {
   const insights = useMemo(() => computeInsights(items), [items])
   const [building, setBuilding] = useState(false)
@@ -99,7 +151,7 @@ export default function InsightsHero({ items }) {
           <button
             onClick={handleShare}
             disabled={building}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-accent-primary text-white hover:bg-accent-hover transition-all active:scale-95 disabled:opacity-60 shadow-md shadow-accent-primary/30"
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold bg-accent-primary text-white hover:bg-accent-hover transition-all active:scale-95 disabled:opacity-60 shadow-md shadow-accent-primary/30"
           >
             {building ? (
               <><Loader2 size={13} className="animate-spin" /> Making…</>
@@ -109,35 +161,44 @@ export default function InsightsHero({ items }) {
           </button>
         </div>
 
-        {/* Big headline */}
-        <h3
-          className="text-2xl md:text-3xl font-bold text-text-primary leading-tight"
-          style={{ fontFamily: "'Libre Baskerville', serif" }}
-        >
-          {headline}
-        </h3>
-        {insights.breakdown && (
-          <p className="text-sm text-text-secondary mt-1.5">{insights.breakdown}</p>
-        )}
+        {/* Score ring + headline, moodboard-dial style */}
+        <div className="flex flex-col sm:flex-row items-center gap-5">
+          <ScoreRing
+            count={insights.count}
+            byType={insights.byType}
+            label={insights.usingMonth ? `finished in ${insights.monthLabel}` : 'finished, all time'}
+          />
+          <div className="flex-1 text-center sm:text-left">
+            <h3
+              className="text-xl md:text-2xl font-bold text-text-primary leading-tight"
+              style={{ fontFamily: "'Libre Baskerville', serif" }}
+            >
+              {headline}
+            </h3>
+            {insights.breakdown && (
+              <p className="text-sm text-text-secondary mt-1.5">{insights.breakdown}</p>
+            )}
 
-        {/* Quick fact chips */}
-        <div className="flex flex-wrap gap-2 mt-4">
-          {insights.fiveStarCount > 0 && (
-            <span className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-amber-400/15 text-amber-400 font-medium">
-              <Star size={11} fill="currentColor" />
-              {insights.fiveStarCount} five-star {insights.fiveStarCount === 1 ? 'pick' : 'picks'}
-            </span>
-          )}
-          {insights.topGenre && (
-            <span className="text-xs px-2.5 py-1 rounded-full bg-bg-tertiary text-text-secondary font-medium">
-              Mostly {insights.topGenre}
-            </span>
-          )}
-          {insights.finishedThisYear > 0 && (
-            <span className="text-xs px-2.5 py-1 rounded-full bg-bg-tertiary text-text-secondary font-medium">
-              {insights.finishedThisYear} this year
-            </span>
-          )}
+            {/* Quick fact chips */}
+            <div className="flex flex-wrap justify-center sm:justify-start gap-2 mt-4">
+              {insights.fiveStarCount > 0 && (
+                <span className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-amber-400/15 text-amber-500 font-medium">
+                  <Star size={11} fill="currentColor" />
+                  {insights.fiveStarCount} five-star {insights.fiveStarCount === 1 ? 'pick' : 'picks'}
+                </span>
+              )}
+              {insights.topGenre && (
+                <span className="text-xs px-2.5 py-1 rounded-full bg-bg-tertiary text-text-secondary font-medium">
+                  Mostly {insights.topGenre}
+                </span>
+              )}
+              {insights.finishedThisYear > 0 && (
+                <span className="text-xs px-2.5 py-1 rounded-full bg-bg-tertiary text-text-secondary font-medium">
+                  {insights.finishedThisYear} this year
+                </span>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Favorites */}
@@ -184,14 +245,14 @@ export default function InsightsHero({ items }) {
             <div className="flex gap-2">
               <button
                 onClick={handleDownload}
-                className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium border border-border text-text-primary hover:bg-bg-hover transition-colors"
+                className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-medium border border-border text-text-primary hover:bg-bg-hover transition-colors"
               >
                 <Download size={15} />
                 Download
               </button>
               <button
                 onClick={handleSendToShare}
-                className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-semibold bg-accent-primary text-white hover:bg-accent-hover transition-colors shadow-md shadow-accent-primary/30"
+                className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-semibold bg-accent-primary text-white hover:bg-accent-hover transition-colors shadow-md shadow-accent-primary/30"
               >
                 <Share2 size={15} />
                 {shareSupported ? 'Share' : 'Save image'}

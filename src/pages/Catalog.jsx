@@ -312,10 +312,11 @@ export default function Catalog() {
         <QuickAdd addItem={addItem} />
       </div>
 
-      {/* Secondary: detailed add (rating, review, status, genre) */}
+      {/* Secondary: detailed add (rating, review, status, genre) — ink pill */}
       <button
         onClick={openAdd}
-        className="w-full mb-4 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-border text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors"
+        className="w-full mb-4 flex items-center justify-center gap-2 py-2.5 rounded-full text-sm font-semibold transition-all active:scale-[0.99] shadow-md hover:opacity-90"
+        style={{ backgroundColor: 'var(--color-nav-bg)', color: 'var(--color-nav-text)' }}
       >
         <Plus size={15} />
         Add with rating &amp; review

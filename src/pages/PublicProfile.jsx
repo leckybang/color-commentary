@@ -222,13 +222,20 @@ export default function PublicProfile({ isSelf }) {
       {/* Quick stats — visible on own profile and on a friend's (from their catalog) */}
       <div className="grid grid-cols-3 gap-3 mb-8">
         {[
-          { label: 'Cataloged', value: stats.total },
-          { label: 'Avg Rating', value: stats.avgRating || '—' },
-          { label: 'Finished', value: stats.byStatus.finished },
+          { label: 'Cataloged', value: stats.total, color: 'var(--color-accent-tv)' },
+          { label: 'Avg Rating', value: stats.avgRating || '—', color: '#f59e0b' },
+          { label: 'Finished', value: stats.byStatus.finished, color: 'var(--color-accent-books)' },
         ].map((s) => (
-          <div key={s.label} className="bg-bg-secondary border border-border rounded-xl p-3 text-center">
-            <p className="text-xl font-bold text-text-primary">{s.value}</p>
-            <p className="text-xs text-text-muted">{s.label}</p>
+          <div
+            key={s.label}
+            className="border rounded-2xl p-4 text-center"
+            style={{
+              backgroundColor: `color-mix(in srgb, ${s.color} 14%, var(--color-bg-secondary))`,
+              borderColor: `color-mix(in srgb, ${s.color} 30%, transparent)`,
+            }}
+          >
+            <p className="text-2xl md:text-3xl font-bold text-text-primary leading-none">{s.value}</p>
+            <p className="text-xs text-text-muted mt-1.5">{s.label}</p>
           </div>
         ))}
       </div>
