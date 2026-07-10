@@ -4,8 +4,9 @@
  * Builds a self-contained SVG, rasterizes it to PNG, and hands the blob back
  * to the UI so the user can preview it, download it, or send it to the native
  * share sheet. Cover art is fetched and inlined as data URIs (so the canvas
- * export is never tainted); anything that fails to load falls back to a
- * colored placeholder tile.
+ * export is never tainted); hosts that block CORS (e.g. Google Books) are
+ * retried through the images.weserv.nl proxy, and anything that still fails
+ * falls back to a colored placeholder tile.
  */
 
 const W = 1080
@@ -41,25 +42,48 @@ function truncate(s = '', n) {
   return s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s
 }
 
-/** Fetch an image and inline it as a data URI. Null on any failure. */
+async function blobToDataUrl(blob) {
+  return await new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result)
+    reader.onerror = () => resolve(null)
+    reader.readAsDataURL(blob)
+  })
+}
+
+async function fetchBlob(url, timeoutMs) {
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs)
+  try {
+    const res = await fetch(url, { signal: ctrl.signal, mode: 'cors', referrerPolicy: 'no-referrer' })
+    if (!res.ok) return null
+    return await res.blob()
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/**
+ * Fetch an image and inline it as a data URI. Tries the source directly,
+ * then falls back to the weserv image proxy for hosts that don't send CORS
+ * headers (Google Books covers, most notably). Null if both fail.
+ */
 async function fetchAsDataUrl(url, timeoutMs = 4500) {
   if (!url) return null
   try {
-    const ctrl = new AbortController()
-    const timer = setTimeout(() => ctrl.abort(), timeoutMs)
-    const res = await fetch(url, { signal: ctrl.signal, mode: 'cors', referrerPolicy: 'no-referrer' })
-    clearTimeout(timer)
-    if (!res.ok) return null
-    const blob = await res.blob()
-    return await new Promise((resolve) => {
-      const reader = new FileReader()
-      reader.onload = () => resolve(reader.result)
-      reader.onerror = () => resolve(null)
-      reader.readAsDataURL(blob)
-    })
+    const blob = await fetchBlob(url, timeoutMs)
+    if (blob) return await blobToDataUrl(blob)
   } catch {
-    return null
+    /* fall through to proxy */
   }
+  try {
+    const proxied = `https://images.weserv.nl/?url=${encodeURIComponent(url.replace(/^https?:\/\//, ''))}&w=200&fit=cover`
+    const blob = await fetchBlob(proxied, timeoutMs)
+    if (blob) return await blobToDataUrl(blob)
+  } catch {
+    /* placeholder tile it is */
+  }
+  return null
 }
 
 /** Cover <image> with rounded corners, or a colored placeholder tile. */
@@ -74,7 +98,7 @@ function coverSvg({ dataUrl, type, x, y, w, h, clipId }) {
   return `
     <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="12" fill="${color}" fill-opacity="0.25"/>
     <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="12" fill="none" stroke="${INK}" stroke-width="2"/>
-    <text x="${x + w / 2}" y="${y + h / 2 + 12}" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="36" font-weight="bold" fill="${INK}">${escapeXml((TYPE_LABELS[type] || '?')[0])}</text>`
+    <text x="${x + w / 2}" y="${y + h / 2 + 12}" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="34" font-weight="bold" fill="${INK}">${escapeXml((TYPE_LABELS[type] || '?')[0])}</text>`
 }
 
 /** The app logo — the wordmark's 2x2 pastel dot grid. */
@@ -91,71 +115,91 @@ function logoSvg(x, y, size) {
     </g>`
 }
 
-function buildSvg(insights, coverMap) {
-  const { count, monthLabel, usingMonth, breakdown, faves, fiveStars, topGenre } = insights
+function buildSvg(insights, coverMap, username) {
+  const { count, monthLabel, usingMonth, breakdown, faves, fiveStars } = insights
   const periodText = usingMonth ? `things finished in ${monthLabel}` : 'things finished, all time'
 
-  // Favorite rows — with cover art
-  const faveRows = faves.map((f, i) => {
-    const y = 660 + i * 158
+  const pick = fiveStars?.[0] || null
+  // Don't show the five-star pick twice — the spotlight is its home.
+  const rowFaves = (pick ? faves.filter((f) => f.id !== pick.id) : faves).slice(0, 3)
+
+  // ── Header: wordmark left, @username pill right ──
+  let usernamePill = ''
+  if (username) {
+    const label = `@${username}`
+    const pillW = Math.min(430, 34 + label.length * 15.5)
+    const pillX = 990 - pillW
+    usernamePill = `
+      <rect x="${pillX}" y="84" width="${pillW}" height="52" rx="26" fill="${PINK}"/>
+      <text x="${pillX + pillW / 2}" y="118" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="26" font-weight="bold" fill="#ffffff">${escapeXml(label)}</text>`
+  }
+
+  // ── Flowing vertical layout ──
+  // Big stat block
+  const statBlock = `
+    <text x="84" y="392" font-family="Helvetica, Arial, sans-serif" font-size="235" font-weight="bold" fill="${INK}" letter-spacing="-10">${count}</text>
+    <text x="90" y="452" font-family="Helvetica, Arial, sans-serif" font-size="42" font-weight="bold" fill="${PINK}">${escapeXml(periodText)}</text>
+    ${breakdown ? `<text x="90" y="512" font-family="Helvetica, Arial, sans-serif" font-size="33" font-weight="bold" fill="${SEC}">${escapeXml(breakdown)}</text>` : ''}`
+
+  // Favorites rows
+  const rowsStart = 590
+  const rowH = 134
+  const rowGap = 18
+  const faveHeader = rowFaves.length > 0
+    ? `<text x="90" y="${rowsStart - 22}" font-family="Helvetica, Arial, sans-serif" font-size="26" font-weight="bold" fill="${MUTED}" letter-spacing="5">FAVORITES</text>`
+    : ''
+  const faveRows = rowFaves.map((f, i) => {
+    const y = rowsStart + i * (rowH + rowGap)
     const color = TYPE_COLORS[f.type] || '#c49bff'
     const stars = '★'.repeat(f.rating) + '☆'.repeat(Math.max(0, 5 - f.rating))
     return `
       <g transform="translate(90 ${y})">
-        <rect x="0" y="0" width="900" height="142" rx="20" fill="${CARD}" stroke="${INK}" stroke-width="2.5"/>
-        <rect x="0" y="14" width="9" height="114" rx="4.5" fill="${color}"/>
-        ${coverSvg({ dataUrl: coverMap.get(f.id), type: f.type, x: 26, y: 12, w: 86, h: 118, clipId: `fave-cov-${i}` })}
-        <text x="138" y="60" font-family="Helvetica, Arial, sans-serif" font-size="36" font-weight="bold" fill="${INK}" letter-spacing="-0.5">${escapeXml(truncate(f.title, 28))}</text>
-        <text x="138" y="102" font-family="Helvetica, Arial, sans-serif" font-size="26" fill="${SEC}">${escapeXml(truncate(f.creator || TYPE_LABELS[f.type] || '', 34))}</text>
-        <text x="872" y="84" text-anchor="end" font-family="Helvetica, Arial, sans-serif" font-size="34" fill="${PINK}" letter-spacing="2">${stars}</text>
+        <rect x="0" y="0" width="900" height="${rowH}" rx="20" fill="${CARD}" stroke="${INK}" stroke-width="2.5"/>
+        <rect x="0" y="13" width="9" height="${rowH - 26}" rx="4.5" fill="${color}"/>
+        ${coverSvg({ dataUrl: coverMap.get(f.id), type: f.type, x: 26, y: 12, w: 80, h: rowH - 24, clipId: `fave-cov-${i}` })}
+        <text x="130" y="58" font-family="Helvetica, Arial, sans-serif" font-size="34" font-weight="bold" fill="${INK}" letter-spacing="-0.5">${escapeXml(truncate(f.title, 30))}</text>
+        <text x="130" y="98" font-family="Helvetica, Arial, sans-serif" font-size="25" fill="${SEC}">${escapeXml(truncate(f.creator || TYPE_LABELS[f.type] || '', 36))}</text>
+        <text x="872" y="80" text-anchor="end" font-family="Helvetica, Arial, sans-serif" font-size="32" fill="${PINK}" letter-spacing="2">${stars}</text>
       </g>`
   }).join('')
 
-  const faveHeader = faves.length > 0
-    ? `<text x="90" y="628" font-family="Helvetica, Arial, sans-serif" font-size="28" font-weight="bold" fill="${MUTED}" letter-spacing="5">FAVORITES</text>`
-    : ''
-
-  // Five-star spotlight — show WHAT it was, with its cover.
+  // Five-star spotlight flows right after the rows
   let fiveStarBlock = ''
-  if (fiveStars && fiveStars.length > 0) {
-    const pick = fiveStars[0]
+  if (pick) {
+    const y = rowsStart + rowFaves.length * (rowH + rowGap) + 14
     const extra = fiveStars.length > 1 ? `  ·  +${fiveStars.length - 1} more` : ''
     fiveStarBlock = `
-      <g transform="translate(90 1148)">
-        <rect x="0" y="0" width="900" height="126" rx="20" fill="#f0b429" fill-opacity="0.16"/>
-        <rect x="0" y="0" width="900" height="126" rx="20" fill="none" stroke="${INK}" stroke-width="2.5"/>
-        ${coverSvg({ dataUrl: coverMap.get(pick.id), type: pick.type, x: 22, y: 14, w: 72, h: 98, clipId: 'fivestar-cov' })}
-        <text x="118" y="46" font-family="Helvetica, Arial, sans-serif" font-size="21" font-weight="bold" fill="#a16207" letter-spacing="4">FIVE-STAR PICK${escapeXml(extra)}</text>
-        <text x="118" y="92" font-family="Helvetica, Arial, sans-serif" font-size="33" font-weight="bold" fill="${INK}" letter-spacing="-0.5">${escapeXml(truncate(pick.title, 30))}</text>
-        <text x="872" y="76" text-anchor="end" font-family="Helvetica, Arial, sans-serif" font-size="30" fill="#d97706" letter-spacing="2">★★★★★</text>
+      <g transform="translate(90 ${y})">
+        <rect x="0" y="0" width="900" height="150" rx="20" fill="#f0b429" fill-opacity="0.16"/>
+        <rect x="0" y="0" width="900" height="150" rx="20" fill="none" stroke="${INK}" stroke-width="2.5"/>
+        ${coverSvg({ dataUrl: coverMap.get(pick.id), type: pick.type, x: 24, y: 14, w: 82, h: 122, clipId: 'fivestar-cov' })}
+        <text x="132" y="52" font-family="Helvetica, Arial, sans-serif" font-size="21" font-weight="bold" fill="#a16207" letter-spacing="4">FIVE-STAR PICK${escapeXml(extra)}</text>
+        <text x="132" y="98" font-family="Helvetica, Arial, sans-serif" font-size="34" font-weight="bold" fill="${INK}" letter-spacing="-0.5">${escapeXml(truncate(pick.title, 29))}</text>
+        ${pick.creator ? `<text x="132" y="132" font-family="Helvetica, Arial, sans-serif" font-size="24" fill="${SEC}">${escapeXml(truncate(pick.creator, 36))}</text>` : ''}
+        <text x="872" y="88" text-anchor="end" font-family="Helvetica, Arial, sans-serif" font-size="30" fill="#d97706" letter-spacing="2">★★★★★</text>
       </g>`
-  } else if (topGenre) {
-    fiveStarBlock = `<text x="90" y="1220" font-family="Helvetica, Arial, sans-serif" font-size="30" fill="${SEC}">mostly ${escapeXml(topGenre)}</text>`
   }
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
     <rect width="${W}" height="${H}" fill="${PORCELAIN}"/>
     <rect x="24" y="24" width="${W - 48}" height="${H - 48}" rx="34" fill="none" stroke="${INK}" stroke-width="3"/>
 
-    <!-- Wordmark: pastel dot grid + stacked lowercase, pink underline -->
+    <!-- Wordmark + owner -->
     ${logoSvg(90, 76, 66)}
     <text x="176" y="106" font-family="Helvetica, Arial, sans-serif" font-size="35" font-weight="bold" fill="${INK}" letter-spacing="-1">color</text>
     <text x="176" y="142" font-family="Helvetica, Arial, sans-serif" font-size="35" font-weight="bold" fill="${INK}" letter-spacing="-1">commentary</text>
     <rect x="176" y="150" width="212" height="6" rx="3" fill="${PINK}"/>
+    ${usernamePill}
 
-    <!-- Big stat -->
-    <text x="86" y="420" font-family="Helvetica, Arial, sans-serif" font-size="250" font-weight="bold" fill="${INK}" letter-spacing="-10">${count}</text>
-    <text x="90" y="486" font-family="Helvetica, Arial, sans-serif" font-size="44" font-weight="bold" fill="${PINK}">${escapeXml(periodText)}</text>
-
-    <!-- Breakdown -->
-    ${breakdown ? `<text x="90" y="560" font-family="Helvetica, Arial, sans-serif" font-size="36" font-weight="bold" fill="${SEC}">${escapeXml(breakdown)}</text>` : ''}
+    ${statBlock}
 
     ${faveHeader}
     ${faveRows}
 
     ${fiveStarBlock}
 
-    <!-- Footer: where to find the app, ink pill -->
+    <!-- Footer: follow me + where -->
+    ${username ? `<text x="90" y="1318" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="bold" fill="${SEC}">follow @${escapeXml(username)} on</text>` : ''}
     <rect x="586" y="1286" width="404" height="50" rx="25" fill="${INK}"/>
     <text x="966" y="1319" text-anchor="end" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="bold" fill="${PORCELAIN}">${SITE_URL}</text>
   </svg>`
@@ -194,7 +238,7 @@ export function downloadBlob(blob, filename) {
  * five-star pick (best effort — placeholders on failure).
  * @returns {Promise<{blob: Blob, filename: string}>}
  */
-export async function buildInsightCard(insights) {
+export async function buildInsightCard(insights, { username = '' } = {}) {
   // Collect the covers the card needs: favorites + top five-star pick.
   const wanted = new Map()
   for (const f of insights.faves || []) wanted.set(f.id, f.coverUrl)
@@ -208,7 +252,7 @@ export async function buildInsightCard(insights) {
     })
   )
 
-  const svg = buildSvg(insights, coverMap)
+  const svg = buildSvg(insights, coverMap, username)
   const blob = await svgToPngBlob(svg)
   const filename = `color-commentary-${insights.usingMonth ? insights.monthLabel.toLowerCase() : 'wrapped'}.png`
   return { blob, filename }

@@ -13,6 +13,7 @@ import { Trophy, Share2, Star, Loader2, ArrowRight, Download } from 'lucide-reac
 import CoverArt from './common/CoverArt'
 import Modal from './common/Modal'
 import { getMediaColor } from '../utils/filterUtils'
+import { usePublicProfile } from '../hooks/usePublicProfile'
 import { computeInsights, insightsHeadline } from '../utils/insights'
 import { buildInsightCard, shareCardBlob, canShareFile, downloadBlob } from '../utils/shareCard'
 
@@ -70,6 +71,7 @@ function ScoreRing({ count, byType, label }) {
 
 export default function InsightsHero({ items }) {
   const insights = useMemo(() => computeInsights(items), [items])
+  const { username } = usePublicProfile()
   const [building, setBuilding] = useState(false)
   const [card, setCard] = useState(null) // { blob, filename, url }
   const cardUrlRef = useRef(null)
@@ -86,7 +88,7 @@ export default function InsightsHero({ items }) {
     if (building) return
     setBuilding(true)
     try {
-      const { blob, filename } = await buildInsightCard(insights)
+      const { blob, filename } = await buildInsightCard(insights, { username })
       setCard({ blob, filename, url: URL.createObjectURL(blob) })
     } catch (err) {
       console.error('Share card failed', err)
@@ -209,7 +211,7 @@ export default function InsightsHero({ items }) {
               {insights.usingMonth ? 'Faves this month' : 'Your faves'}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              {insights.faves.map((f) => {
+              {insights.faves.slice(0, 3).map((f) => {
                 const color = getMediaColor(f.type)
                 return (
                   <div

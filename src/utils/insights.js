@@ -62,11 +62,13 @@ export function computeInsights(items = []) {
   const byType = { music: 0, movie: 0, tv: 0, book: 0 }
   scope.forEach((i) => { if (byType[i.type] !== undefined) byType[i.type]++ })
 
-  // Faves: highest-rated within the scope, then most recent. Up to 3.
+  // Faves: highest-rated within the scope, then most recent. Up to 4 so the
+  // share card can still fill three rows after the five-star spotlight takes
+  // one; the dashboard hero shows the top 3.
   const faves = [...scope]
     .filter((i) => i.rating > 0)
     .sort((a, b) => (b.rating - a.rating) || (finishedDate(b) - finishedDate(a)))
-    .slice(0, 3)
+    .slice(0, 4)
 
   // Top genre across the scope.
   const genreCounts = {}
