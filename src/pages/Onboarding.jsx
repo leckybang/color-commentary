@@ -118,7 +118,7 @@ export default function Onboarding() {
   const selectedPicks = current.category ? (profile[current.category]?.[SUGGESTION_FIELD[current.category]] || []) : []
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(135deg, #110d18 0%, #1a1228 50%, #0f0d16 100%)' }}>
+    <div className="min-h-screen flex flex-col bg-bg-primary text-text-primary">
       {/* Progress bar */}
       {isMediaStep && (
         <div className="fixed top-0 left-0 right-0 z-10">
@@ -175,7 +175,8 @@ export default function Onboarding() {
               </p>
               <button
                 onClick={next}
-                className="inline-flex items-center gap-2 bg-accent-primary hover:bg-accent-hover text-white px-8 py-3.5 rounded-xl text-lg font-medium transition-colors"
+                className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full text-lg font-bold transition-all hover:opacity-90 active:scale-[0.99]"
+                style={{ backgroundColor: 'var(--color-nav-bg)', color: 'var(--color-nav-text)', boxShadow: '4px 4px 0 var(--color-accent-primary)' }}
               >
                 Let's Go
                 <ArrowRight size={20} />
@@ -199,7 +200,7 @@ export default function Onboarding() {
                 </div>
               </div>
 
-              <div className="bg-bg-secondary/80 backdrop-blur border border-border rounded-2xl p-6 md:p-8">
+              <div className="ink-card bg-bg-secondary rounded-2xl p-6 md:p-8">
                 <ChipSelector
                   key={`${current.category}-genres`}
                   options={GENRE_OPTIONS[current.category]}
@@ -223,7 +224,7 @@ export default function Onboarding() {
                   )}
                   <button
                     onClick={next}
-                    className="flex items-center gap-2 bg-accent-primary hover:bg-accent-hover text-white px-6 py-2.5 rounded-xl font-medium transition-colors"
+                    className="flex items-center gap-2 bg-accent-primary hover:bg-accent-hover text-white px-6 py-2.5 rounded-full font-bold transition-colors"
                   >
                     Next
                     <ChevronRight size={18} />
@@ -249,7 +250,7 @@ export default function Onboarding() {
                 </div>
               </div>
 
-              <div className="bg-bg-secondary/80 backdrop-blur border border-border rounded-2xl p-6 md:p-8 space-y-6">
+              <div className="ink-card bg-bg-secondary rounded-2xl p-6 md:p-8 space-y-6">
                 {suggestions.length > 0 ? (
                   <div>
                     <label className="block text-sm font-medium text-text-secondary mb-3">
@@ -298,7 +299,7 @@ export default function Onboarding() {
                   )}
                   <button
                     onClick={next}
-                    className="flex items-center gap-2 bg-accent-primary hover:bg-accent-hover text-white px-6 py-2.5 rounded-xl font-medium transition-colors"
+                    className="flex items-center gap-2 bg-accent-primary hover:bg-accent-hover text-white px-6 py-2.5 rounded-full font-bold transition-colors"
                   >
                     {step === STEPS.length - 2 ? 'See My Results' : 'Next'}
                     <ChevronRight size={18} />
@@ -371,7 +372,8 @@ export default function Onboarding() {
               <div className="text-center">
                 <button
                   onClick={next}
-                  className="inline-flex items-center gap-2 bg-accent-primary hover:bg-accent-hover text-white px-8 py-3.5 rounded-xl text-lg font-medium transition-colors"
+                  className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full text-lg font-bold transition-all hover:opacity-90 active:scale-[0.99]"
+                  style={{ backgroundColor: 'var(--color-nav-bg)', color: 'var(--color-nav-text)', boxShadow: '4px 4px 0 var(--color-accent-primary)' }}
                 >
                   Enter Your Universe
                   <ArrowRight size={20} />
