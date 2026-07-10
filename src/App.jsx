@@ -32,6 +32,26 @@ function ProtectedRoute({ children }) {
   return children
 }
 
+// /u/:username works for everyone: signed-in users keep the app shell
+// (sidebar + mobile nav), logged-out visitors get the standalone page.
+function PublicProfileRoute() {
+  const { user, loading } = useAuth()
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-bg-primary">
+        <div className="w-8 h-8 border-2 border-accent-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+  return user ? (
+    <Layout>
+      <PublicProfile />
+    </Layout>
+  ) : (
+    <PublicProfile />
+  )
+}
+
 function PublicRoute({ children }) {
   const { user, loading } = useAuth()
   // Wait for auth to fully resolve (important for OAuth redirects)
@@ -72,7 +92,7 @@ function AppRoutes() {
         <Route path="/calibrate" element={<Navigate to="/me?tab=taste" replace />} />
         <Route path="/group-chat" element={<Navigate to="/people?tab=chat" replace />} />
       </Route>
-      <Route path="/u/:username" element={<PublicProfile />} />
+      <Route path="/u/:username" element={<PublicProfileRoute />} />
       <Route path="/moodboard" element={<Moodboard />} />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>

@@ -79,7 +79,7 @@ export default function PublicProfile({ isSelf }) {
   // Loading state when viewing by slug
   if (isViewingBySlug && otherLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
+      <div className="min-h-[70vh] flex items-center justify-center p-4">
         <div className="w-8 h-8 border-2 border-accent-primary border-t-transparent rounded-full animate-spin" />
       </div>
     )
@@ -91,7 +91,7 @@ export default function PublicProfile({ isSelf }) {
       ? "Public profiles require Supabase to work across devices. In demo mode, you can only view your own."
       : "Either this person doesn't exist yet, or they've kept their profile private."
     return (
-      <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
+      <div className="min-h-[70vh] flex items-center justify-center p-4">
         <div className="text-center max-w-md">
           <Lock size={48} className="mx-auto text-text-muted/30 mb-4" />
           <h1 className="text-2xl font-bold text-text-primary mb-2">Nothing to see here</h1>
@@ -147,7 +147,9 @@ export default function PublicProfile({ isSelf }) {
     if (otherProfile) friendsApi.unfollow(otherProfile.id)
   }
 
-  const showSelfWrapper = !isSelf // wrap in its own layout if /u/:username; /me uses app Layout
+  // Standalone shell only for logged-out visitors — signed-in viewers get the
+  // app Layout (sidebar + mobile nav) from PublicProfileRoute in App.jsx.
+  const showStandalone = !isSelf && !user
   const content = (
     <div className="max-w-2xl mx-auto">
       {/* Header */}
@@ -352,20 +354,24 @@ export default function PublicProfile({ isSelf }) {
     </div>
   )
 
-  if (showSelfWrapper) {
+  if (showStandalone) {
     return (
       <div className="min-h-screen p-4 md:p-8" style={{ backgroundColor: 'var(--color-bg-primary)', color: 'var(--color-text-primary)' }}>
-        {/* Signed-in viewers get a way back into the app from this standalone page */}
-        {user && (
-          <div className="max-w-2xl mx-auto mb-5">
-            <Link
-              to="/me"
-              className="inline-flex items-center gap-1.5 text-sm font-semibold text-text-secondary hover:text-text-primary transition-colors"
-            >
-              ← Back to your universe
-            </Link>
-          </div>
-        )}
+        {/* Wordmark header — the visitor's path into the app */}
+        <Link to="/" className="flex items-center justify-center gap-2 mb-7 group">
+          <span className="grid grid-cols-2 gap-[2px] w-[18px] h-[18px] shrink-0" aria-hidden="true">
+            <span className="rounded-[4px_4px_4px_1px] bg-accent-music" />
+            <span className="rounded-[4px_4px_4px_1px] bg-accent-movies" />
+            <span className="rounded-[4px_4px_4px_1px] bg-accent-tv" />
+            <span className="rounded-[4px_4px_4px_1px] bg-accent-books" />
+          </span>
+          <span
+            className="text-sm font-extrabold tracking-tight text-text-primary group-hover:text-accent-primary transition-colors"
+            style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}
+          >
+            color commentary
+          </span>
+        </Link>
         {content}
       </div>
     )
