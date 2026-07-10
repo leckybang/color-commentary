@@ -245,6 +245,15 @@ export default function InsightsHero({ items }) {
               alt="Preview of your insights share card"
               className="w-full rounded-xl border border-border shadow-lg mb-4"
             />
+            {!username && (
+              <p className="text-xs text-text-muted mb-3 -mt-1">
+                Psst — set your @username in{' '}
+                <Link to="/me?tab=settings" className="text-accent-primary font-semibold hover:underline">
+                  Settings
+                </Link>{' '}
+                and your card will carry a follow-me handle.
+              </p>
+            )}
             <div className="flex gap-2">
               <button
                 onClick={handleDownload}

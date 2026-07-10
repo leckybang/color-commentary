@@ -117,7 +117,7 @@ function logoSvg(x, y, size) {
 
 function buildSvg(insights, coverMap, username) {
   const { count, monthLabel, usingMonth, breakdown, faves, fiveStars } = insights
-  const periodText = usingMonth ? `things finished in ${monthLabel}` : 'things finished, all time'
+  const periodText = usingMonth ? `titles finished in ${monthLabel}` : 'titles finished, all time'
 
   const pick = fiveStars?.[0] || null
   // Don't show the five-star pick twice — the spotlight is its home.

@@ -109,7 +109,7 @@ export function insightsHeadline(insights) {
   if (!insights.hasData) return "Your story starts here"
   const { count, usingMonth, monthLabel } = insights
   if (usingMonth) {
-    return `You finished ${count} ${count === 1 ? 'thing' : 'things'} in ${monthLabel}`
+    return `You finished ${count} ${count === 1 ? 'title' : 'titles'} in ${monthLabel}`
   }
-  return `${count} ${count === 1 ? 'thing' : 'things'} finished, all time`
+  return `${count} ${count === 1 ? 'title' : 'titles'} finished, all time`
 }
