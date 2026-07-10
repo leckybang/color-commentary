@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { User, SlidersHorizontal, Settings, LogOut, Check, Globe } from 'lucide-react'
+import { User, SlidersHorizontal, Settings, LogOut, Check, Globe, Save } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { usePublicProfile } from '../hooks/usePublicProfile'
 import EmojiPicker from '../components/common/EmojiPicker'
@@ -18,8 +18,11 @@ export default function MyProfile() {
   const { user, logout } = useAuth()
   const publicProfile = usePublicProfile()
 
-  const initialTab = TABS.find(t => t.key === params.get('tab'))?.key || 'profile'
-  const [activeTab, setActiveTab] = useState(initialTab)
+  // The URL is the source of truth for the active tab, so in-app links like
+  // /me?tab=settings (e.g. the Friends panel nudge) work from anywhere —
+  // including when you're already on /me.
+  const activeTab = TABS.find((t) => t.key === params.get('tab'))?.key || 'profile'
+  const setActiveTab = (key) => setParams({ tab: key }, { replace: true })
 
   // Public profile local drafts
   const [usernameDraft, setUsernameDraft] = useState('')
@@ -31,30 +34,13 @@ export default function MyProfile() {
     setBioDraft(publicProfile.bio || '')
   }, [publicProfile.username, publicProfile.bio])
 
-  // Sync tab to URL
-  useEffect(() => {
-    const current = params.get('tab')
-    if (current !== activeTab) {
-      setParams({ tab: activeTab }, { replace: true })
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab])
+  const hasProfileChanges =
+    usernameDraft !== (publicProfile.username || '') || bioDraft !== (publicProfile.bio || '')
 
-  // Auto-save when the user clicks/tabs out of a field. Same pattern as the
-  // public-toggle and avatar (which already save immediately). This way the
-  // explicit "Save Profile" button isn't load-bearing — typing a username
-  // and clicking away is enough to persist it.
-  const autosaveUsername = async () => {
+  const handleSaveProfile = async () => {
     const clean = usernameDraft.toLowerCase().replace(/[^a-z0-9-_]/g, '')
-    if (clean === (publicProfile.username || '')) return
     if (clean !== usernameDraft) setUsernameDraft(clean)
-    await publicProfile.savePublicProfile({ username: clean })
-    setSaveMessage('Saved!')
-    setTimeout(() => setSaveMessage(''), 2500)
-  }
-  const autosaveBio = async () => {
-    if (bioDraft === (publicProfile.bio || '')) return
-    await publicProfile.savePublicProfile({ bio: bioDraft })
+    await publicProfile.savePublicProfile({ username: clean, bio: bioDraft })
     setSaveMessage('Saved!')
     setTimeout(() => setSaveMessage(''), 2500)
   }
@@ -160,14 +146,13 @@ export default function MyProfile() {
                     type="text"
                     value={usernameDraft}
                     onChange={(e) => setUsernameDraft(e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, ''))}
-                    onBlur={autosaveUsername}
-                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur() } }}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveProfile() } }}
                     placeholder="yourname"
                     maxLength={30}
                     className="flex-1 bg-transparent px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none"
                   />
                 </div>
-                <p className="text-xs text-text-muted mt-1.5">Letters, numbers, dashes. This is your URL. Saves automatically when you click away.</p>
+                <p className="text-xs text-text-muted mt-1.5">Letters, numbers, dashes. This is your URL.</p>
               </div>
 
               <div>
@@ -175,16 +160,15 @@ export default function MyProfile() {
                 <textarea
                   value={bioDraft}
                   onChange={(e) => setBioDraft(e.target.value.slice(0, 160))}
-                  onBlur={autosaveBio}
                   placeholder="A few words about your taste, vibe, or whatever."
                   rows={2}
                   className="w-full bg-bg-tertiary border border-border rounded-lg px-4 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-primary transition-colors resize-none"
                 />
-                <p className="text-xs text-text-muted mt-1">{bioDraft.length}/160 · auto-saves on blur</p>
+                <p className="text-xs text-text-muted mt-1">{bioDraft.length}/160</p>
               </div>
 
-              {/* Save status — auto-save handles persistence, this is just feedback. */}
-              <div className="flex items-center justify-end pt-1 h-5">
+              {/* Explicit save for username + bio (avatar and toggles still save instantly) */}
+              <div className="flex items-center justify-between pt-1">
                 <span className="text-xs">
                   {saveMessage ? (
                     <span className="text-accent-books flex items-center gap-1">
@@ -193,8 +177,18 @@ export default function MyProfile() {
                     </span>
                   ) : publicProfile.saving ? (
                     <span className="text-text-muted">Saving…</span>
+                  ) : hasProfileChanges ? (
+                    <span className="text-text-muted">Unsaved changes</span>
                   ) : null}
                 </span>
+                <button
+                  onClick={handleSaveProfile}
+                  disabled={!hasProfileChanges || publicProfile.saving}
+                  className="flex items-center gap-2 px-5 py-2 rounded-full text-sm font-bold bg-accent-primary hover:bg-accent-hover text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Save size={14} />
+                  Save Profile
+                </button>
               </div>
             </div>
           </div>
