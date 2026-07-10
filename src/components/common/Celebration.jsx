@@ -188,7 +188,7 @@ export default function Celebration({ item, onRate, onReview, onClose }) {
         </div>
         <h3
           className="text-lg font-bold text-text-primary leading-tight"
-          style={{ fontFamily: "'Libre Baskerville', serif" }}
+          style={{ fontFamily: 'var(--font-heading)' }}
         >
           {item.title}
         </h3>

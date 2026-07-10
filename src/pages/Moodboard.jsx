@@ -126,7 +126,7 @@ export default function Moodboard() {
     <div className="min-h-screen p-4 md:p-8" style={{ backgroundColor: '#1a1a1a' }}>
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-10">
-          <h1 className="text-3xl font-bold text-white mb-2" style={{ fontFamily: "'Libre Baskerville', serif" }}>
+          <h1 className="text-3xl font-bold text-white mb-2" style={{ fontFamily: 'var(--font-heading)' }}>
             Pick Your Vibe
           </h1>
           <p className="text-gray-400 max-w-lg mx-auto">
@@ -139,7 +139,7 @@ export default function Moodboard() {
             <div key={i} className="space-y-4">
               {/* Theme header */}
               <div className="text-center">
-                <h2 className="text-lg font-bold text-white" style={{ fontFamily: "'Libre Baskerville', serif" }}>
+                <h2 className="text-lg font-bold text-white" style={{ fontFamily: 'var(--font-heading)' }}>
                   {theme.name}
                 </h2>
                 <p className="text-sm text-gray-400 mt-1">{theme.tagline}</p>
@@ -177,7 +177,7 @@ export default function Moodboard() {
 
         {selected !== null && (
           <div className="text-center mt-10 p-6 rounded-2xl" style={{ backgroundColor: '#222' }}>
-            <p className="text-white text-lg font-medium" style={{ fontFamily: "'Libre Baskerville', serif" }}>
+            <p className="text-white text-lg font-medium" style={{ fontFamily: 'var(--font-heading)' }}>
               You picked <strong>{THEMES[selected].name}</strong>
             </p>
             <p className="text-gray-400 text-sm mt-1">

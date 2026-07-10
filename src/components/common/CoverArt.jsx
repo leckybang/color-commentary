@@ -91,7 +91,7 @@ export default function CoverArt({ title, type, creator, coverUrl, size = 'md', 
         {s.text && (
           <p
             className="text-[8px] font-medium mt-1 leading-tight opacity-70 line-clamp-2 px-1"
-            style={{ color, fontFamily: "'Libre Baskerville', serif" }}
+            style={{ color, fontFamily: 'var(--font-heading)' }}
           >
             {title}
           </p>

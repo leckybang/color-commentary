@@ -217,7 +217,7 @@ export default function ItemLightbox({ item, isOpen, onClose, onEdit, onUpdate, 
                 <div className="flex-1 min-w-0">
                   <h2
                     className="text-xl font-bold text-text-primary leading-tight"
-                    style={{ fontFamily: "'Libre Baskerville', serif" }}
+                    style={{ fontFamily: 'var(--font-heading)' }}
                   >
                     {item.title}
                   </h2>

@@ -27,10 +27,20 @@ function applyTheme(theme) {
   if (theme.bodyFont) root.setProperty('--font-body', theme.bodyFont)
 }
 
+// Themes are persisted by NAME. The old numeric key ('cc_theme') predates the
+// Editorial Ink refresh — its indexes now point at different themes, so we
+// deliberately ignore it: everyone lands on the new default once, and any
+// theme they pick after that sticks by name.
+const THEME_STORAGE_KEY = 'cc_theme_name'
+
 export function ThemeProvider({ children }) {
   const [themeIndex, setThemeIndex] = useState(() => {
-    const saved = localStorage.getItem('cc_theme')
-    return saved !== null ? parseInt(saved, 10) : DEFAULT_THEME_INDEX
+    const savedName = localStorage.getItem(THEME_STORAGE_KEY)
+    if (savedName) {
+      const i = THEMES.findIndex((t) => t.name === savedName)
+      if (i >= 0) return i
+    }
+    return DEFAULT_THEME_INDEX
   })
 
   const currentTheme = THEMES[themeIndex] || THEMES[DEFAULT_THEME_INDEX]
@@ -41,7 +51,8 @@ export function ThemeProvider({ children }) {
 
   const setTheme = (index) => {
     setThemeIndex(index)
-    localStorage.setItem('cc_theme', String(index))
+    const theme = THEMES[index]
+    if (theme) localStorage.setItem(THEME_STORAGE_KEY, theme.name)
   }
 
   return (
