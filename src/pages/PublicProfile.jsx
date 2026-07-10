@@ -11,7 +11,6 @@ import { determineArchetype } from '../utils/archetypes'
 import { getMediaColor } from '../utils/filterUtils'
 import CoverArt from '../components/common/CoverArt'
 import EmojiPicker from '../components/common/EmojiPicker'
-import FriendsPanel from '../components/FriendsPanel'
 import { isSupabaseConfigured } from '../lib/supabase'
 
 // Inline stats so we can compute over either the owner's catalog or a
@@ -325,8 +324,7 @@ export default function PublicProfile({ isSelf }) {
         )}
       </div>
 
-      {/* Friends — find, follow, and visit people. Own profile only. */}
-      {isOwnProfile && isSelf && <FriendsPanel />}
+      {/* Friends moved to their own tab (/friends). */}
 
       {/* Taste DNA & Taste Map are hidden here for now — they live in the
           Taste tab (Taste Calibrator). */}

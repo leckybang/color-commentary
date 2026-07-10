@@ -9,6 +9,7 @@ import Catalog from './pages/Catalog'
 import Radar from './pages/Radar'
 import Moodboard from './pages/Moodboard'
 import MyProfile from './pages/MyProfile'
+import Friends from './pages/Friends'
 import People from './pages/People'
 import PublicProfile from './pages/PublicProfile'
 import CookieConsent from './components/common/CookieConsent'
@@ -62,13 +63,13 @@ function AppRoutes() {
         <Route path="/me" element={<MyProfile />} />
         <Route path="/catalog" element={<Catalog />} />
         <Route path="/radar" element={<Radar />} />
+        <Route path="/friends" element={<Friends />} />
         <Route path="/people" element={<People />} />
 
         {/* Legacy redirects */}
         <Route path="/weekly" element={<Navigate to="/" replace />} />
         <Route path="/profile" element={<Navigate to="/me" replace />} />
         <Route path="/calibrate" element={<Navigate to="/me?tab=taste" replace />} />
-        <Route path="/friends" element={<Navigate to="/people?tab=friends" replace />} />
         <Route path="/group-chat" element={<Navigate to="/people?tab=chat" replace />} />
       </Route>
       <Route path="/u/:username" element={<PublicProfile />} />
