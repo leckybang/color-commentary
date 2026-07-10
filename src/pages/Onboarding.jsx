@@ -152,27 +152,52 @@ export default function Onboarding() {
           {/* ───── WELCOME ───── */}
           {current.key === 'welcome' && (
             <div className="text-center">
-              <div className="flex justify-center gap-3 mb-8">
+              <p className="flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-[3px] text-text-muted mb-5">
+                <span className="w-5 h-[3px] rounded-full bg-accent-primary inline-block" aria-hidden="true" />
+                welcome to
+                <span className="w-5 h-[3px] rounded-full bg-accent-primary inline-block" aria-hidden="true" />
+              </p>
+              <div className="flex items-center justify-center gap-3.5 mb-8">
+                <div className="grid grid-cols-2 gap-1 w-11 h-11 shrink-0" aria-hidden="true">
+                  <span className="rounded-[10px_10px_10px_3px] bg-accent-music" />
+                  <span className="rounded-[10px_10px_10px_3px] bg-accent-movies" />
+                  <span className="rounded-[10px_10px_10px_3px] bg-accent-tv" />
+                  <span className="rounded-[10px_10px_10px_3px] bg-accent-books" />
+                </div>
+                <span
+                  className="text-[34px] font-extrabold leading-[0.95] text-left text-text-primary"
+                  style={{ fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: '-1px' }}
+                >
+                  color
+                  <br />
+                  <span className="relative inline-block">
+                    commentary
+                    <span className="absolute left-0 right-0 -bottom-1 h-[4px] rounded-full bg-accent-primary" aria-hidden="true" />
+                  </span>
+                </span>
+              </div>
+              <h1 className="text-3xl md:text-4xl font-extrabold text-text-primary mb-4 tracking-tight">
+                First, let's tune your taste.
+              </h1>
+              <p className="text-text-secondary text-lg mb-8 max-w-md mx-auto leading-relaxed">
+                Four quick rounds — music, movies, TV, books. Tap what you love and your Radar takes shape around it.
+              </p>
+              <div className="grid grid-cols-4 gap-3 max-w-sm mx-auto mb-10">
                 {CATEGORIES.map((c, i) => {
                   const { color } = c
                   const Icon = c.icon
                   return (
-                  <div
-                    key={i}
-                    className="w-16 h-16 rounded-2xl flex items-center justify-center"
-                    style={{ backgroundColor: `color-mix(in srgb, ${color} 15%, transparent)` }}
-                  >
-                    <Icon size={32} style={{ color }} />
-                  </div>
+                    <div
+                      key={i}
+                      className="ink-tile relative overflow-hidden rounded-2xl h-16 flex items-center justify-center"
+                      style={{ backgroundColor: `color-mix(in srgb, ${color} 16%, var(--color-bg-secondary))` }}
+                    >
+                      <span className="absolute top-0 right-0 w-5 h-5 rounded-bl-xl" style={{ backgroundColor: color }} aria-hidden="true" />
+                      <Icon size={26} style={{ color }} />
+                    </div>
                   )
                 })}
               </div>
-              <h1 className="text-3xl md:text-4xl font-bold text-text-primary mb-4">
-                Welcome to Color Commentary
-              </h1>
-              <p className="text-text-secondary text-lg mb-10 max-w-md mx-auto leading-relaxed">
-                Let's build your media universe. Track what you're into, see what's hyped and what critics love.
-              </p>
               <button
                 onClick={next}
                 className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full text-lg font-bold transition-all hover:opacity-90 active:scale-[0.99]"
@@ -187,15 +212,20 @@ export default function Onboarding() {
           {/* ───── GENRE STEP ───── */}
           {current.substep === 'genres' && (
             <div>
+              <p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[3px] text-text-muted mb-3">
+                <span className="w-5 h-[3px] rounded-full inline-block" style={{ backgroundColor: current.color }} aria-hidden="true" />
+                step {currentMediaStep} of {totalMediaSteps}
+              </p>
               <div className="flex items-center gap-4 mb-8">
                 <div
-                  className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0"
-                  style={{ backgroundColor: `color-mix(in srgb, ${current.color} 15%, transparent)` }}
+                  className="ink-tile relative overflow-hidden w-14 h-14 rounded-2xl flex items-center justify-center shrink-0"
+                  style={{ backgroundColor: `color-mix(in srgb, ${current.color} 16%, var(--color-bg-secondary))` }}
                 >
-                  <current.icon size={28} style={{ color: current.color }} />
+                  <span className="absolute top-0 right-0 w-4 h-4 rounded-bl-xl" style={{ backgroundColor: current.color }} aria-hidden="true" />
+                  <current.icon size={26} style={{ color: current.color }} />
                 </div>
                 <div>
-                  <h1 className="text-2xl md:text-3xl font-bold text-text-primary">{current.genreTitle}</h1>
+                  <h1 className="text-2xl md:text-3xl font-extrabold text-text-primary tracking-tight">{current.genreTitle}</h1>
                   <p className="text-text-secondary mt-1">{current.genreSubtitle}</p>
                 </div>
               </div>
@@ -237,15 +267,20 @@ export default function Onboarding() {
           {/* ───── PICKS STEP ───── */}
           {current.substep === 'picks' && (
             <div>
+              <p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[3px] text-text-muted mb-3">
+                <span className="w-5 h-[3px] rounded-full inline-block" style={{ backgroundColor: current.color }} aria-hidden="true" />
+                step {currentMediaStep} of {totalMediaSteps}
+              </p>
               <div className="flex items-center gap-4 mb-8">
                 <div
-                  className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0"
-                  style={{ backgroundColor: `color-mix(in srgb, ${current.color} 15%, transparent)` }}
+                  className="ink-tile relative overflow-hidden w-14 h-14 rounded-2xl flex items-center justify-center shrink-0"
+                  style={{ backgroundColor: `color-mix(in srgb, ${current.color} 16%, var(--color-bg-secondary))` }}
                 >
-                  <current.icon size={28} style={{ color: current.color }} />
+                  <span className="absolute top-0 right-0 w-4 h-4 rounded-bl-xl" style={{ backgroundColor: current.color }} aria-hidden="true" />
+                  <current.icon size={26} style={{ color: current.color }} />
                 </div>
                 <div>
-                  <h1 className="text-2xl md:text-3xl font-bold text-text-primary">{current.picksTitle}</h1>
+                  <h1 className="text-2xl md:text-3xl font-extrabold text-text-primary tracking-tight">{current.picksTitle}</h1>
                   <p className="text-text-secondary mt-1">{current.picksSubtitle}</p>
                 </div>
               </div>
@@ -314,9 +349,14 @@ export default function Onboarding() {
             <div>
               {/* Archetype reveal */}
               <div className="text-center mb-10">
+                <p className="flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-[3px] text-text-muted mb-5">
+                  <span className="w-5 h-[3px] rounded-full bg-accent-primary inline-block" aria-hidden="true" />
+                  the results are in
+                  <span className="w-5 h-[3px] rounded-full bg-accent-primary inline-block" aria-hidden="true" />
+                </p>
                 <div className="text-6xl mb-4">{archetype.emoji}</div>
-                <h1 className="text-3xl md:text-4xl font-bold text-text-primary mb-2">
-                  You're {archetype.name}
+                <h1 className="text-3xl md:text-4xl font-extrabold text-text-primary mb-2 tracking-tight">
+                  You're <span className="text-accent-primary">{archetype.name}</span>
                 </h1>
                 <p className="text-text-secondary text-lg max-w-lg mx-auto leading-relaxed">
                   {archetype.description}
@@ -330,14 +370,19 @@ export default function Onboarding() {
                   const Icon = c.icon
                   const count = profile[cat] ? Object.values(profile[cat]).reduce((s, a) => s + a.length, 0) : 0
                   return (
-                    <div key={cat} className="text-center">
-                      <div
-                        className="w-11 h-11 rounded-xl flex items-center justify-center mx-auto mb-1"
-                        style={{ backgroundColor: `color-mix(in srgb, ${color} 15%, transparent)` }}
+                    <div
+                      key={cat}
+                      className="ink-tile relative overflow-hidden rounded-2xl px-4 py-3 text-center"
+                      style={{ backgroundColor: `color-mix(in srgb, ${color} 16%, var(--color-bg-secondary))` }}
+                    >
+                      <span className="absolute top-0 right-0 w-4 h-4 rounded-bl-xl" style={{ backgroundColor: color }} aria-hidden="true" />
+                      <Icon size={18} style={{ color }} className="mx-auto mb-1" />
+                      <p
+                        className="text-2xl font-extrabold text-text-primary leading-none"
+                        style={{ fontFamily: 'var(--font-heading)' }}
                       >
-                        <Icon size={20} style={{ color }} />
-                      </div>
-                      <p className="text-sm font-bold" style={{ color }}>{count}</p>
+                        {count}
+                      </p>
                     </div>
                   )
                 })}
@@ -358,8 +403,8 @@ export default function Onboarding() {
                   ].map((b) => (
                     <div
                       key={b.title}
-                      className="rounded-xl p-4 border bg-bg-secondary/60 text-left"
-                      style={{ borderColor: `color-mix(in srgb, ${b.color} 35%, transparent)` }}
+                      className="ink-tile rounded-xl p-4 text-left"
+                      style={{ backgroundColor: `color-mix(in srgb, ${b.color} 12%, var(--color-bg-secondary))` }}
                     >
                       <div className="h-1 w-10 rounded-full mb-2" style={{ backgroundColor: b.color }} />
                       <p className="text-sm font-semibold text-text-primary mb-1">{b.title}</p>
