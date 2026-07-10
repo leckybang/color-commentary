@@ -29,6 +29,33 @@ const TYPE_COLORS = {
 }
 const TYPE_LABELS = { music: 'Music', movie: 'Film', tv: 'TV', book: 'Book' }
 
+const DISPLAY_FONT = "'Bricolage Grotesque', Helvetica, Arial, sans-serif"
+const BODY_FONT = 'Helvetica, Arial, sans-serif'
+
+// Load the vendored Bricolage woff2 (same origin, so no CORS drama) once and
+// cache the data URI — SVGs rendered via <img> can't reach external fonts,
+// but an inlined @font-face works.
+let fontPromise = null
+function getDisplayFontDataUrl() {
+  if (!fontPromise) {
+    fontPromise = (async () => {
+      try {
+        const res = await fetch('/fonts/bricolage-grotesque-latin.woff2')
+        if (!res.ok) return null
+        const bytes = new Uint8Array(await res.arrayBuffer())
+        let bin = ''
+        for (let i = 0; i < bytes.length; i += 0x8000) {
+          bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000))
+        }
+        return 'data:font/woff2;base64,' + btoa(bin)
+      } catch {
+        return null // Helvetica fallback — card still renders
+      }
+    })()
+  }
+  return fontPromise
+}
+
 function escapeXml(s = '') {
   return String(s)
     .replace(/&/g, '&amp;')
@@ -115,7 +142,7 @@ function logoSvg(x, y, size) {
     </g>`
 }
 
-function buildSvg(insights, coverMap, username) {
+function buildSvg(insights, coverMap, username, fontDataUrl) {
   const { count, monthLabel, usingMonth, breakdown, faves, fiveStars } = insights
   const periodText = usingMonth ? `titles finished in ${monthLabel}` : 'titles finished, all time'
 
@@ -131,15 +158,15 @@ function buildSvg(insights, coverMap, username) {
     const pillX = 990 - pillW
     usernamePill = `
       <rect x="${pillX}" y="84" width="${pillW}" height="52" rx="26" fill="${PINK}"/>
-      <text x="${pillX + pillW / 2}" y="118" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="26" font-weight="bold" fill="#ffffff">${escapeXml(label)}</text>`
+      <text x="${pillX + pillW / 2}" y="118" text-anchor="middle" font-family="${DISPLAY_FONT}" font-size="26" font-weight="700" fill="#ffffff">${escapeXml(label)}</text>`
   }
 
   // ── Flowing vertical layout ──
   // Big stat block
   const statBlock = `
-    <text x="84" y="392" font-family="Helvetica, Arial, sans-serif" font-size="235" font-weight="bold" fill="${INK}" letter-spacing="-10">${count}</text>
-    <text x="90" y="452" font-family="Helvetica, Arial, sans-serif" font-size="42" font-weight="bold" fill="${PINK}">${escapeXml(periodText)}</text>
-    ${breakdown ? `<text x="90" y="512" font-family="Helvetica, Arial, sans-serif" font-size="33" font-weight="bold" fill="${SEC}">${escapeXml(breakdown)}</text>` : ''}`
+    <text x="84" y="392" font-family="${DISPLAY_FONT}" font-size="235" font-weight="800" fill="${INK}" letter-spacing="-8">${count}</text>
+    <text x="90" y="452" font-family="${DISPLAY_FONT}" font-size="42" font-weight="800" fill="${PINK}" letter-spacing="-1">${escapeXml(periodText)}</text>
+    ${breakdown ? `<text x="90" y="512" font-family="${DISPLAY_FONT}" font-size="32" font-weight="700" fill="${SEC}">${escapeXml(breakdown)}</text>` : ''}`
 
   // Favorites rows
   const rowsStart = 590
@@ -157,7 +184,7 @@ function buildSvg(insights, coverMap, username) {
         <rect x="0" y="0" width="900" height="${rowH}" rx="20" fill="${CARD}" stroke="${INK}" stroke-width="2.5"/>
         <rect x="0" y="13" width="9" height="${rowH - 26}" rx="4.5" fill="${color}"/>
         ${coverSvg({ dataUrl: coverMap.get(f.id), type: f.type, x: 26, y: 12, w: 80, h: rowH - 24, clipId: `fave-cov-${i}` })}
-        <text x="130" y="58" font-family="Helvetica, Arial, sans-serif" font-size="34" font-weight="bold" fill="${INK}" letter-spacing="-0.5">${escapeXml(truncate(f.title, 30))}</text>
+        <text x="130" y="58" font-family="${DISPLAY_FONT}" font-size="33" font-weight="800" fill="${INK}" letter-spacing="-0.5">${escapeXml(truncate(f.title, 30))}</text>
         <text x="130" y="98" font-family="Helvetica, Arial, sans-serif" font-size="25" fill="${SEC}">${escapeXml(truncate(f.creator || TYPE_LABELS[f.type] || '', 36))}</text>
         <text x="872" y="80" text-anchor="end" font-family="Helvetica, Arial, sans-serif" font-size="32" fill="${PINK}" letter-spacing="2">${stars}</text>
       </g>`
@@ -174,20 +201,25 @@ function buildSvg(insights, coverMap, username) {
         <rect x="0" y="0" width="900" height="150" rx="20" fill="none" stroke="${INK}" stroke-width="2.5"/>
         ${coverSvg({ dataUrl: coverMap.get(pick.id), type: pick.type, x: 24, y: 14, w: 82, h: 122, clipId: 'fivestar-cov' })}
         <text x="132" y="52" font-family="Helvetica, Arial, sans-serif" font-size="21" font-weight="bold" fill="#a16207" letter-spacing="4">FIVE-STAR PICK${escapeXml(extra)}</text>
-        <text x="132" y="98" font-family="Helvetica, Arial, sans-serif" font-size="34" font-weight="bold" fill="${INK}" letter-spacing="-0.5">${escapeXml(truncate(pick.title, 29))}</text>
+        <text x="132" y="98" font-family="${DISPLAY_FONT}" font-size="33" font-weight="800" fill="${INK}" letter-spacing="-0.5">${escapeXml(truncate(pick.title, 29))}</text>
         ${pick.creator ? `<text x="132" y="132" font-family="Helvetica, Arial, sans-serif" font-size="24" fill="${SEC}">${escapeXml(truncate(pick.creator, 36))}</text>` : ''}
         <text x="872" y="88" text-anchor="end" font-family="Helvetica, Arial, sans-serif" font-size="30" fill="#d97706" letter-spacing="2">★★★★★</text>
       </g>`
   }
 
+  const fontFace = fontDataUrl
+    ? `<style>@font-face{font-family:'Bricolage Grotesque';src:url(${fontDataUrl}) format('woff2');font-weight:200 800;font-style:normal;}</style>`
+    : ''
+
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+    ${fontFace}
     <rect width="${W}" height="${H}" fill="${PORCELAIN}"/>
     <rect x="24" y="24" width="${W - 48}" height="${H - 48}" rx="34" fill="none" stroke="${INK}" stroke-width="3"/>
 
     <!-- Wordmark + owner -->
     ${logoSvg(90, 76, 66)}
-    <text x="176" y="106" font-family="Helvetica, Arial, sans-serif" font-size="35" font-weight="bold" fill="${INK}" letter-spacing="-1">color</text>
-    <text x="176" y="142" font-family="Helvetica, Arial, sans-serif" font-size="35" font-weight="bold" fill="${INK}" letter-spacing="-1">commentary</text>
+    <text x="176" y="106" font-family="${DISPLAY_FONT}" font-size="36" font-weight="800" fill="${INK}" letter-spacing="-1">color</text>
+    <text x="176" y="142" font-family="${DISPLAY_FONT}" font-size="36" font-weight="800" fill="${INK}" letter-spacing="-1">commentary</text>
     <rect x="176" y="150" width="212" height="6" rx="3" fill="${PINK}"/>
     ${usernamePill}
 
@@ -198,10 +230,15 @@ function buildSvg(insights, coverMap, username) {
 
     ${fiveStarBlock}
 
-    <!-- Footer: follow me + where -->
-    ${username ? `<text x="90" y="1318" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="bold" fill="${SEC}">follow @${escapeXml(username)} on</text>` : ''}
-    <rect x="586" y="1286" width="404" height="50" rx="25" fill="${INK}"/>
-    <text x="966" y="1319" text-anchor="end" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="bold" fill="${PORCELAIN}">${SITE_URL}</text>
+    <!-- Footer: one centered ink pill -->
+    ${(() => {
+      const label = username ? `follow @${username} · ${SITE_URL}` : SITE_URL
+      const pillW = Math.min(940, 56 + label.length * 12.6)
+      const pillX = (W - pillW) / 2
+      return `
+        <rect x="${pillX}" y="1278" width="${pillW}" height="54" rx="27" fill="${INK}"/>
+        <text x="${W / 2}" y="1313" text-anchor="middle" font-family="${DISPLAY_FONT}" font-size="23" font-weight="700" fill="${PORCELAIN}">${escapeXml(label)}</text>`
+    })()}
   </svg>`
 }
 
@@ -246,13 +283,14 @@ export async function buildInsightCard(insights, { username = '' } = {}) {
   if (topFive) wanted.set(topFive.id, topFive.coverUrl)
 
   const coverMap = new Map()
-  await Promise.all(
-    [...wanted.entries()].map(async ([id, url]) => {
+  const [fontDataUrl] = await Promise.all([
+    getDisplayFontDataUrl(),
+    ...[...wanted.entries()].map(async ([id, url]) => {
       coverMap.set(id, await fetchAsDataUrl(url))
-    })
-  )
+    }),
+  ])
 
-  const svg = buildSvg(insights, coverMap, username)
+  const svg = buildSvg(insights, coverMap, username, fontDataUrl)
   const blob = await svgToPngBlob(svg)
   const filename = `color-commentary-${insights.usingMonth ? insights.monthLabel.toLowerCase() : 'wrapped'}.png`
   return { blob, filename }

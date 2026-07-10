@@ -36,6 +36,8 @@ export default function Login() {
   const [name, setName] = useState('')
   const [mode, setMode] = useState('welcome')
   const [authError, setAuthError] = useState(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [notice, setNotice] = useState(null)
 
   const handleGoogleSignIn = async () => {
     try {
@@ -47,9 +49,24 @@ export default function Login() {
     }
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    if (email) login(email, name)
+    if (!email || submitting) return
+    setSubmitting(true)
+    setAuthError(null)
+    setNotice(null)
+    try {
+      const result = await login(email, name)
+      if (result === 'confirm-email') {
+        setNotice('Almost there! Check your inbox for a confirmation email, then come back and hit Get Started again.')
+      }
+      // 'signed-in' / 'signed-up' redirect via the auth listener.
+    } catch (err) {
+      console.error('Sign-up failed:', err)
+      setAuthError(err.message || 'Could not create the account — try Google sign-in instead.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -157,16 +174,23 @@ export default function Login() {
                   className="w-full bg-bg-tertiary border border-border rounded-xl px-4 py-2.5 text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-primary transition-colors"
                 />
               </div>
+              {authError && (
+                <p className="text-xs text-accent-movies text-center">{authError}</p>
+              )}
+              {notice && (
+                <p className="text-xs font-semibold text-accent-books text-center">{notice}</p>
+              )}
               <button
                 type="submit"
-                className="w-full font-bold py-3 px-4 rounded-full transition-all hover:opacity-90 active:scale-[0.99]"
+                disabled={submitting}
+                className="w-full font-bold py-3 px-4 rounded-full transition-all hover:opacity-90 active:scale-[0.99] disabled:opacity-60"
                 style={{
                   backgroundColor: 'var(--color-nav-bg)',
                   color: 'var(--color-nav-text)',
                   boxShadow: '3px 3px 0 var(--color-accent-primary)',
                 }}
               >
-                Get Started
+                {submitting ? 'Creating your account…' : 'Get Started'}
               </button>
               <button
                 type="button"

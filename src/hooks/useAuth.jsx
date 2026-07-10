@@ -97,14 +97,16 @@ export function AuthProvider({ children }) {
   const login = async (email, name) => {
     if (isSupabaseConfigured) {
       const { error } = await supabase.auth.signInWithPassword({ email, password: email })
-      if (error) {
-        const { error: signUpError } = await supabase.auth.signUp({
-          email,
-          password: email,
-          options: { data: { full_name: name || email.split('@')[0] } },
-        })
-        if (signUpError) throw signUpError
-      }
+      if (!error) return 'signed-in'
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password: email,
+        options: { data: { full_name: name || email.split('@')[0] } },
+      })
+      if (signUpError) throw signUpError
+      // No session after a successful signUp means Supabase wants the email
+      // confirmed first — the caller should tell the user to check their inbox.
+      return data?.session ? 'signed-up' : 'confirm-email'
     } else {
       const u = { uid: `user-${Date.now()}`, email, displayName: name || email.split('@')[0] }
       localStorage.setItem('cc_user', JSON.stringify(u))
