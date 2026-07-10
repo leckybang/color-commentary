@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Music, Film, Tv, BookOpen, ArrowRight, ArrowLeft, Sparkles, ChevronRight } from 'lucide-react'
+import { Music, Film, Tv, BookOpen, ArrowRight, ArrowLeft, Sparkles, ChevronRight, Smartphone } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { useTasteProfile } from '../hooks/useTasteProfile'
 import ChipSelector from '../components/common/ChipSelector'
@@ -411,6 +411,24 @@ export default function Onboarding() {
                       <p className="text-xs text-text-muted leading-relaxed">{b.body}</p>
                     </div>
                   ))}
+                </div>
+              </div>
+
+              {/* Keep it one tap away — add-to-home-screen nudge */}
+              <div
+                className="ink-tile rounded-2xl p-4 max-w-md mx-auto mb-8 flex items-start gap-3 text-left"
+                style={{ backgroundColor: 'color-mix(in srgb, var(--color-accent-tv) 12%, var(--color-bg-secondary))' }}
+              >
+                <Smartphone size={18} className="text-accent-tv mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-bold text-text-primary mb-0.5" style={{ fontFamily: 'var(--font-heading)' }}>
+                    Keep it one tap away
+                  </p>
+                  <p className="text-xs text-text-secondary leading-relaxed">
+                    {/iPad|iPhone|iPod/.test(navigator.userAgent)
+                      ? 'In Safari, tap Share, then "Add to Home Screen" — Color Commentary lives on your phone like an app.'
+                      : 'On your phone, open the browser menu and choose "Add to Home Screen" — Color Commentary lives there like an app.'}
+                  </p>
                 </div>
               </div>
 

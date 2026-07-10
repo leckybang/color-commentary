@@ -1,12 +1,20 @@
+import { useEffect } from 'react'
 import { Sparkles } from 'lucide-react'
 import FriendsPanel from '../components/FriendsPanel'
 import FriendsFeedRows from '../components/FriendsFeedRows'
 import { useFriendsFeed } from '../hooks/useFriendsFeed'
 import { useCatalog } from '../hooks/useCatalog'
+import { useNewFollowers } from '../hooks/useNewFollowers'
 
 export default function Friends() {
   const feed = useFriendsFeed()
   const { items: ownItems, addItem } = useCatalog()
+  const { markFollowersSeen } = useNewFollowers()
+
+  // Visiting this page counts as seeing your followers — clears the nav dot.
+  useEffect(() => {
+    markFollowersSeen()
+  }, [markFollowersSeen])
 
   const inCatalog = (title, type) =>
     ownItems.some(

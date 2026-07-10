@@ -1,11 +1,12 @@
 import { useParams, Link } from 'react-router-dom'
-import { Lock, Settings, Star, UserPlus, UserMinus, Check } from 'lucide-react'
+import { Lock, Settings, Star, UserPlus, UserMinus, Check, Users, ArrowUpRight } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { useTasteProfile } from '../hooks/useTasteProfile'
 import { usePublicProfile } from '../hooks/usePublicProfile'
 import { usePublicProfileByUsername } from '../hooks/usePublicProfileByUsername'
 import { useCatalog } from '../hooks/useCatalog'
 import { useUserCatalog } from '../hooks/useUserCatalog'
+import { useUserFollowing } from '../hooks/useUserFollowing'
 import { useFriends } from '../hooks/useFriends'
 import { determineArchetype } from '../utils/archetypes'
 import { getMediaColor } from '../utils/filterUtils'
@@ -55,6 +56,7 @@ export default function PublicProfile({ isSelf }) {
   // when userId is null. Needs the public-profiles RLS policy (see docs).
   const friendUserId = !isOwnProfile && otherProfile ? otherProfile.id : null
   const { items: friendItems, loading: friendLoading } = useUserCatalog(friendUserId)
+  const { people: theirFollowing } = useUserFollowing(friendUserId)
 
   // Resolve which profile to display
   let displayProfile
@@ -338,6 +340,71 @@ export default function PublicProfile({ isSelf }) {
           </div>
         )}
       </div>
+
+      {/* Who they follow — friend-of-friend discovery */}
+      {!isOwnProfile && theirFollowing.length > 0 && (
+        <div className="ink-card bg-bg-secondary rounded-2xl p-6 mb-6">
+          <div className="flex items-center gap-2 mb-1">
+            <Users size={18} className="text-accent-primary" />
+            <h2 className="text-lg font-semibold text-text-primary">
+              {displayProfile.displayName?.split(' ')[0] || 'They'} follows
+            </h2>
+          </div>
+          <p className="text-xs text-text-muted mb-2">Good taste travels — borrow some of their people.</p>
+          {theirFollowing.map((p) => {
+            const isMe = p.userId === user?.uid
+            const alreadyFollowing = friendsApi.isFollowing(p.userId)
+            return (
+              <div key={p.userId} className="flex items-center gap-3 py-2.5 border-b border-dotted border-border last:border-b-0">
+                {p.avatarEmoji ? (
+                  <div className="w-9 h-9 rounded-full bg-bg-tertiary flex items-center justify-center text-lg shrink-0">{p.avatarEmoji}</div>
+                ) : (
+                  <div className="w-9 h-9 rounded-full bg-accent-primary/20 text-accent-primary text-sm font-bold flex items-center justify-center shrink-0">
+                    {p.displayName?.[0]?.toUpperCase() || '?'}
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-text-primary truncate">{p.displayName}</p>
+                  <p className="text-xs text-text-muted truncate">
+                    {p.username ? `@${p.username}` : ''}
+                    {p.archetype ? `${p.username ? ' · ' : ''}${p.archetype}` : ''}
+                  </p>
+                </div>
+                {isMe ? (
+                  <span className="text-[11px] font-bold uppercase tracking-wide text-accent-primary shrink-0">you 🍒</span>
+                ) : (
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {p.username && (
+                      <Link
+                        to={`/u/${p.username}`}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold transition-colors"
+                        style={{ backgroundColor: 'var(--color-nav-bg)', color: 'var(--color-nav-text)' }}
+                      >
+                        View <ArrowUpRight size={12} />
+                      </Link>
+                    )}
+                    {user && (
+                      alreadyFollowing ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-accent-books px-2">
+                          <Check size={12} /> Following
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => friendsApi.follow(p)}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-accent-primary text-white hover:bg-accent-hover transition-colors"
+                        >
+                          <UserPlus size={13} />
+                          Follow
+                        </button>
+                      )
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
 
       {/* Friends moved to their own tab (/friends). */}
 
