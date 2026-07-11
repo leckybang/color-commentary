@@ -175,7 +175,7 @@ export default function Dashboard() {
       {!showBuildProfile && <div className="mb-2" />}
 
       {/* ─── Stats Row — pastel-tinted tiles, numbers lead ─── */}
-      <div className="grid grid-cols-4 gap-3 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
         {[
           { label: 'Cataloged', value: stats.total, icon: Library, color: 'var(--color-accent-tv)', to: '/catalog' },
           { label: 'This Week', value: addedThisWeek, icon: CalendarPlus, color: 'var(--color-accent-music)', to: '/catalog' },
