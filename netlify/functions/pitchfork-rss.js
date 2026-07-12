@@ -1,9 +1,15 @@
 /**
  * Pitchfork Best New Music — server-side RSS proxy.
  *
- * Pitchfork has no JSON API, but they publish a stable RSS feed of "Best
- * New Music" album reviews:
- *   https://pitchfork.com/rss/reviews/best/albums/
+ * Pitchfork has no JSON API, but they publish an RSS feed of "Best New
+ * Albums" reviews. The old /rss/reviews/best/albums/ path now 404s; the
+ * live feed is:
+ *   https://pitchfork.com/feed/reviews/best/albums/rss
+ *
+ * Feed shape (differs from the old one): <title> is the album name alone,
+ * the artist only appears in the review URL slug, <dc:creator> is the
+ * REVIEW AUTHOR (not the artist), and <media:thumbnail> carries real cover
+ * art.
  *
  * We fetch + parse it server-side (avoiding browser CORS) and return a tidy
  * JSON list. Failures degrade gracefully to an empty array so they don't
@@ -12,7 +18,7 @@
 
 import { corsHeaders, handleOptions } from './_shared/cors.js'
 
-const FEED_URL = 'https://pitchfork.com/rss/reviews/best/albums/'
+const FEED_URL = 'https://pitchfork.com/feed/reviews/best/albums/rss'
 const MAX_ITEMS = 8
 // Pitchfork RSS is largely static between updates; cache so warm Lambdas
 // don't re-fetch every radar build.
@@ -33,13 +39,34 @@ function stripHtml(s) {
   return s.replace(/<[^>]+>/g, '').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim()
 }
 
-// Pitchfork titles look like "Artist Name: Album Title" — split into the
-// shape the radar expects ({ creator, title }).
-function splitTitle(rawTitle) {
-  const t = rawTitle.replace(/\s+/g, ' ').trim()
-  const i = t.indexOf(': ')
-  if (i > 0) return { creator: t.slice(0, i).trim(), title: t.slice(i + 2).trim() }
-  return { creator: '', title: t }
+// Self-closing tags like <media:thumbnail url="…"/> carry data in attributes.
+function pickAttr(xml, tag, attr) {
+  const re = new RegExp(`<${tag}[^>]*\\b${attr}="([^"]*)"`, 'i')
+  return xml.match(re)?.[1] || ''
+}
+
+// The feed's <title> is just the album name; the artist only lives in the
+// review URL slug ("/reviews/albums/<artist-slug>-<album-slug>/"). Peel the
+// slugified album title off the end and de-slugify what's left. When the
+// slug doesn't end with the album title (special characters, retitled URLs)
+// return '' rather than guess.
+function artistFromLink(link, title) {
+  const m = link.match(/\/reviews\/albums\/([^/?#]+)/)
+  if (!m) return ''
+  const slug = m[1].toLowerCase()
+  const titleSlug = title
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+  if (!titleSlug || !slug.endsWith(titleSlug)) return ''
+  const artistSlug = slug.slice(0, slug.length - titleSlug.length).replace(/-+$/, '')
+  if (!artistSlug) return ''
+  return artistSlug
+    .split('-')
+    .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w))
+    .join(' ')
 }
 
 function parseFeed(xml) {
@@ -48,12 +75,12 @@ function parseFeed(xml) {
   let m
   while ((m = re.exec(xml)) && items.length < MAX_ITEMS) {
     const block = m[1]
-    const rawTitle = pickTag(block, 'title')
+    const title = pickTag(block, 'title')
     const link = pickTag(block, 'link')
     const desc = stripHtml(pickTag(block, 'description'))
     const pubDate = pickTag(block, 'pubDate')
-    if (!rawTitle) continue
-    const { creator, title } = splitTitle(rawTitle)
+    if (!title) continue
+    const creator = artistFromLink(link, title)
     items.push({
       title,
       creator,
@@ -61,6 +88,7 @@ function parseFeed(xml) {
       source: 'Pitchfork — Best New Music',
       blurb: desc.slice(0, 240),
       reviewUrl: link,
+      coverUrl: pickAttr(block, 'media:thumbnail', 'url'),
       releaseDate: pubDate ? new Date(pubDate).toISOString().slice(0, 10) : '',
       isTastemaker: true,
       provider: 'pitchfork',

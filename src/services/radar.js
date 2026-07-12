@@ -64,7 +64,9 @@ async function fetchSpotifyNewReleases() {
 
   spotifyInflight = (async () => {
     try {
-      const res = await fetch('/.netlify/functions/spotify-radar?limit=20')
+      // Spotify caps tag:new search pages at 10 for this app tier; asking for
+      // more gets the whole request rejected with a 400.
+      const res = await fetch('/.netlify/functions/spotify-radar?limit=10')
       if (!res.ok) return []
       // When running `vite dev` without `netlify dev`, the function route
       // falls through to index.html — guard against HTML masquerading as
