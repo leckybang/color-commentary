@@ -319,9 +319,37 @@ export default function Dashboard() {
                           {formatDate(note.createdAt)}
                         </p>
                       </div>
+                      {note.type && (
+                        inCatalog(note.text, note.type) ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-accent-books shrink-0" title="Already in your catalog">
+                            <Check size={12} />
+                            Saved
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              addItem({
+                                title: note.text,
+                                creator: note.creator || '',
+                                type: note.type,
+                                year: note.year || '',
+                                coverUrl: note.coverUrl || '',
+                                status: 'want',
+                              })
+                              deleteNote(note.id)
+                            }}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-accent-primary text-white hover:bg-accent-hover transition-colors shrink-0"
+                            title="Move to your catalog (Want to Try)"
+                          >
+                            <Plus size={12} />
+                            Add
+                          </button>
+                        )
+                      )}
                       <button
                         onClick={() => deleteNote(note.id)}
                         className="p-1 rounded text-text-muted/0 group-hover:text-text-muted hover:text-accent-movies transition-colors shrink-0"
+                        title="Not interested, remove"
                       >
                         <X size={14} />
                       </button>
