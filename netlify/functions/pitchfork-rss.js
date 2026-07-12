@@ -39,6 +39,15 @@ function stripHtml(s) {
   return s.replace(/<[^>]+>/g, '').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim()
 }
 
+// Truncate at a word boundary with an ellipsis — a blind slice() cuts
+// mid-word ("…one of t") and reads like a rendering bug.
+function clip(s, max) {
+  if (s.length <= max) return s
+  const cut = s.slice(0, max)
+  const atWord = cut.slice(0, cut.lastIndexOf(' '))
+  return (atWord || cut).replace(/[\s,;:.—–-]+$/, '') + '…'
+}
+
 // Self-closing tags like <media:thumbnail url="…"/> carry data in attributes.
 function pickAttr(xml, tag, attr) {
   const re = new RegExp(`<${tag}[^>]*\\b${attr}="([^"]*)"`, 'i')
@@ -86,7 +95,7 @@ function parseFeed(xml) {
       creator,
       type: 'music',
       source: 'Pitchfork — Best New Music',
-      blurb: desc.slice(0, 240),
+      blurb: clip(desc, 240),
       reviewUrl: link,
       coverUrl: pickAttr(block, 'media:thumbnail', 'url'),
       releaseDate: pubDate ? new Date(pubDate).toISOString().slice(0, 10) : '',

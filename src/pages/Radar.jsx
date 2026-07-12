@@ -26,6 +26,9 @@ const SOURCE_SITES = [
 
 function reviewLink(item) {
   if (!item?.source || !item?.title) return null
+  // "New on Spotify" is a release announcement, not a review — there's
+  // nothing to read, and the Spotify/Apple Music buttons already link out.
+  if (/new on spotify/i.test(item.source)) return null
   if (item.reviewUrl) {
     const hit0 = SOURCE_SITES.find((s) => s.re.test(item.source))
     return { label: hit0?.name || item.source.split(/[—–-]/)[0].trim(), url: item.reviewUrl }
