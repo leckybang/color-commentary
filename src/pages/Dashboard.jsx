@@ -13,6 +13,7 @@ import MediaPickerInput from '../components/common/MediaPickerInput'
 import CalibrationOnboarding from '../components/CalibrationOnboarding'
 import InsightsHero from '../components/InsightsHero'
 import QuickAdd from '../components/QuickAdd'
+import CatalogSeeds from '../components/CatalogSeeds'
 import FriendsFeedRows from '../components/FriendsFeedRows'
 import { useFriendsFeed } from '../hooks/useFriendsFeed'
 import { CALIBRATION_QUESTIONS } from '../data/calibrationData'
@@ -159,6 +160,9 @@ export default function Dashboard() {
       <div className="mb-6">
         <QuickAdd addItem={addItem} />
       </div>
+
+      {/* ─── Catalog seeds — activation for (nearly) empty catalogs ─── */}
+      {items.length < 3 && <CatalogSeeds profile={profile} addItem={addItem} />}
 
       {/* Build-profile nudge (only when empty) */}
       {showBuildProfile && (

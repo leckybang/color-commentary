@@ -48,6 +48,30 @@ export async function searchTMDB(query, { signal } = {}) {
   }
 }
 
+/**
+ * A person's best-known works, via /search/person. Used to turn taste picks
+ * like "Greta Gerwig" into addable movies (the multi-search normalizer drops
+ * person results, so a plain searchTMDB on a director name finds nothing).
+ */
+export async function searchTMDBKnownFor(personName, { signal } = {}) {
+  if (!TMDB_API_KEY) return []
+  if (!personName || personName.trim().length < 2) return []
+  const url = `${BASE}/search/person?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(personName)}&include_adult=false&language=en-US&page=1`
+  try {
+    const res = await fetch(url, { signal })
+    if (!res.ok) return []
+    const data = await res.json()
+    const person = (data.results || [])[0]
+    return (person?.known_for || [])
+      .map(normalizeTMDB)
+      .filter(Boolean)
+      .map((item) => ({ ...item, creator: item.creator || person.name }))
+  } catch (err) {
+    if (err.name !== 'AbortError') console.error('TMDB person search failed', err)
+    return []
+  }
+}
+
 function normalizeListItem(item, type) {
   if (!item) return null
   const rawDate = item.release_date || item.first_air_date || ''
