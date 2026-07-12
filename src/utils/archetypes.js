@@ -9,13 +9,13 @@ const ARCHETYPES = [
     name: 'The Feral Librarian',
     emoji: '📖',
     test: (stats) => stats.uniqueGenres >= 8 && stats.categoriesWithGenres >= 3,
-    description: "Memoir, true crime, art-house cinema, a random jazz deep-cut — you're reading three books at once and ranking them in your head. Nothing is off the table.",
+    description: "Memoir, true crime, art-house cinema, a random jazz deep-cut. You're reading three books at once and ranking them in your head. Nothing is off the table.",
   },
   {
     name: 'The Completionist',
     emoji: '🗂️',
     test: (stats) => stats.totalPicks >= 10 && stats.categoriesWithGenres <= 2,
-    description: "You find a director, a band, an author — and then you consume their ENTIRE catalog in chronological order before moving on. This is not a flaw.",
+    description: "You find a director, a band, an author, and then you consume their ENTIRE catalog in chronological order before moving on. This is not a flaw.",
   },
   {
     name: 'The Cozy Rewatcher',

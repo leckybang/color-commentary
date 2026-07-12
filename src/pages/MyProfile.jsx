@@ -108,7 +108,7 @@ export default function MyProfile() {
                 <div className="flex items-start gap-4">
                   <EmojiPicker value={publicProfile.avatarEmoji} onChange={publicProfile.setAvatarEmoji} />
                   <div className="flex-1 text-xs text-text-muted pt-3">
-                    Pick an emoji to be your avatar. Or don't — we're not your parents.
+                    Pick an emoji to be your avatar. Or don't. We're not your parents.
                   </div>
                 </div>
               </div>
@@ -132,7 +132,7 @@ export default function MyProfile() {
                 <button
                   onClick={publicProfile.togglePublic}
                   className={`w-12 h-7 rounded-full transition-colors relative shrink-0 ml-3 ${publicProfile.isPublic ? 'bg-accent-primary' : 'bg-bg-tertiary border border-border'}`}
-                  aria-label={publicProfile.isPublic ? 'Profile is public — click to make private' : 'Profile is private — click to make public'}
+                  aria-label={publicProfile.isPublic ? 'Profile is public. Click to make private.' : 'Profile is private. Click to make public.'}
                 >
                   <div className={`w-5 h-5 rounded-full bg-white absolute top-1 transition-transform ${publicProfile.isPublic ? 'translate-x-6' : 'translate-x-1'}`} />
                 </button>

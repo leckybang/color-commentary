@@ -273,7 +273,7 @@ export default function Profile({ hidePublicProfile = false, hideHeader = false 
                 onChange={publicProfile.setAvatarEmoji}
               />
               <div className="flex-1 text-xs text-text-muted pt-3">
-                Pick an emoji to be your avatar on your public profile. Or don't — we're not your parents.
+                Pick an emoji to be your avatar on your public profile. Or don't. We're not your parents.
               </div>
             </div>
           </div>

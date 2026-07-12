@@ -350,7 +350,7 @@ export default function PublicProfile({ isSelf }) {
               {displayProfile.displayName?.split(' ')[0] || 'They'} follows
             </h2>
           </div>
-          <p className="text-xs text-text-muted mb-2">Good taste travels — borrow some of their people.</p>
+          <p className="text-xs text-text-muted mb-2">Good taste travels. Borrow some of their people.</p>
           {theirFollowing.map((p) => {
             const isMe = p.userId === user?.uid
             const alreadyFollowing = friendsApi.isFollowing(p.userId)

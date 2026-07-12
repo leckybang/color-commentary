@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Radar as RadarIcon, Sparkles, Calendar, Loader2, RefreshCw, ChevronDown, ChevronUp, Check, Bookmark, Info, Music, Film, Tv, BookOpen, Newspaper, ExternalLink, TrendingUp, Award, Users } from 'lucide-react'
+import { Radar as RadarIcon, BadgeCheck, Calendar, Loader2, RefreshCw, ChevronDown, ChevronUp, Check, Bookmark, Info, Music, Film, Tv, BookOpen, Newspaper, ExternalLink, TrendingUp, Award, Users } from 'lucide-react'
 import CoverArt from '../components/common/CoverArt'
 import ExternalLinks from '../components/common/ExternalLinks'
 import { useCatalog } from '../hooks/useCatalog'
@@ -264,7 +264,7 @@ export default function Radar() {
           <h1 className="text-2xl font-bold text-text-primary mb-1">Weekly Radar</h1>
           <p className="text-text-secondary text-sm">
             {isDemo
-              ? 'A sample dispatch — fictional picks, real vibes.'
+              ? 'A sample dispatch: fictional picks, real vibes.'
               : "What's hyped this week, and what critics are quietly raving about."}
           </p>
         </div>
@@ -328,7 +328,7 @@ export default function Radar() {
       {radar && (
         <div className="text-[11px] text-text-muted/80 italic text-center pt-2">
           Sources: NYT Best Sellers + reviews · TMDB critic scores · Pitchfork Best New Music · Spotify.{' '}
-          <Sparkles size={10} className="inline -mt-0.5" /> Real picks, real sources.
+          <BadgeCheck size={10} className="inline -mt-0.5" /> Real picks, real sources.
         </div>
       )}
     </div>

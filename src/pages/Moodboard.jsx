@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Music, Film, Tv, BookOpen, Star, ArrowRight, Sparkles, Bookmark, MessageCircle, SlidersHorizontal, Check } from 'lucide-react'
+import { Music, Film, Tv, BookOpen, Star, ArrowRight, Radar, Bookmark, MessageCircle, SlidersHorizontal, Check } from 'lucide-react'
 import { THEMES } from '../config/themes'
 import { useTheme } from '../hooks/useTheme'
 
@@ -53,7 +53,7 @@ function ThemePreview({ theme }) {
           className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white"
           style={{ backgroundColor: theme.accents.primary }}
         >
-          <Sparkles size={14} />
+          <Radar size={14} />
           Check Your Weekly Radar
         </button>
       </div>
@@ -130,7 +130,7 @@ export default function Moodboard() {
             Pick Your Vibe
           </h1>
           <p className="text-gray-400 max-w-lg mx-auto">
-            Three visual directions for Color Commentary. Each one changes the entire feel of the app — colors, mood, energy. Pick the one that feels like you.
+            Three visual directions for Color Commentary. Each one changes the entire feel of the app: colors, mood, energy. Pick the one that feels like you.
           </p>
         </div>
 

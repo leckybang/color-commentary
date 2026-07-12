@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Music, Film, Tv, BookOpen, ArrowRight, ArrowLeft, Sparkles, ChevronRight, Smartphone } from 'lucide-react'
+import { Music, Film, Tv, BookOpen, ArrowRight, ArrowLeft, ChevronRight, Smartphone } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { useTasteProfile } from '../hooks/useTasteProfile'
 import ChipSelector from '../components/common/ChipSelector'
@@ -16,7 +16,7 @@ const CATEGORIES = [
     genreTitle: "What sounds like you?",
     genreSubtitle: 'Pick the genres that define your music taste.',
     picksTitle: "Who's always on repeat?",
-    picksSubtitle: 'Based on your genres — tap to add, or type your own below.',
+    picksSubtitle: 'Based on your genres. Tap to add, or type your own below.',
   },
   {
     key: 'movies',
@@ -25,7 +25,7 @@ const CATEGORIES = [
     genreTitle: 'What do you reach for on movie night?',
     genreSubtitle: 'Pick the genres you keep coming back to.',
     picksTitle: 'Who are you always rewatching?',
-    picksSubtitle: 'Directors we think you might love — tap to add.',
+    picksSubtitle: 'Directors we think you might love. Tap to add.',
   },
   {
     key: 'tv',
@@ -34,7 +34,7 @@ const CATEGORIES = [
     genreTitle: 'What owns your evenings?',
     genreSubtitle: 'Pick the kinds of shows you gravitate toward.',
     picksTitle: 'Which shows have your heart?',
-    picksSubtitle: 'Based on your genres — tap the ones you love.',
+    picksSubtitle: 'Based on your genres. Tap the ones you love.',
   },
   {
     key: 'books',
@@ -43,7 +43,7 @@ const CATEGORIES = [
     genreTitle: 'What lives on your nightstand?',
     genreSubtitle: 'Pick the genres you reach for most.',
     picksTitle: 'Who are your must-read authors?',
-    picksSubtitle: 'We think you might love these — tap to add.',
+    picksSubtitle: 'We think you might love these. Tap to add.',
   },
 ]
 
@@ -180,7 +180,7 @@ export default function Onboarding() {
                 First, let's tune your taste.
               </h1>
               <p className="text-text-secondary text-lg mb-8 max-w-md mx-auto leading-relaxed">
-                Four quick rounds — music, movies, TV, books. Tap what you love and your Radar takes shape around it.
+                Four quick rounds: music, movies, TV, books. Tap what you love and your Radar takes shape around it.
               </p>
               <div className="grid grid-cols-4 gap-3 max-w-sm mx-auto mb-10">
                 {CATEGORIES.map((c, i) => {
@@ -426,8 +426,8 @@ export default function Onboarding() {
                   </p>
                   <p className="text-xs text-text-secondary leading-relaxed">
                     {/iPad|iPhone|iPod/.test(navigator.userAgent)
-                      ? 'In Safari, tap Share, then "Add to Home Screen" — Color Commentary lives on your phone like an app.'
-                      : 'On your phone, open the browser menu and choose "Add to Home Screen" — Color Commentary lives there like an app.'}
+                      ? 'In Safari, tap Share, then "Add to Home Screen". Color Commentary lives on your phone like an app.'
+                      : 'On your phone, open the browser menu and choose "Add to Home Screen". Color Commentary lives there like an app.'}
                   </p>
                 </div>
               </div>

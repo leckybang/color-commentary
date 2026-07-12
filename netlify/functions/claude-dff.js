@@ -38,7 +38,7 @@ further (4 items): Neighboring works with genuine thematic or emotional resonanc
 
 fresher (3 items): Genuinely surprising lateral moves that someone who loved this would find delightful even if they seem unrelated at first. The connection must be real and specific — a shared obsession, structural similarity, or a conversation the two works are having across time.
 
-Reason format: second person, under 20 words, state the actual specific connection — not "you might enjoy" but what the real link is.`
+Reason format: second person, under 20 words, state the actual specific connection — not "you might enjoy" but what the real link is. Write like a friend texting, not a critic: no em dashes, no semicolons.`
 
 async function fetchCoverUrl(title, creator, type, spotifyToken, tmdbKey) {
   const controller = new AbortController()
