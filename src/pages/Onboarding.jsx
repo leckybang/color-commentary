@@ -1,8 +1,10 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Music, Film, Tv, BookOpen, ArrowRight, ArrowLeft, ChevronRight, Smartphone } from 'lucide-react'
+import { Music, Film, Tv, BookOpen, ArrowRight, ArrowLeft, ChevronRight, Smartphone, AtSign, Globe, Check, Loader2 } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { useTasteProfile } from '../hooks/useTasteProfile'
+import { usePublicProfile } from '../hooks/usePublicProfile'
+import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import ChipSelector from '../components/common/ChipSelector'
 import TagInput from '../components/common/TagInput'
 import { GENRE_OPTIONS, SUGGESTION_MAP, SUGGESTION_FIELD, SUGGESTION_LABEL, getSuggestionsForGenres } from '../data/onboardingSuggestions'
@@ -54,17 +56,80 @@ const STEPS = [
     { key: `${cat.key}-genres`, category: cat.key, substep: 'genres', ...cat },
     { key: `${cat.key}-picks`, category: cat.key, substep: 'picks', ...cat },
   ]),
+  { key: 'profile' },
   { key: 'done' },
 ]
+
+function slugifyName(name) {
+  return (name || '')
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
 
 const TYPE_ICONS = { music: Music, movie: Film, tv: Tv, book: BookOpen }
 const TYPE_LABELS = { music: 'Music', movie: 'Movie', tv: 'TV', book: 'Book' }
 
 export default function Onboarding() {
   const navigate = useNavigate()
-  const { updateProfile } = useAuth()
+  const { user, updateProfile } = useAuth()
   const { profile, addTag, removeTag } = useTasteProfile()
+  const publicProfile = usePublicProfile()
   const [step, setStep] = useState(0)
+
+  // ── Claim-your-corner step state ──
+  const [usernameDraft, setUsernameDraft] = useState('')
+  const [wantsPublic, setWantsPublic] = useState(false)
+  const [usernameTouched, setUsernameTouched] = useState(false)
+  // idle | checking | available | taken
+  const [availability, setAvailability] = useState('idle')
+
+  const isRealAccount =
+    isSupabaseConfigured && user?.uid && !user.uid.startsWith('demo') && !user.uid.startsWith('user-')
+
+  // Prefill a suggestion from the display name once, if they haven't typed.
+  useEffect(() => {
+    if (!usernameTouched && !usernameDraft && (user?.displayName || publicProfile.username)) {
+      setUsernameDraft(publicProfile.username || slugifyName(user.displayName))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.displayName, publicProfile.username])
+
+  // Debounced availability check (real accounts only; demo saves locally).
+  useEffect(() => {
+    const name = usernameDraft.trim()
+    if (!name || !isRealAccount || name === publicProfile.username) {
+      setAvailability('idle')
+      return
+    }
+    setAvailability('checking')
+    const t = setTimeout(() => {
+      supabase
+        .rpc('username_taken', { name })
+        .then(({ data, error }) => {
+          if (error) {
+            console.warn('username check failed:', error.message)
+            setAvailability('idle')
+          } else {
+            setAvailability(data ? 'taken' : 'available')
+          }
+        })
+    }, 450)
+    return () => clearTimeout(t)
+     
+  }, [usernameDraft, isRealAccount, publicProfile.username])
+
+  const saveProfileStep = async () => {
+    const clean = usernameDraft.trim()
+    if (clean || wantsPublic) {
+      await publicProfile.savePublicProfile({
+        ...(clean ? { username: clean } : {}),
+        isPublic: wantsPublic,
+      })
+    }
+  }
 
   const current = STEPS[step]
   const isLast = step === STEPS.length - 1
@@ -336,7 +401,103 @@ export default function Onboarding() {
                     onClick={next}
                     className="flex items-center gap-2 bg-accent-primary hover:bg-accent-hover text-white px-6 py-2.5 rounded-full font-bold transition-colors"
                   >
-                    {step === STEPS.length - 2 ? 'See My Results' : 'Next'}
+                    {STEPS[step + 1]?.key === 'profile' ? 'Almost Done' : 'Next'}
+                    <ChevronRight size={18} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ───── CLAIM YOUR CORNER ───── */}
+          {current.key === 'profile' && (
+            <div className="max-w-lg mx-auto">
+              <div className="text-center mb-8">
+                <p className="text-[10px] font-bold uppercase tracking-[3px] text-text-muted mb-4">one last thing</p>
+                <h1 className="text-3xl md:text-4xl font-extrabold text-text-primary mb-2 tracking-tight">
+                  Claim your corner
+                </h1>
+                <p className="text-text-secondary leading-relaxed">
+                  A username gives you a shareable page and lets friends find you. Both are optional, and you can change them anytime in Profile.
+                </p>
+              </div>
+
+              {/* Username */}
+              <div className="ink-tile rounded-2xl p-4 mb-4 bg-bg-secondary">
+                <label className="flex items-center gap-1.5 text-sm font-bold text-text-primary mb-2" htmlFor="onboarding-username">
+                  <AtSign size={14} className="text-accent-primary" />
+                  Pick a username
+                </label>
+                <input
+                  id="onboarding-username"
+                  type="text"
+                  value={usernameDraft}
+                  onChange={(e) => {
+                    setUsernameTouched(true)
+                    setUsernameDraft(e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, ''))
+                  }}
+                  placeholder="your-username"
+                  autoComplete="off"
+                  className="w-full px-3 py-2.5 rounded-xl bg-bg-tertiary border border-border text-text-primary text-sm focus:outline-none focus:border-accent-primary"
+                />
+                <p className="text-xs mt-2 min-h-[1rem]">
+                  {availability === 'checking' && (
+                    <span className="text-text-muted inline-flex items-center gap-1"><Loader2 size={11} className="animate-spin" /> Checking…</span>
+                  )}
+                  {availability === 'available' && (
+                    <span className="text-accent-books inline-flex items-center gap-1"><Check size={11} /> {usernameDraft} is yours if you want it</span>
+                  )}
+                  {availability === 'taken' && (
+                    <span className="text-accent-movies">Someone beat you to that one. Try another.</span>
+                  )}
+                  {availability === 'idle' && usernameDraft && (
+                    <span className="text-text-muted">Your page: /u/{usernameDraft}</span>
+                  )}
+                </p>
+              </div>
+
+              {/* Public toggle */}
+              <button
+                onClick={() => setWantsPublic((v) => !v)}
+                className="ink-tile rounded-2xl p-4 mb-8 w-full text-left flex items-start gap-3 transition-colors bg-bg-secondary hover:bg-bg-hover/40"
+                aria-pressed={wantsPublic}
+              >
+                <Globe size={18} className={wantsPublic ? 'text-accent-primary mt-0.5 shrink-0' : 'text-text-muted mt-0.5 shrink-0'} />
+                <span className="flex-1">
+                  <span className="block text-sm font-bold text-text-primary mb-0.5">Make my profile public</span>
+                  <span className="block text-xs text-text-muted leading-relaxed">
+                    Friends can find you in search and see your catalog and ratings. Off means invisible: nobody can see you, even with your link. You stay in control either way.
+                  </span>
+                </span>
+                <span
+                  className={`shrink-0 mt-1 w-10 h-6 rounded-full transition-colors relative ${wantsPublic ? 'bg-accent-primary' : 'bg-bg-tertiary border border-border'}`}
+                  aria-hidden="true"
+                >
+                  <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${wantsPublic ? 'left-[18px]' : 'left-0.5'}`} />
+                </span>
+              </button>
+
+              <div className="flex items-center justify-between">
+                <button
+                  onClick={back}
+                  className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors px-4 py-2 rounded-lg hover:bg-bg-hover/50"
+                >
+                  <ArrowLeft size={18} />
+                  Back
+                </button>
+                <div className="flex items-center gap-3">
+                  <button onClick={next} className="text-sm text-text-muted hover:text-text-secondary transition-colors">
+                    Maybe later
+                  </button>
+                  <button
+                    onClick={async () => {
+                      await saveProfileStep()
+                      next()
+                    }}
+                    disabled={availability === 'taken' || publicProfile.saving}
+                    className="flex items-center gap-2 bg-accent-primary hover:bg-accent-hover text-white px-6 py-2.5 rounded-full font-bold transition-colors disabled:opacity-40"
+                  >
+                    {publicProfile.saving ? 'Saving…' : 'See My Results'}
                     <ChevronRight size={18} />
                   </button>
                 </div>
