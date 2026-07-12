@@ -44,7 +44,9 @@ export async function handler(event) {
     }
   }
 
-  const limit = Math.min(parseInt(event.queryStringParameters?.limit || '20', 10) || 20, 50)
+  // Spotify rejects tag:new searches with limit > 10 (HTTP 400) on this app
+  // tier, so clamp hard — the radar only surfaces a couple of picks anyway.
+  const limit = Math.min(parseInt(event.queryStringParameters?.limit || '10', 10) || 10, 10)
   const searchUrl =
     `https://api.spotify.com/v1/search` +
     `?q=${encodeURIComponent('tag:new')}` +
