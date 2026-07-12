@@ -3,6 +3,7 @@ import { LayoutDashboard, Library, Radar, LogOut, User, Users, Plus } from 'luci
 import { useAuth } from '../../hooks/useAuth'
 import { usePublicProfile } from '../../hooks/usePublicProfile'
 import { useNewFollowers } from '../../hooks/useNewFollowers'
+import { useReactionsOnMyItems } from '../../hooks/useReactionsOnMyItems'
 
 // People is hidden for now — the /people route still works if linked directly.
 const NAV_ITEMS = [
@@ -17,9 +18,11 @@ export default function Sidebar() {
   const { user, logout } = useAuth()
   const { avatarEmoji } = usePublicProfile()
   const { newFollowerCount } = useNewFollowers()
+  const { newReactionCount } = useReactionsOnMyItems()
 
-  // Pink dot on the Friends item when someone new has followed you.
-  const showDotFor = (to) => to === '/friends' && newFollowerCount > 0
+  // Pink dot on the Friends item when someone new followed you or reacted
+  // to something in your catalog.
+  const showDotFor = (to) => to === '/friends' && newFollowerCount + newReactionCount > 0
 
   const renderMobileLink = (nav) => {
     const { to, label, mobile } = nav

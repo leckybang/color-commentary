@@ -1,7 +1,9 @@
+import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { Star, Plus, Check } from 'lucide-react'
 import { getMediaColor } from '../utils/filterUtils'
 import CoverArt from './common/CoverArt'
+import { useItemReactions, REACTION_EMOJI } from '../hooks/useItemReactions'
 
 const VERBS = {
   want: 'wants to try',
@@ -65,6 +67,9 @@ export function AddFromFriendButton({ item, addItem, inCatalog }) {
  * instance at the page level) to enable one-tap adding.
  */
 export default function FriendsFeedRows({ items, addItem, inCatalog, compact = false }) {
+  const itemIds = useMemo(() => items.map((i) => i.id), [items])
+  const { enabled: reactionsEnabled, counts, mine, toggle } = useItemReactions(itemIds)
+
   return (
     <div>
       {items.map((item) => {
@@ -111,6 +116,34 @@ export default function FriendsFeedRows({ items, addItem, inCatalog, compact = f
                 )}
                 <span className="text-[11px] text-text-muted">{timeAgo(item.at)}</span>
               </div>
+              {reactionsEnabled && (
+                <div className="flex items-center gap-1 mt-1.5">
+                  {REACTION_EMOJI.map((emoji) => {
+                    const count = counts[item.id]?.[emoji] || 0
+                    const isMine = mine.has(`${item.id}:${emoji}`)
+                    if (!isMine && count === 0 && compact) return null
+                    return (
+                      <button
+                        key={emoji}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          toggle(item.id, emoji)
+                        }}
+                        className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[11px] transition-colors border ${
+                          isMine
+                            ? 'border-accent-primary/60 bg-accent-primary/15 text-accent-primary font-semibold'
+                            : 'border-transparent bg-bg-tertiary/70 text-text-muted hover:text-text-secondary hover:bg-bg-hover'
+                        }`}
+                        title={isMine ? 'Remove reaction' : 'React'}
+                      >
+                        <span className="leading-none">{emoji}</span>
+                        {count > 0 && <span className="leading-none">{count}</span>}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
             </div>
             <AddFromFriendButton item={item} addItem={addItem} inCatalog={inCatalog} />
           </div>

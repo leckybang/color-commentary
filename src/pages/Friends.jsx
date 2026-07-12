@@ -5,16 +5,20 @@ import FriendsFeedRows from '../components/FriendsFeedRows'
 import { useFriendsFeed } from '../hooks/useFriendsFeed'
 import { useCatalog } from '../hooks/useCatalog'
 import { useNewFollowers } from '../hooks/useNewFollowers'
+import { useReactionsOnMyItems } from '../hooks/useReactionsOnMyItems'
 
 export default function Friends() {
   const feed = useFriendsFeed()
   const { items: ownItems, addItem } = useCatalog()
   const { markFollowersSeen } = useNewFollowers()
+  const { reactions, markReactionsSeen } = useReactionsOnMyItems()
 
-  // Visiting this page counts as seeing your followers — clears the nav dot.
+  // Visiting this page counts as seeing your followers and reactions —
+  // clears the nav dot.
   useEffect(() => {
     markFollowersSeen()
-  }, [markFollowersSeen])
+    markReactionsSeen()
+  }, [markFollowersSeen, markReactionsSeen])
 
   const inCatalog = (title, type) =>
     ownItems.some(
@@ -33,6 +37,24 @@ export default function Friends() {
       </div>
 
       <FriendsPanel />
+
+      {/* Reactions on your items — the "someone loved what I logged" moment */}
+      {reactions.length > 0 && (
+        <div className="ink-card bg-bg-secondary rounded-2xl p-6 mb-6">
+          <h2 className="text-lg font-semibold text-text-primary mb-1">On your items</h2>
+          <p className="text-xs text-text-muted mb-3">Reactions from your people.</p>
+          <div className="space-y-1.5">
+            {reactions.slice(0, 6).map((r) => (
+              <p key={r.id} className="text-sm text-text-secondary">
+                <span className="mr-1">{r.emoji}</span>
+                <span className="font-semibold text-text-primary">{r.reactorName}</span>
+                {' reacted to '}
+                <span className="font-semibold text-text-primary">{r.itemTitle}</span>
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Fresh from friends — recent catalog activity from people you follow */}
       <div className="ink-card bg-bg-secondary rounded-2xl p-6">

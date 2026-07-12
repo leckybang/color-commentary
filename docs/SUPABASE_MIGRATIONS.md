@@ -250,3 +250,24 @@ $$;
 REVOKE ALL ON FUNCTION public.popular_items(int, int, int) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.popular_items(int, int, int) TO authenticated;
 ```
+## Feed reactions (applied 2026-07-11 via MCP, migration `item_reactions_table`)
+
+Already applied to prod. Emoji reactions on catalog items, powering the friends-feed reaction bar and the Friends nav dot:
+
+```sql
+CREATE TABLE public.item_reactions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  item_id uuid NOT NULL REFERENCES public.catalog_items(id) ON DELETE CASCADE,
+  reactor_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  emoji text NOT NULL CHECK (char_length(emoji) <= 8),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (item_id, reactor_id, emoji)
+);
+CREATE INDEX item_reactions_item_idx ON public.item_reactions (item_id);
+CREATE INDEX item_reactions_created_idx ON public.item_reactions (created_at DESC);
+ALTER TABLE public.item_reactions ENABLE ROW LEVEL SECURITY;
+-- Policies: insert only as yourself and only on items you can see (own or
+-- public-profile items); select where the item is visible to you; delete own.
+```
+
+RLS verified with simulated JWTs: a user can react to a public profile's item, and an attempt to insert a reaction with someone else's reactor_id is rejected by the WITH CHECK.
