@@ -137,7 +137,7 @@ export function buildNarrative(items, period = 'month', now = new Date()) {
         lines.push(`You've got ${pl(inProgress, 'shows')} on the go.`)
       }
     } else if (finished > 0) {
-      const extra = added > finished ? ` — plus ${added - finished} more added` : ''
+      const extra = added > finished ? `, plus ${added - finished} more added` : ''
       lines.push(`You've ${v.read} ${pl(finished, v.plural)} ${pw}${extra}.`)
     } else if (added > 0) {
       lines.push(`You've ${v.add} ${pl(added, v.plural)} ${pw}.`)
@@ -147,7 +147,7 @@ export function buildNarrative(items, period = 'month', now = new Date()) {
   }
 
   if (lines.length === 0) {
-    lines.push(`Nothing logged ${pw} yet — Quick Add something to get the numbers rolling.`)
+    lines.push(`Nothing logged ${pw} yet. Quick Add something to get the numbers rolling.`)
   }
   return { lines, totals }
 }

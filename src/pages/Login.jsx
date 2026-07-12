@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { isSupabaseConfigured } from '../lib/supabase'
-import { Sparkles, Radar, BookMarked, Star, Users } from 'lucide-react'
+import { Play, Radar, BookMarked, Star, Users } from 'lucide-react'
 
 const FEATURES = [
   {
@@ -63,7 +63,7 @@ export default function Login() {
       // 'signed-in' / 'signed-up' redirect via the auth listener.
     } catch (err) {
       console.error('Sign-up failed:', err)
-      setAuthError(err.message || 'Could not create the account — try Google sign-in instead.')
+      setAuthError(err.message || 'Could not create the account. Try Google sign-in instead.')
     } finally {
       setSubmitting(false)
     }
@@ -136,7 +136,7 @@ export default function Login() {
                   boxShadow: '3px 3px 0 var(--color-accent-primary)',
                 }}
               >
-                <Sparkles size={17} />
+                <Play size={17} />
                 Try Demo Mode
               </button>
 

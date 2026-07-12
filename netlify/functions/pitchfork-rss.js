@@ -94,7 +94,7 @@ function parseFeed(xml) {
       title,
       creator,
       type: 'music',
-      source: 'Pitchfork — Best New Music',
+      source: 'Pitchfork · Best New Music',
       blurb: clip(desc, 240),
       reviewUrl: link,
       coverUrl: pickAttr(block, 'media:thumbnail', 'url'),

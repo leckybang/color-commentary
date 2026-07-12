@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Plus, LayoutGrid, List, Music, Film, Tv, BookOpen, Trash2, Pin, PinOff, GripVertical, ArrowUp, ArrowDown, Sparkles, SlidersHorizontal, Target, Library, Play, Check, X } from 'lucide-react'
+import { Plus, LayoutGrid, List, Music, Film, Tv, BookOpen, Trash2, Pin, PinOff, GripVertical, ArrowUp, ArrowDown, Search, SlidersHorizontal, Target, Library, Play, Check, X } from 'lucide-react'
 import { useCatalog } from '../hooks/useCatalog'
 import { useNextUp } from '../hooks/useNextUp'
 import MediaCard from '../components/common/MediaCard'
@@ -557,7 +557,7 @@ export default function Catalog() {
               />
             ) : !formData.type ? (
               <div className="w-full bg-bg-tertiary/50 border border-dashed border-border rounded-lg px-4 py-3 text-sm text-text-muted flex items-center gap-2">
-                <Sparkles size={14} />
+                <Search size={14} />
                 Pick a type above to search for a match.
               </div>
             ) : (

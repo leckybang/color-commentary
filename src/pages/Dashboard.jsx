@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { Music, Film, Tv, BookOpen, Radar, Star, CalendarPlus, Plus, ArrowRight, Sparkles, Library, MessageCircle, Users, X, Send } from 'lucide-react'
+import { Music, Film, Tv, BookOpen, Radar, Star, CalendarPlus, Plus, ArrowRight, SlidersHorizontal, Trophy, Library, MessageCircle, Users, X, Send } from 'lucide-react'
 import { useCatalog } from '../hooks/useCatalog'
 import { useTasteProfile } from '../hooks/useTasteProfile'
 import { useScratchpad } from '../hooks/useScratchpad'
@@ -167,7 +167,7 @@ export default function Dashboard() {
             to="/me?tab=taste"
             className="inline-flex items-center gap-2 text-sm text-accent-primary hover:underline"
           >
-            <Sparkles size={14} />
+            <SlidersHorizontal size={14} />
             Build Your Taste Profile
           </Link>
         </div>
@@ -180,7 +180,7 @@ export default function Dashboard() {
           { label: 'Cataloged', value: stats.total, icon: Library, color: 'var(--color-accent-tv)', to: '/catalog' },
           { label: 'This Week', value: addedThisWeek, icon: CalendarPlus, color: 'var(--color-accent-music)', to: '/catalog' },
           { label: 'Avg Rating', value: stats.avgRating || '—', icon: Star, color: '#f59e0b' },
-          { label: 'Finished', value: stats.byStatus.finished, icon: Sparkles, color: 'var(--color-accent-books)' },
+          { label: 'Finished', value: stats.byStatus.finished, icon: Trophy, color: 'var(--color-accent-books)' },
         ].map((stat) => {
           const { label, value, color, to } = stat
           const Icon = stat.icon
@@ -350,7 +350,7 @@ export default function Dashboard() {
             ) : (
               <p className="text-xs text-text-muted italic text-center py-4">
                 {friendsFeed.hasFriends
-                  ? 'Nothing from your friends yet — check back soon.'
+                  ? 'Nothing from your friends yet. Check back soon.'
                   : 'Follow some friends and their latest picks show up here.'}
               </p>
             )}

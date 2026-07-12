@@ -226,7 +226,7 @@ async function buildRealRadar({ signal } = {}) {
     .slice(0, 3)
     .map((p) => ({ ...p, bucket: 'darlings', isTastemaker: true }))
   const darlings = [
-    ...tag(reviewedBooks, 'darlings', () => ({ source: 'New York Times — reviewed', blurb: '' })),
+    ...tag(reviewedBooks, 'darlings', () => ({ source: 'New York Times · reviewed', blurb: '' })),
     ...darlingsPitchfork,
     ...tag(acclaimedMovies, 'darlings', (m) => ({ source: `Critics' score ${m.voteAverage.toFixed(1)}/10`, blurb: m.description || '' })),
     ...tag(acclaimedTV, 'darlings', (t) => ({ source: `Critics' score ${t.voteAverage.toFixed(1)}/10`, blurb: t.description || '' })),

@@ -1,7 +1,7 @@
 export const THEMES = [
   {
     name: 'Pastel Press',
-    tagline: 'Porcelain, playful pastels, ink outlines — an editorial zine for your brain',
+    tagline: 'Porcelain paper, playful pastels, ink outlines. An editorial zine for your brain.',
     bg: {
       primary: '#f0efea',
       secondary: '#fbfaf7',
@@ -34,7 +34,7 @@ export const THEMES = [
   },
   {
     name: 'Velvet Darkroom',
-    tagline: 'The ink zine after dark — deep violet paper, glowing pastel blocks',
+    tagline: 'The ink zine after dark: deep violet paper and glowing pastel blocks',
     bg: {
       primary: '#131019',
       secondary: '#1c1726',
@@ -67,7 +67,7 @@ export const THEMES = [
   },
   {
     name: 'Analog Cream',
-    tagline: 'The ink zine on warm paper — cream stock, terracotta ink blocks',
+    tagline: 'The ink zine on warm paper: cream stock and terracotta ink',
     bg: {
       primary: '#f5f0e8',
       secondary: '#fdf9f2',
@@ -96,11 +96,11 @@ export const THEMES = [
     gradient: 'linear-gradient(135deg, #f5f0e8 0%, #ebe0d0 50%, #f2ede5 100%)',
     headingFont: "'Bricolage Grotesque', sans-serif",
     bodyFont: "'Karla', sans-serif",
-    vibe: 'The editorial-zine look printed on warm cream stock. Terracotta ink and toasted pastels — a well-loved paperback with sharp outlines.',
+    vibe: 'The editorial-zine look printed on warm cream stock. Terracotta ink and toasted pastels, like a well-loved paperback with sharp outlines.',
   },
   {
     name: 'Neon Noir',
-    tagline: 'The ink zine at 2am — true black paper, electric pastel blocks',
+    tagline: 'The ink zine at 2am: true black paper, electric pastels',
     bg: {
       primary: '#08080c',
       secondary: '#101018',

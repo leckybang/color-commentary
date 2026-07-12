@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Users, Search, UserPlus, UserMinus, ArrowUpRight, Sparkles, Loader2 } from 'lucide-react'
+import { Users, Search, UserPlus, UserMinus, ArrowUpRight, Loader2 } from 'lucide-react'
 import { useFriends } from '../hooks/useFriends'
 import { usePublicProfile } from '../hooks/usePublicProfile'
 
@@ -83,7 +83,7 @@ export default function FriendsPanel() {
           find YOU until you're public with a username. */}
       {!findable && (
         <div className="rounded-xl border-[1.5px] border-text-primary bg-accent-primary/10 p-3.5 mb-4 flex items-start gap-2.5">
-          <Sparkles size={15} className="text-accent-primary mt-0.5 shrink-0" />
+          <UserPlus size={15} className="text-accent-primary mt-0.5 shrink-0" />
           <div className="flex-1 text-xs text-text-secondary">
             <p className="font-semibold text-text-primary mb-0.5">Make yourself findable</p>
             {publicProfile.username
@@ -179,7 +179,7 @@ export default function FriendsPanel() {
           ))
         ) : (
           <p className="text-xs text-text-muted italic py-2">
-            Nobody yet. Search above — be the friend who makes the first move.
+            Nobody yet. Search above and be the friend who makes the first move.
           </p>
         )}
       </div>

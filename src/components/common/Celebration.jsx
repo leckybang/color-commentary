@@ -9,7 +9,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
-import { Sparkles, X } from 'lucide-react'
+import { PartyPopper, X } from 'lucide-react'
 import StarRating from './StarRating'
 
 // getMediaColor returns CSS var() strings, which a canvas fillStyle can't
@@ -183,7 +183,7 @@ export default function Celebration({ item, onRate, onReview, onClose }) {
           <X size={16} />
         </button>
         <div className="flex items-center justify-center gap-1.5 text-accent-primary mb-2">
-          <Sparkles size={16} />
+          <PartyPopper size={16} />
           <span className="text-xs font-semibold uppercase tracking-wide">Finished</span>
         </div>
         <h3

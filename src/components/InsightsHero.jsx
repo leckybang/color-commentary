@@ -122,7 +122,7 @@ export default function InsightsHero({ items }) {
           <h2 className="font-semibold text-text-primary">Your Insights</h2>
         </div>
         <p className="text-sm text-text-secondary mb-4 max-w-md">
-          Finish your first thing and this turns into your personal highlight reel — counts, favorites, and a card you can share.
+          Finish your first thing and this turns into your personal highlight reel: counts, favorites, and a card you can share.
         </p>
         <Link
           to="/catalog"
@@ -247,7 +247,7 @@ export default function InsightsHero({ items }) {
             />
             {!username && (
               <p className="text-xs text-text-muted mb-3 -mt-1">
-                Psst — set your @username in{' '}
+                Psst: set your @username in{' '}
                 <Link to="/me?tab=settings" className="text-accent-primary font-semibold hover:underline">
                   Settings
                 </Link>{' '}

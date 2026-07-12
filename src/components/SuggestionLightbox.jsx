@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { X, Sparkles, Plus, Check } from 'lucide-react'
+import { X, Lightbulb, Quote, Plus, Check } from 'lucide-react'
 import CoverArt from './common/CoverArt'
 import ExternalLinks from './common/ExternalLinks'
 import { getMediaColor } from '../utils/filterUtils'
@@ -50,7 +50,7 @@ export default function SuggestionLightbox({ suggestion, onClose, addItem }) {
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-border">
           <div className="flex items-center gap-2">
-            <Sparkles size={16} className="text-accent-primary" />
+            <Lightbulb size={16} className="text-accent-primary" />
             <span className="text-sm font-medium text-text-secondary">Suggestion</span>
           </div>
           <button
@@ -89,7 +89,7 @@ export default function SuggestionLightbox({ suggestion, onClose, addItem }) {
           {/* Why this suggestion */}
           {suggestion.reason && (
             <div className="flex items-start gap-2.5 bg-accent-primary/5 border border-accent-primary/15 rounded-xl p-3.5">
-              <Sparkles size={14} className="text-accent-primary mt-0.5 shrink-0" />
+              <Quote size={14} className="text-accent-primary mt-0.5 shrink-0" />
               <p className="text-sm text-text-secondary leading-relaxed italic">{suggestion.reason}</p>
             </div>
           )}

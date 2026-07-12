@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Sparkles } from 'lucide-react'
+import { Users } from 'lucide-react'
 import FriendsPanel from '../components/FriendsPanel'
 import FriendsFeedRows from '../components/FriendsFeedRows'
 import { useFriendsFeed } from '../hooks/useFriendsFeed'
@@ -29,7 +29,7 @@ export default function Friends() {
           your people
         </p>
         <h1 className="text-3xl md:text-4xl font-extrabold text-text-primary mb-2 tracking-tight">Friends</h1>
-        <p className="text-text-secondary">Follow taste you trust — and see what they're into lately.</p>
+        <p className="text-text-secondary">Follow taste you trust and see what they're into lately.</p>
       </div>
 
       <FriendsPanel />
@@ -37,7 +37,7 @@ export default function Friends() {
       {/* Fresh from friends — recent catalog activity from people you follow */}
       <div className="ink-card bg-bg-secondary rounded-2xl p-6">
         <div className="flex items-center gap-2 mb-1">
-          <Sparkles size={18} className="text-accent-primary" />
+          <Users size={18} className="text-accent-primary" />
           <h2 className="text-lg font-semibold text-text-primary">Fresh from friends</h2>
         </div>
         <p className="text-xs text-text-muted mb-3">
@@ -49,7 +49,7 @@ export default function Friends() {
           <p className="text-sm text-text-muted italic py-4 text-center">Checking in on your people…</p>
         ) : feed.hasFriends ? (
           <p className="text-sm text-text-muted italic py-4 text-center">
-            Quiet so far — nothing from your friends yet. (Private profiles keep their catalogs to themselves.)
+            Quiet so far: nothing from your friends yet. (Private profiles keep their catalogs to themselves.)
           </p>
         ) : (
           <p className="text-sm text-text-muted italic py-4 text-center">
