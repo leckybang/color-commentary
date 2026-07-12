@@ -271,3 +271,19 @@ ALTER TABLE public.item_reactions ENABLE ROW LEVEL SECURITY;
 ```
 
 RLS verified with simulated JWTs: a user can react to a public profile's item, and an attempt to insert a reaction with someone else's reactor_id is rejected by the WITH CHECK.
+
+## Username availability (applied 2026-07-12 via MCP, migration `username_taken_rpc`)
+
+Already applied to prod. Availability check for the onboarding "Claim your corner" step. SECURITY DEFINER because RLS hides private profiles from a plain select, which would falsely report a taken username as available. Returns only a boolean; signed-in callers only:
+
+```sql
+CREATE OR REPLACE FUNCTION public.username_taken(name text)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = ''
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.profiles WHERE lower(username) = lower(trim(name))
+  );
+$$;
+REVOKE ALL ON FUNCTION public.username_taken(text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.username_taken(text) TO authenticated;
+```
