@@ -21,8 +21,8 @@ export default function CookieConsent() {
   if (!visible) return null
 
   return (
-    <div className="fixed bottom-20 md:bottom-4 left-4 right-4 z-50 flex justify-center">
-      <div className="bg-bg-secondary border border-border rounded-xl p-4 shadow-lg max-w-lg w-full flex items-center gap-3">
+    <div className="fixed bottom-20 md:bottom-4 left-4 right-4 z-50 flex justify-center pointer-events-none">
+      <div className="bg-bg-secondary border border-border rounded-xl p-4 shadow-lg max-w-lg w-full flex items-center gap-3 pointer-events-auto">
         <Cookie size={20} className="text-accent-primary shrink-0" />
         <p className="text-xs text-text-secondary flex-1">
           We use cookies and local storage to save your preferences and improve your experience.
