@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { Music, Film, Tv, BookOpen, Radar, Star, CalendarPlus, Plus, ArrowRight, SlidersHorizontal, Trophy, Library, MessageCircle, Users, X, Send } from 'lucide-react'
+import { Music, Film, Tv, BookOpen, Radar, Star, CalendarPlus, Plus, ArrowRight, SlidersHorizontal, Trophy, Library, MessageCircle, Users, X, Send, Flame, Check } from 'lucide-react'
 import { useCatalog } from '../hooks/useCatalog'
 import { useTasteProfile } from '../hooks/useTasteProfile'
 import { useScratchpad } from '../hooks/useScratchpad'
@@ -15,6 +15,7 @@ import InsightsHero from '../components/InsightsHero'
 import QuickAdd from '../components/QuickAdd'
 import FriendsFeedRows from '../components/FriendsFeedRows'
 import { useFriendsFeed } from '../hooks/useFriendsFeed'
+import { usePopularItems } from '../hooks/usePopularItems'
 import { CALIBRATION_QUESTIONS } from '../data/calibrationData'
 
 const SCRATCHPAD_TYPE_TO_SEARCH = {
@@ -42,6 +43,7 @@ export default function Dashboard() {
   const { radar, loading: radarLoading, isDemo: radarIsDemo } = useWeeklyRadar()
   const { notes, addNote, deleteNote } = useScratchpad()
   const friendsFeed = useFriendsFeed(6)
+  const popular = usePopularItems()
   const [noteText, setNoteText] = useState('')
   const [noteType, setNoteType] = useState('movie')
   const [noteMeta, setNoteMeta] = useState(null) // from picked search result
@@ -401,6 +403,54 @@ export default function Dashboard() {
               </div>
             )}
           </div>
+
+          {/* Popular with Users — anonymous aggregate of what people are adding */}
+          {popular.items.length > 0 && (
+            <div className="ink-card bg-bg-secondary rounded-2xl p-5">
+              <div className="flex items-center gap-2 mb-1">
+                <Flame size={18} className="text-accent-primary" />
+                <h2 className="font-semibold text-text-primary">Popular with Users</h2>
+              </div>
+              <p className="text-xs text-text-muted mb-3">What multiple people cataloged lately.</p>
+              <div className="space-y-2">
+                {popular.items.map((item) => {
+                  const owned = inCatalog(item.title, item.type)
+                  return (
+                    <div key={`${item.type}-${item.title}`} className="flex items-center gap-3 p-2 rounded-lg hover:bg-bg-hover transition-colors">
+                      <CoverArt title={item.title} type={item.type} creator={item.creator} coverUrl={item.coverUrl} size="sm" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-text-primary truncate">{item.title}</p>
+                        <p className="text-xs text-text-muted truncate">
+                          {item.creator ? `${item.creator} · ` : ''}
+                          <span style={{ color: getMediaColor(item.type) }}>{item.userCount} people added this</span>
+                        </p>
+                      </div>
+                      {owned ? (
+                        <span className="shrink-0 flex items-center gap-1 text-xs font-medium text-accent-books">
+                          <Check size={13} /> In catalog
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() =>
+                            addItem({
+                              title: item.title,
+                              creator: item.creator,
+                              type: item.type,
+                              coverUrl: item.coverUrl,
+                              status: 'want',
+                            })
+                          }
+                          className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-accent-primary/10 text-accent-primary hover:bg-accent-primary/20 transition-colors"
+                        >
+                          <Plus size={13} /> Add
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Recent in Catalog */}
           <div className="ink-card bg-bg-secondary rounded-2xl p-5">

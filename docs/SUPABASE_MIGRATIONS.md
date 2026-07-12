@@ -205,3 +205,48 @@ CREATE POLICY "Anyone can read catalog of public profiles"
 ```
 
 Without this policy, a follower viewing `/u/<username>` will see only the basics (name, avatar, bio) — the Current Favorites / Right Now / Stats sections will be empty because the client can't read the friend's catalog. Run the policy once and the friend view fills in.
+
+## Security tidy (applied 2026-07-11 via MCP, migration `security_tidy_dedupe_policies_lock_rls_helper`)
+
+Already applied to prod. Locks down the internal RLS helper and removes Firebase-era duplicate policies:
+
+```sql
+REVOKE EXECUTE ON FUNCTION public.rls_auto_enable() FROM PUBLIC, anon, authenticated;
+
+DROP POLICY IF EXISTS "Users manage own catalog" ON public.catalog_items;
+DROP POLICY IF EXISTS "Users manage own heavy rotation" ON public.heavy_rotation_items;
+DROP POLICY IF EXISTS "Users manage own next-up list" ON public.next_up_items;
+DROP POLICY IF EXISTS "Users manage own scratchpad notes" ON public.scratchpad_notes;
+DROP POLICY IF EXISTS "Users manage own taste profile" ON public.taste_profiles;
+DROP POLICY IF EXISTS "Users manage own weekly dumps" ON public.weekly_dumps;
+```
+
+Each table keeps its uuid-native `"Users can manage own …"` policy; behavior is unchanged. `is_public_profile()` intentionally stays executable — RLS policies evaluate it as the querying role. Remaining manual step: enable leaked-password protection in Dashboard → Authentication.
+
+## Popular with Users (applied 2026-07-11 via MCP, migration `popular_items_aggregate_rpc`)
+
+Already applied to prod. Anonymous aggregate powering the dashboard "Popular with Users" widget — counts only, no user attribution, signed-in callers only:
+
+```sql
+CREATE OR REPLACE FUNCTION public.popular_items(
+  days_back int DEFAULT 14,
+  min_users int DEFAULT 2,
+  max_rows int DEFAULT 6
+)
+RETURNS TABLE (title text, creator text, item_type text, cover_url text, user_count bigint, latest_added timestamptz)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = ''
+AS $$
+  SELECT MAX(c.title), MAX(c.creator) FILTER (WHERE c.creator IS NOT NULL AND c.creator <> ''),
+         c.type, MAX(c.cover_url) FILTER (WHERE c.cover_url IS NOT NULL AND c.cover_url <> ''),
+         COUNT(DISTINCT c.user_id), MAX(c.created_at)
+  FROM public.catalog_items c
+  WHERE c.created_at > now() - make_interval(days => LEAST(GREATEST(days_back, 1), 90))
+  GROUP BY lower(trim(c.title)), c.type
+  HAVING COUNT(DISTINCT c.user_id) >= GREATEST(min_users, 2)
+  ORDER BY COUNT(DISTINCT c.user_id) DESC, MAX(c.created_at) DESC
+  LIMIT LEAST(GREATEST(max_rows, 1), 12);
+$$;
+
+REVOKE ALL ON FUNCTION public.popular_items(int, int, int) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.popular_items(int, int, int) TO authenticated;
+```
