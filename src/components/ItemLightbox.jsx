@@ -9,7 +9,7 @@
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { X, Edit2, Loader2, Music, Film, Tv, BookOpen, Star, Award, Trash2 } from 'lucide-react'
+import { X, Edit2, Loader2, Music, Film, Tv, BookOpen, Star, Award, Trash2, EyeOff } from 'lucide-react'
 import CoverArt from './common/CoverArt'
 import ExternalLinks from './common/ExternalLinks'
 import SuggestionLightbox from './SuggestionLightbox'
@@ -270,6 +270,12 @@ export default function ItemLightbox({ item, isOpen, onClose, onEdit, onUpdate, 
                       <span className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium bg-amber-400/15 text-amber-400">
                         <Award size={11} />
                         {detail.rating.label}
+                      </span>
+                    )}
+                    {item.hidden && (
+                      <span className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium bg-bg-tertiary text-text-muted" title="Only you can see this item">
+                        <EyeOff size={11} />
+                        Hidden from profile
                       </span>
                     )}
                   </div>

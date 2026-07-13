@@ -113,7 +113,9 @@ export default function PublicProfile({ isSelf }) {
 
   // The catalog backing the visible sections — yours when looking at yourself,
   // their catalog when looking at someone else (gated by RLS to public users).
-  const effectiveItems = isOwnProfile ? ownItems : friendItems
+  // Own-profile view previews what a visitor sees, so hidden items stay out.
+  // (Friend items are already filtered server-side by RLS.)
+  const effectiveItems = isOwnProfile ? ownItems.filter((i) => !i.hidden) : friendItems
   const inCatalog = (title, type) =>
     ownItems.some(
       (i) => i.type === type && i.title.trim().toLowerCase() === String(title).trim().toLowerCase()

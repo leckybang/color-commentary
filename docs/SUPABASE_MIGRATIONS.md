@@ -287,3 +287,7 @@ $$;
 REVOKE ALL ON FUNCTION public.username_taken(text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.username_taken(text) TO authenticated;
 ```
+
+## Hide from Profile (applied 2026-07-13 via MCP, migration `catalog_items_hidden_flag`)
+
+Already applied to prod. Adds `catalog_items.hidden boolean NOT NULL DEFAULT false` and enforces it server-side: the public-profile read policy, both item_reactions visibility policies, and the popular_items() aggregate all exclude hidden rows. Verified with a simulated JWT: another user reading a public catalog gets zero hidden items.
