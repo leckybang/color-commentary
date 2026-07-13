@@ -7,7 +7,6 @@ import ExternalLinks from '../components/common/ExternalLinks'
 import { useCatalog } from '../hooks/useCatalog'
 import { useWeeklyRadar } from '../hooks/useWeeklyRadar'
 import { getMediaColor } from '../utils/filterUtils'
-import { formatDate } from '../utils/dateUtils'
 
 const TYPE_LABELS = { music: 'Music', movie: 'Movie', tv: 'TV', book: 'Book' }
 
@@ -69,123 +68,7 @@ const BUCKETS = [
   },
 ]
 
-function RadarCard({ item, onAdd, onDismiss, isAdded }) {
-  const [expanded, setExpanded] = useState(false)
-  const color = getMediaColor(item.type)
-  const review = reviewLink(item)
-
-  return (
-    <div
-      className={`bg-bg-secondary border rounded-xl transition-all ${
-        expanded ? 'border-accent-primary/30 shadow-lg shadow-accent-primary/5' : 'border-border hover:border-accent-primary/15'
-      }`}
-    >
-      <div className="p-4 cursor-pointer" onClick={() => setExpanded(!expanded)}>
-        <div className="flex items-start gap-3">
-          <CoverArt title={item.title} type={item.type} creator={item.creator} coverUrl={item.coverUrl} size="radar" />
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-text-primary text-sm">{item.title}</h3>
-            <p className="text-xs text-text-secondary mt-0.5">{item.creator}</p>
-            <div className="flex items-center gap-2 mt-2 flex-wrap">
-              <span
-                className="text-xs px-2 py-0.5 rounded-full font-medium"
-                style={{ backgroundColor: `color-mix(in srgb, ${color} 15%, transparent)`, color }}
-              >
-                {TYPE_LABELS[item.type]}
-              </span>
-              {item.source && (
-                review ? (
-                  <a
-                    href={review.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-accent-primary/15 text-accent-primary hover:bg-accent-primary/25 transition-colors flex items-center gap-1"
-                    title={`Read the ${review.label} review`}
-                  >
-                    <Newspaper size={10} />
-                    {item.source}
-                    <ExternalLink size={9} />
-                  </a>
-                ) : (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-accent-primary/15 text-accent-primary flex items-center gap-1">
-                    <Newspaper size={10} />
-                    {item.source}
-                  </span>
-                )
-              )}
-              {item.releaseDate && (
-                <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-bg-tertiary text-text-muted flex items-center gap-1">
-                  <Calendar size={10} />
-                  {formatDate(item.releaseDate)}
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="shrink-0 text-text-muted mt-1">
-            {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-          </div>
-        </div>
-
-        {!expanded && (item.blurb || item.description) && (
-          <p className="text-xs text-text-muted mt-2 line-clamp-2 leading-relaxed">{item.blurb || item.description}</p>
-        )}
-      </div>
-
-      {expanded && (
-        <div className="px-4 pb-4 space-y-3">
-          {(item.blurb || item.description) && (
-            <p className="text-sm text-text-secondary leading-relaxed">{item.blurb || item.description}</p>
-          )}
-          {Array.isArray(item.cast) && item.cast.length > 0 && (
-            <div className="flex items-start gap-1.5 text-xs text-text-muted">
-              <Users size={12} className="shrink-0 mt-0.5" />
-              <span><span className="text-text-secondary">Starring</span> {item.cast.join(', ')}</span>
-            </div>
-          )}
-          {review && (
-            <a
-              href={review.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-accent-primary hover:underline"
-            >
-              <Newspaper size={13} />
-              Read the {review.label} review
-              <ExternalLink size={11} />
-            </a>
-          )}
-          <ExternalLinks type={item.type} title={item.title} creator={item.creator} />
-          <div className="flex gap-2 pt-2 border-t border-border">
-            {isAdded ? (
-              <div className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium text-accent-books">
-                <Check size={14} />
-                Logged
-              </div>
-            ) : (
-              <button
-                onClick={(e) => { e.stopPropagation(); onAdd(item) }}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium bg-accent-primary/10 text-accent-primary hover:bg-accent-primary/20 transition-colors"
-              >
-                <Bookmark size={14} />
-                Want to Check Out
-              </button>
-            )}
-            <button
-              onClick={(e) => { e.stopPropagation(); onDismiss(item) }}
-              className="px-3 py-2 rounded-lg text-xs text-text-muted hover:text-text-secondary hover:bg-bg-hover transition-colors"
-            >
-              Not for me
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function BucketSection({ bucket, items, onAdd, onDismiss, addedItems }) {
+function BucketSection({ bucket, items, onItemClick, inCatalog }) {
   const Icon = bucket.icon
   if (!items || items.length === 0) {
     return (
@@ -214,16 +97,23 @@ function BucketSection({ bucket, items, onAdd, onDismiss, addedItems }) {
         </span>
       </div>
       <p className="text-xs text-text-muted mb-3">{bucket.blurb}</p>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {items.map((item, i) => (
-          <RadarCard
-            key={`${item.title}-${i}`}
-            item={item}
-            onAdd={onAdd}
-            onDismiss={onDismiss}
-            isAdded={addedItems.has(item.title)}
-          />
-        ))}
+      <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-1 px-1 pb-1">
+        {items.map((item, i) => {
+          const owned = inCatalog(item.title, item.type)
+          return (
+            <div
+              key={`${item.title}-${i}`}
+              className="w-28 shrink-0 cursor-pointer group"
+              onClick={() => onItemClick(item)}
+            >
+              <CoverArt title={item.title} type={item.type} creator={item.creator} coverUrl={item.coverUrl} size="lg" />
+              <p className="text-xs font-medium text-text-primary truncate mt-1.5">{item.title}</p>
+              <p className="text-[10px] truncate" style={{ color: owned ? 'var(--color-accent-books)' : getMediaColor(item.type) }}>
+                {owned ? '✓ In your log' : item.source || item.creator || ''}
+              </p>
+            </div>
+          )
+        })}
       </div>
     </section>
   )
@@ -233,7 +123,7 @@ export default function Radar() {
   const { items: catalogItems, addItem } = useCatalog()
   const { radar, loading, error, refresh: refreshRadar, isDemo } = useWeeklyRadar()
   const popular = usePopularItems()
-  const [popularDetail, setPopularDetail] = useState(null)
+  const [detailItem, setDetailItem] = useState(null)
 
   const inCatalog = (title, type) =>
     catalogItems.some(
@@ -241,20 +131,6 @@ export default function Radar() {
     )
 
   const [dismissed, setDismissed] = useState(new Set())
-  const [addedItems, setAddedItems] = useState(new Set())
-
-  const handleAdd = (item) => {
-    addItem({
-      title: item.title,
-      creator: item.creator,
-      type: item.type,
-      genre: item.genre || '',
-      coverUrl: item.coverUrl || '',
-      year: item.year || (item.releaseDate ? String(item.releaseDate).slice(0, 4) : ''),
-      status: 'want',
-    })
-    setAddedItems((prev) => new Set([...prev, item.title]))
-  }
 
   const handleDismiss = (item) => {
     setDismissed((prev) => new Set([...prev, item.title]))
@@ -338,7 +214,7 @@ export default function Radar() {
               <div
                 key={`${item.type}-${item.title}`}
                 className="w-28 shrink-0 cursor-pointer group"
-                onClick={() => setPopularDetail({ ...item, sourceLabel: 'Popular with users' })}
+                onClick={() => setDetailItem({ ...item, source: `${item.userCount} people logged this`, sourceLabel: 'Popular with users' })}
               >
                 <CoverArt title={item.title} type={item.type} creator={item.creator} coverUrl={item.coverUrl} size="lg" />
                 <p className="text-xs font-medium text-text-primary truncate mt-1.5">{item.title}</p>
@@ -358,9 +234,10 @@ export default function Radar() {
               key={b.key}
               bucket={b}
               items={bucketItems[b.key]}
-              onAdd={handleAdd}
-              onDismiss={handleDismiss}
-              addedItems={addedItems}
+              inCatalog={inCatalog}
+              onItemClick={(item) =>
+                setDetailItem({ ...item, sourceLabel: b.label, sourceLink: reviewLink(item) })
+              }
             />
           ))}
         </>
@@ -372,11 +249,12 @@ export default function Radar() {
       ) : null}
 
       <FriendItemLightbox
-        item={popularDetail}
-        isOpen={!!popularDetail}
-        onClose={() => setPopularDetail(null)}
+        item={detailItem}
+        isOpen={!!detailItem}
+        onClose={() => setDetailItem(null)}
         addItem={addItem}
         inCatalog={inCatalog}
+        onDismiss={handleDismiss}
       />
 
       {/* What this means — small footer */}
