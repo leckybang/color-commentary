@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Plus, LayoutGrid, List, Music, Film, Tv, BookOpen, Trash2, Pin, PinOff, GripVertical, ArrowUp, ArrowDown, Search, SlidersHorizontal, Target, Library, Play, Check, X, Eye, EyeOff } from 'lucide-react'
+import { Plus, LayoutGrid, List, Music, Film, Tv, BookOpen, Trash2, Pin, PinOff, GripVertical, ArrowUp, ArrowDown, Search, SlidersHorizontal, Target, Library, Play, Check, X, Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react'
 import { useCatalog } from '../hooks/useCatalog'
 import { useNextUp } from '../hooks/useNextUp'
-import MediaCard from '../components/common/MediaCard'
 import FilterBar from '../components/common/FilterBar'
 import StarRating from '../components/common/StarRating'
+import CoverArt from '../components/common/CoverArt'
 import Modal from '../components/common/Modal'
 import ExternalLinks from '../components/common/ExternalLinks'
 import MediaPickerInput from '../components/common/MediaPickerInput'
@@ -14,7 +14,6 @@ import Celebration from '../components/common/Celebration'
 import CatalogInsights from '../components/CatalogInsights'
 import QuickAdd from '../components/QuickAdd'
 import { filterCatalog, sortCatalog, MEDIA_TYPES, STATUS_OPTIONS, getMediaColor } from '../utils/filterUtils'
-import { getCountsByType } from '../utils/catalogStats'
 
 const EMPTY_ITEM = { title: '', creator: '', type: null, genre: '', status: 'want', rating: 0, review: '', coverUrl: '', year: '', hidden: false }
 
@@ -44,6 +43,27 @@ export default function Catalog() {
   const [editItem, setEditItem] = useState(null)
   const [formData, setFormData] = useState(EMPTY_ITEM)
   const [lightboxItem, setLightboxItem] = useState(null)
+  const [collapsedSections, setCollapsedSections] = useState(() => new Set())
+
+  const toggleSection = (key) => {
+    setCollapsedSections((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+
+  const jumpToSection = (key) => {
+    setCollapsedSections((prev) => {
+      const next = new Set(prev)
+      next.delete(key)
+      return next
+    })
+    requestAnimationFrame(() => {
+      document.getElementById(`section-${key}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }
   const [saveAttempted, setSaveAttempted] = useState(false)
   const [dragIndex, setDragIndex] = useState(null)
   const [celebrating, setCelebrating] = useState(null)
@@ -80,13 +100,10 @@ export default function Catalog() {
   const filtered = sortCatalog(filterCatalog(items, filters), sortBy)
   // A type-only filter (from the top tab strip) should still show the status
   // groupings — only "non-type" filters collapse the view to flat.
-  const hasNonTypeFilters = !!(filters.status && filters.status !== 'all') ||
+  const hasActiveFilters = !!(filters.status && filters.status !== 'all') ||
     !!(filters.search && filters.search.trim()) ||
     !!(filters.genre && filters.genre.trim()) ||
     !!filters.rating
-  const hasTypeFilter = !!(filters.type && filters.type !== 'all')
-  const hasActiveFilters = hasNonTypeFilters
-  const typeCounts = getCountsByType(items)
 
   // Build Next Up items (in order) from catalog
   const nextUpItems = nextUpIds
@@ -234,33 +251,47 @@ export default function Catalog() {
   }
 
   // Render an item card in a status section, with optional pin affordance
+  // Dense, cover-first tile: a dozen visible at once, tap for the full
+  // lightbox (status changes, rating, delete all live there).
   const renderCatalogItem = (item) => {
     const showPin = item.status === 'want' && !isInNextUp(item.id)
     const pinned = isInNextUp(item.id)
+    const section = STATUS_SECTIONS.find((s) => s.key === item.status)
     return (
-      <div key={item.id} className="relative group">
-        <MediaCard item={item} onClick={openLightbox} onUpdate={updateItem} onFinish={handleFinish} />
-        {item.status === 'want' && (
-          <button
-            type="button"
-            onClick={(e) => togglePin(item, e)}
-            disabled={showPin && nextUpFull}
-            title={
-              pinned
-                ? 'Unpin from Next Up'
-                : nextUpFull
-                ? `Next Up is full (${MAX_NEXT_UP} max)`
-                : 'Pin to Next Up'
-            }
-            className={`absolute top-3 right-3 p-1.5 rounded-lg transition-all ${
-              pinned
-                ? 'bg-accent-primary text-white shadow-md'
-                : 'bg-bg-tertiary text-text-muted opacity-0 group-hover:opacity-100 hover:text-accent-primary disabled:cursor-not-allowed disabled:opacity-30'
-            }`}
-          >
-            {pinned ? <PinOff size={13} /> : <Pin size={13} />}
-          </button>
-        )}
+      <div key={item.id} className="group cursor-pointer w-28 shrink-0" onClick={() => openLightbox(item)}>
+        <div className="relative w-28 mx-auto">
+          <CoverArt title={item.title} type={item.type} creator={item.creator} coverUrl={item.coverUrl} size="lg" />
+          {item.status === 'want' && (
+            <button
+              type="button"
+              onClick={(e) => togglePin(item, e)}
+              disabled={showPin && nextUpFull}
+              title={
+                pinned
+                  ? 'Unpin from Next Up'
+                  : nextUpFull
+                  ? `Next Up is full (${MAX_NEXT_UP} max)`
+                  : 'Pin to Next Up'
+              }
+              className={`absolute top-1.5 right-1.5 p-1.5 rounded-lg transition-all ${
+                pinned
+                  ? 'bg-accent-primary text-white shadow-md'
+                  : 'bg-bg-primary/80 text-text-muted opacity-70 sm:opacity-0 sm:group-hover:opacity-100 hover:text-accent-primary disabled:cursor-not-allowed disabled:opacity-30'
+              }`}
+            >
+              {pinned ? <PinOff size={13} /> : <Pin size={13} />}
+            </button>
+          )}
+        </div>
+        <p className="text-xs font-medium text-text-primary truncate mt-1.5 text-center">{item.title}</p>
+        <div className="flex items-center justify-center gap-1 mt-0.5 min-h-[14px]">
+          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: section?.color || 'var(--color-text-muted)' }} aria-hidden="true" />
+          {item.rating > 0 ? (
+            <span className="text-[10px] font-semibold text-amber-500">★ {item.rating}</span>
+          ) : (
+            <span className="text-[10px] text-text-muted truncate">{section?.label || ''}</span>
+          )}
+        </div>
       </div>
     )
   }
@@ -273,18 +304,29 @@ export default function Catalog() {
     }
     if (sectionItems.length === 0) return null
     const Icon = section.icon
+    const collapsed = collapsedSections.has(section.key)
     return (
-      <section key={section.key} className="mb-8">
-        <div className="flex items-center gap-2 mb-3">
+      <section key={section.key} id={`section-${section.key}`} className="mb-8 scroll-mt-4">
+        <button
+          onClick={() => toggleSection(section.key)}
+          className="w-full flex items-center gap-2 mb-3 text-left group/section"
+          title={collapsed ? `Show ${section.label}` : `Hide ${section.label} for now`}
+        >
           <Icon size={18} style={{ color: section.color }} />
           <h2 className="text-lg font-semibold text-text-primary">{section.label}</h2>
           <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: `color-mix(in srgb, ${section.color} 15%, transparent)`, color: section.color }}>
             {sectionItems.length}
           </span>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {sectionItems.map(renderCatalogItem)}
-        </div>
+          <span className="flex-1" />
+          <span className="p-1 rounded-lg text-text-muted group-hover/section:text-text-secondary group-hover/section:bg-bg-hover transition-colors">
+            {collapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+          </span>
+        </button>
+        {!collapsed && (
+          <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-1 px-1 pb-1">
+            {sectionItems.map(renderCatalogItem)}
+          </div>
+        )}
       </section>
     )
   }
@@ -295,7 +337,7 @@ export default function Catalog() {
     <div>
       <div className="flex items-start justify-between mb-4">
         <div>
-          <h1 className="text-2xl font-bold text-text-primary">Catalog</h1>
+          <h1 className="text-2xl font-bold text-text-primary">Log</h1>
           <p className="text-text-secondary text-sm mt-1">{items.length} items in your library</p>
         </div>
         <button
@@ -322,77 +364,49 @@ export default function Catalog() {
         Add with rating &amp; review
       </button>
 
-      {/* Media-type tabs */}
-      <div className="flex gap-1 mb-4 overflow-x-auto -mx-1 px-1 pb-1">
-        {[
-          { value: 'all', label: 'All', icon: Library, color: 'var(--color-accent-primary)', count: items.length },
-          ...MEDIA_TYPES.map((t) => ({
-            value: t.value,
-            label: t.label,
-            icon: t.value === 'music' ? Music : t.value === 'movie' ? Film : t.value === 'tv' ? Tv : BookOpen,
-            color: t.color,
-            count: typeCounts[t.value] || 0,
-          })),
-        ].map((tab) => {
-          const { value, label, color, count } = tab
-          const Icon = tab.icon
-          const isActive = value === 'all' ? !hasTypeFilter : filters.type === value
-          return (
-            <button
-              key={value}
-              onClick={() => {
-                setFilters({ ...filters, type: value === 'all' ? 'all' : value })
-              }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-all whitespace-nowrap"
-              style={
-                isActive
-                  ? {
-                      backgroundColor: `color-mix(in srgb, ${color} 18%, transparent)`,
-                      color,
-                      borderColor: `color-mix(in srgb, ${color} 50%, transparent)`,
-                    }
-                  : {
-                      backgroundColor: 'transparent',
-                      color: 'var(--color-text-muted)',
-                      borderColor: 'var(--color-border)',
-                    }
-              }
-            >
-              <Icon size={14} />
-              {label}
-              <span
-                className="text-[10px] px-1.5 rounded-full"
-                style={
-                  isActive
-                    ? { backgroundColor: `color-mix(in srgb, ${color} 25%, transparent)`, color }
-                    : { backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-muted)' }
-                }
-              >
-                {count}
-              </span>
-            </button>
-          )
-        })}
-      </div>
-
-      {/* Insights — collapsed by default */}
-      <div className="mb-6">
-        <CatalogInsights items={items} onItemClick={openLightbox} />
-      </div>
-
-      {/* Secondary: filter / search existing items. Demoted under the primary action. */}
-      <details className="mb-6 group">
-        <summary className="cursor-pointer list-none flex items-center justify-between text-xs text-text-muted hover:text-text-secondary transition-colors px-1 py-1.5 select-none">
-          <span className="flex items-center gap-1.5">
-            <SlidersHorizontal size={13} />
-            Filter or search what's already here
-          </span>
-          <span className="text-text-muted/60 group-open:rotate-180 transition-transform">▾</span>
-        </summary>
-        <div className="mt-2">
-          <FilterBar filters={filters} onChange={setFilters} sortBy={sortBy} onSortChange={setSortBy} />
+      {/* Just added — the thing you entered ten seconds ago, visibly here */}
+      {!hasActiveFilters && items.length > 0 && (
+        <div className="mb-5">
+          <p className="text-[11px] font-bold uppercase tracking-[2px] text-text-muted mb-2">Just added</p>
+          <div className="flex gap-3">
+            {[...items]
+              .sort((a, b) => new Date(b.dateAdded || 0) - new Date(a.dateAdded || 0))
+              .slice(0, 4)
+              .map((it) => (
+                <button key={it.id} onClick={() => openLightbox(it)} className="shrink-0 w-16 text-left" title={it.title}>
+                  <CoverArt title={it.title} type={it.type} creator={it.creator} coverUrl={it.coverUrl} size="radar" />
+                  <p className="text-[10px] text-text-muted truncate mt-1">{it.title}</p>
+                </button>
+              ))}
+          </div>
         </div>
-      </details>
+      )}
+
+      {/* Status jump links — anchor straight to the shelf you want */}
+      {!hasActiveFilters && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          {STATUS_SECTIONS.map((s) => {
+            const count = items.filter((i) => i.status === s.key).length
+            if (count === 0) return null
+            return (
+              <button
+                key={s.key}
+                onClick={() => jumpToSection(s.key)}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold border-[1.5px] border-border bg-bg-secondary transition-all hover:bg-bg-hover"
+                style={{ color: s.color }}
+              >
+                {s.label}
+                <span className="opacity-60">{count}</span>
+              </button>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Search + filters — always visible */}
+      <div className="mb-6">
+        <FilterBar filters={filters} onChange={setFilters} sortBy={sortBy} onSortChange={setSortBy} />
+      </div>
 
       {filtered.length === 0 ? (
         <div className="text-center py-16 bg-bg-secondary border border-border rounded-2xl">
@@ -423,7 +437,7 @@ export default function Catalog() {
       ) : hasActiveFilters || viewMode === 'list' ? (
         // Flat grid / list when filters active or list view requested
         viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-x-3 gap-y-5 justify-items-center">
             {filtered.map(renderCatalogItem)}
           </div>
         ) : (
@@ -668,7 +682,7 @@ export default function Catalog() {
             <span className="flex-1">
               <span className="block text-sm font-medium text-text-primary">Hide from profile</span>
               <span className="block text-xs text-text-muted mt-0.5">
-                Stays in your catalog and counts, but friends and profile visitors never see it.
+                Stays in your log and counts, but friends and profile visitors never see it.
               </span>
             </span>
             <span

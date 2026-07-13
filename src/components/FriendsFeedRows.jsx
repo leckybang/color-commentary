@@ -31,7 +31,7 @@ export function AddFromFriendButton({ item, addItem, inCatalog }) {
   if (!addItem || !inCatalog) return null
   if (inCatalog(item.title, item.type)) {
     return (
-      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-accent-books shrink-0" title="Already in your catalog">
+      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-accent-books shrink-0" title="Already in your log">
         <Check size={12} />
         Saved
       </span>
@@ -53,11 +53,66 @@ export function AddFromFriendButton({ item, addItem, inCatalog }) {
         })
       }}
       className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-accent-primary text-white hover:bg-accent-hover transition-colors shrink-0"
-      title="Add to your catalog (Want to Try)"
+      title="Add to your log (Want to Try)"
     >
       <Plus size={12} />
       Add
     </button>
+  )
+}
+
+/**
+ * FriendsFeedShelf — the horizontal version: a swipeable row of covers with
+ * the friend's name, freshness, and compact reactions. Tap a tile to open
+ * the detail lightbox (pass onItemClick from the page).
+ */
+export function FriendsFeedShelf({ items, onItemClick }) {
+  const itemIds = useMemo(() => items.map((i) => i.id), [items])
+  const { enabled: reactionsEnabled, counts, mine, toggle } = useItemReactions(itemIds)
+
+  return (
+    <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-1 px-1 pb-1">
+      {items.map((item) => (
+        <div
+          key={item.id}
+          className="w-28 shrink-0 cursor-pointer group"
+          onClick={() => onItemClick?.(item)}
+        >
+          <CoverArt title={item.title} type={item.type} creator={item.creator} coverUrl={item.coverUrl} size="lg" />
+          <p className="text-xs font-medium text-text-primary truncate mt-1.5">{item.title}</p>
+          <p className="text-[10px] text-text-muted truncate">
+            {(item.displayName || 'Someone').split(' ')[0]} {VERBS[item.status] || 'added'} · {timeAgo(item.at)}
+          </p>
+          {reactionsEnabled && (
+            <div className="flex items-center gap-1 mt-1">
+              {REACTION_EMOJI.map((emoji) => {
+                const count = counts[item.id]?.[emoji] || 0
+                const isMine = mine.has(`${item.id}:${emoji}`)
+                if (!isMine && count === 0) return null
+                return (
+                  <button
+                    key={emoji}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      toggle(item.id, emoji)
+                    }}
+                    className={`inline-flex items-center gap-0.5 px-1 py-0.5 rounded-full text-[10px] border ${
+                      isMine
+                        ? 'border-accent-primary/60 bg-accent-primary/15 text-accent-primary font-semibold'
+                        : 'border-transparent bg-bg-tertiary/70 text-text-muted'
+                    }`}
+                  >
+                    <span className="leading-none">{emoji}</span>
+                    {count > 0 && <span className="leading-none">{count}</span>}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
   )
 }
 

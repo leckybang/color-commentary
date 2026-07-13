@@ -17,59 +17,7 @@ import { usePublicProfile } from '../hooks/usePublicProfile'
 import { computeInsights, insightsHeadline } from '../utils/insights'
 import { buildInsightCard, shareCardBlob, canShareFile, downloadBlob } from '../utils/shareCard'
 
-/**
- * ScoreRing — segmented pastel dial around the big finished-count, one arc
- * per media type, sized proportionally to how much of the period it was.
- */
-function ScoreRing({ count, byType, label }) {
-  const entries = ['music', 'movie', 'tv', 'book']
-    .map((t) => [t, byType?.[t] || 0])
-    .filter(([, n]) => n > 0)
-  const total = entries.reduce((s, [, n]) => s + n, 0) || 1
-  const size = 170
-  const R = 70
-  const C = 2 * Math.PI * R
-  const gap = entries.length > 1 ? 18 : 0 // degrees of breathing room per segment
-  let acc = -90 // start at 12 o'clock
-  const segs = entries.map(([type, n]) => {
-    const share = (n / total) * 360
-    const seg = { type, start: acc + gap / 2, sweep: Math.max(share - gap, 8) }
-    acc += share
-    return seg
-  })
-  return (
-    <div className="relative w-[170px] h-[170px] shrink-0 mx-auto sm:mx-0">
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="absolute inset-0">
-        {segs.map(({ type, start, sweep }) => (
-          <circle
-            key={type}
-            cx={size / 2}
-            cy={size / 2}
-            r={R}
-            fill="none"
-            stroke={getMediaColor(type)}
-            strokeWidth={15}
-            strokeLinecap="round"
-            strokeDasharray={`${(sweep / 360) * C} ${C}`}
-            transform={`rotate(${start} ${size / 2} ${size / 2})`}
-            opacity="0.9"
-          />
-        ))}
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span
-          className="text-5xl font-bold text-text-primary leading-none"
-          style={{ fontFamily: 'var(--font-heading)' }}
-        >
-          {count}
-        </span>
-        <span className="text-[11px] text-text-muted mt-1.5">{label}</span>
-      </div>
-    </div>
-  )
-}
-
-export default function InsightsHero({ items }) {
+export default function InsightsHero({ items, stats = {} }) {
   const insights = useMemo(() => computeInsights(items), [items])
   const { username } = usePublicProfile()
   const [building, setBuilding] = useState(false)
@@ -128,7 +76,7 @@ export default function InsightsHero({ items }) {
           to="/catalog"
           className="inline-flex items-center gap-1.5 text-sm font-medium text-accent-primary hover:underline"
         >
-          Go to your catalog <ArrowRight size={14} />
+          Go to your log <ArrowRight size={14} />
         </Link>
       </div>
     )
@@ -164,26 +112,42 @@ export default function InsightsHero({ items }) {
           </button>
         </div>
 
-        {/* Score ring + headline, moodboard-dial style */}
-        <div className="flex flex-col sm:flex-row items-center gap-5">
-          <ScoreRing
-            count={insights.count}
-            byType={insights.byType}
-            label={insights.usingMonth ? `finished in ${insights.monthLabel}` : 'finished, all time'}
-          />
-          <div className="flex-1 text-center sm:text-left">
-            <h3
-              className="text-xl md:text-2xl font-bold text-text-primary leading-tight"
-              style={{ fontFamily: 'var(--font-heading)' }}
-            >
-              {headline}
-            </h3>
-            {insights.breakdown && (
-              <p className="text-sm text-text-secondary mt-1.5">{insights.breakdown}</p>
-            )}
+        {/* Headline */}
+        <h3
+          className="text-xl md:text-2xl font-bold text-text-primary leading-tight"
+          style={{ fontFamily: 'var(--font-heading)' }}
+        >
+          {headline}
+        </h3>
+        {insights.breakdown && (
+          <p className="text-sm text-text-secondary mt-1.5">{insights.breakdown}</p>
+        )}
 
+        {/* Quantified self — the numbers that matter, at a glance */}
+        <div className="grid grid-cols-3 gap-2 mt-4 max-w-md">
+          {[
+            { label: insights.usingMonth ? `Finished in ${insights.monthLabel}` : 'Finished all time', value: insights.count, color: 'var(--color-accent-books)' },
+            { label: 'Logged', value: stats.total ?? '—', color: 'var(--color-accent-tv)' },
+            { label: 'Avg rating', value: stats.avgRating || '—', color: '#f59e0b' },
+          ].map((t) => (
+            <div
+              key={t.label}
+              className="relative overflow-hidden rounded-xl p-2.5 border-[1.5px] border-text-primary"
+              style={{ backgroundColor: `color-mix(in srgb, ${t.color} 16%, var(--color-bg-secondary))` }}
+            >
+              <span className="absolute top-0 right-0 w-4 h-4 rounded-bl-xl" style={{ backgroundColor: t.color }} aria-hidden="true" />
+              <p className="text-xl font-extrabold text-text-primary leading-none" style={{ fontFamily: 'var(--font-heading)' }}>
+                {t.value}
+              </p>
+              <p className="text-[10px] font-semibold text-text-secondary mt-1 leading-tight">{t.label}</p>
+            </div>
+          ))}
+        </div>
+
+        <div>
+          <div>
             {/* Quick fact chips */}
-            <div className="flex flex-wrap justify-center sm:justify-start gap-2 mt-4">
+            <div className="flex flex-wrap gap-2 mt-4">
               {insights.fiveStarCount > 0 && (
                 <span className="inline-flex items-center gap-1 text-xs px-3 py-1 rounded-full font-bold text-text-primary border-[1.5px] border-text-primary" style={{ backgroundColor: '#ffd76e' }}>
                   <Star size={11} fill="currentColor" />
@@ -198,6 +162,11 @@ export default function InsightsHero({ items }) {
               {insights.finishedThisYear > 0 && (
                 <span className="text-xs px-3 py-1 rounded-full font-bold text-text-primary border-[1.5px] border-text-primary bg-bg-secondary">
                   {insights.finishedThisYear} this year
+                </span>
+              )}
+              {(stats.addedThisWeek ?? 0) > 0 && (
+                <span className="text-xs px-3 py-1 rounded-full font-bold text-text-primary border-[1.5px] border-text-primary bg-bg-secondary">
+                  {stats.addedThisWeek} added this week
                 </span>
               )}
             </div>
@@ -247,7 +216,7 @@ export default function InsightsHero({ items }) {
             />
             {!username && (
               <p className="text-xs text-text-muted mb-3 -mt-1">
-                Psst: set your @username in{' '}
+                Psst! Set your @username in{' '}
                 <Link to="/me?tab=settings" className="text-accent-primary font-semibold hover:underline">
                   Settings
                 </Link>{' '}

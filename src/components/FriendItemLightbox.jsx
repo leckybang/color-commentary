@@ -105,7 +105,7 @@ export default function FriendItemLightbox({ item, isOpen, onClose, addItem, inC
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
           <p className="text-xs font-semibold uppercase tracking-wide text-text-muted">
-            {item.sourceLabel || (item.friendName ? `From ${item.friendName}'s catalog` : 'From a friend')}
+            {item.sourceLabel || (item.friendName ? `From ${item.friendName}'s log` : 'From a friend')}
           </p>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-bg-hover transition-colors text-text-secondary">
             <X size={18} />
@@ -148,7 +148,7 @@ export default function FriendItemLightbox({ item, isOpen, onClose, addItem, inC
             {owned && !addedAs ? (
               <p className="flex items-center justify-center gap-1.5 py-2 text-sm font-medium text-accent-books">
                 <Library size={15} />
-                Already in your catalog
+                Already in your log
               </p>
             ) : addedAs ? (
               <p className="flex items-center justify-center gap-1.5 py-2 text-sm font-medium text-accent-books">
@@ -157,7 +157,7 @@ export default function FriendItemLightbox({ item, isOpen, onClose, addItem, inC
               </p>
             ) : (
               <>
-                <p className="text-xs font-semibold uppercase tracking-wide text-text-muted mb-2">Add to your catalog</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-text-muted mb-2">Add to your log</p>
                 <div className="grid grid-cols-3 gap-2">
                   {ADD_OPTIONS.map((o) => {
                     const Icon = o.icon

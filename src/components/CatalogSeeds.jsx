@@ -121,7 +121,7 @@ export default function CatalogSeeds({ profile, addItem }) {
     <div className="ink-card bg-bg-secondary rounded-2xl p-5 mb-6">
       <div className="flex items-center gap-2 mb-1">
         <Library size={18} className="text-accent-primary" />
-        <h2 className="font-semibold text-text-primary">Start your catalog</h2>
+        <h2 className="font-semibold text-text-primary">Start your log</h2>
       </div>
       <p className="text-xs text-text-muted mb-4">
         Pulled from the taste picks you made. Tap to add, then rate anything you have already finished.

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { Music, Film, Tv, BookOpen, Radar, Star, CalendarPlus, Plus, ArrowRight, SlidersHorizontal, Trophy, Library, MessageCircle, Users, X, Send, Flame, Check } from 'lucide-react'
+import { Music, Film, Tv, BookOpen, Radar, Star, CalendarPlus, Plus, ArrowRight, SlidersHorizontal, Trophy, Library, MessageCircle, Users, X, Send, Flame, Check, Play } from 'lucide-react'
 import { useCatalog } from '../hooks/useCatalog'
 import { useTasteProfile } from '../hooks/useTasteProfile'
 import { useScratchpad } from '../hooks/useScratchpad'
@@ -14,7 +14,7 @@ import CalibrationOnboarding from '../components/CalibrationOnboarding'
 import InsightsHero from '../components/InsightsHero'
 import QuickAdd from '../components/QuickAdd'
 import CatalogSeeds from '../components/CatalogSeeds'
-import FriendsFeedRows from '../components/FriendsFeedRows'
+import { FriendsFeedShelf } from '../components/FriendsFeedRows'
 import FriendItemLightbox from '../components/FriendItemLightbox'
 import { useFriendsFeed } from '../hooks/useFriendsFeed'
 import { usePopularItems } from '../hooks/usePopularItems'
@@ -139,6 +139,53 @@ export default function Dashboard() {
       (i) => i.type === type && i.title.trim().toLowerCase() === String(title).trim().toLowerCase()
     )
 
+  const radarCard = (
+    <>
+{/* Radar preview — one pick from each bucket */}
+<div className="ink-card bg-bg-secondary rounded-2xl p-5">
+  <div className="flex items-center justify-between mb-1">
+    <h2 className="font-semibold text-text-primary">Weekly Radar</h2>
+    <Link to="/radar" className="text-sm text-accent-primary hover:underline flex items-center gap-1">
+      See all picks <ArrowRight size={14} />
+    </Link>
+  </div>
+  <p className="text-xs text-text-muted mb-3">New & Trending · Hyped · Critics' Darlings.</p>
+  {radarIsDemo && radar && (
+    <p className="text-xs text-text-muted mb-3 italic">
+      Demo picks. Sign in for real ones.
+    </p>
+  )}
+  {radar && radarPreview.length > 0 ? (
+    <div className="space-y-2">
+      {radarPreview.map(({ bucket, item }, i) => (
+        <Link to="/radar" key={i} className="flex items-center gap-3 p-2 rounded-lg hover:bg-bg-hover transition-colors">
+          <CoverArt title={item.title} type={item.type} coverUrl={item.coverUrl} size="sm" />
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] uppercase tracking-wide text-accent-primary font-medium">{bucket}</p>
+            <p className="text-sm font-medium text-text-primary truncate">{item.title}</p>
+            <p className="text-xs text-text-muted truncate">{item.creator}</p>
+          </div>
+        </Link>
+      ))}
+    </div>
+  ) : radarLoading ? (
+    <div className="text-center py-8">
+      <Radar size={24} className="mx-auto text-text-muted/30 mb-2 animate-pulse" />
+      <p className="text-text-muted text-sm">Pulling this week's picks…</p>
+    </div>
+  ) : (
+    <div className="text-center py-8">
+      <Radar size={24} className="mx-auto text-text-muted/30 mb-2" />
+      <p className="text-text-muted text-sm mb-3">Set up your taste profile for recommendations</p>
+      <Link to="/me?tab=taste" className="inline-flex items-center gap-1 text-sm text-accent-primary hover:underline">
+        Build profile <ArrowRight size={14} />
+      </Link>
+    </div>
+  )}
+</div>
+    </>
+  )
+
   return (
     <div>
       {showOnboarding && (
@@ -169,12 +216,35 @@ export default function Dashboard() {
       </div>
 
       {/* ─── Insights — front and center + shareable ─── */}
-      <InsightsHero items={items} />
+      <InsightsHero items={items} stats={{ total: stats.total, addedThisWeek, avgRating: stats.avgRating }} />
 
       {/* ─── Quick Add ─── */}
       <div className="mb-6">
         <QuickAdd addItem={addItem} />
       </div>
+
+      {/* ─── Jump back in — the #1 reason to open a tracker ─── */}
+      {items.some((i) => i.status === 'watching') && (
+        <div className="ink-card bg-bg-secondary rounded-2xl p-5 mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Play size={18} className="text-accent-tv" />
+              <h2 className="font-semibold text-text-primary">Jump back in</h2>
+            </div>
+            <Link to="/catalog" className="text-sm text-accent-primary hover:underline flex items-center gap-1">
+              Catalog <ArrowRight size={14} />
+            </Link>
+          </div>
+          <div className="flex gap-3">
+            {items.filter((i) => i.status === 'watching').slice(0, 4).map((it) => (
+              <Link key={it.id} to="/catalog" className="shrink-0 w-20" title={it.title}>
+                <CoverArt title={it.title} type={it.type} creator={it.creator} coverUrl={it.coverUrl} size="md" />
+                <p className="text-[10px] text-text-muted truncate mt-1">{it.title}</p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ─── Catalog seeds — activation for (nearly) empty catalogs ─── */}
       {items.length < 3 && <CatalogSeeds profile={profile} addItem={addItem} />}
@@ -193,51 +263,8 @@ export default function Dashboard() {
       )}
       {!showBuildProfile && <div className="mb-2" />}
 
-      {/* ─── Stats Row — pastel-tinted tiles, numbers lead ─── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
-        {[
-          { label: 'Cataloged', value: stats.total, icon: Library, color: 'var(--color-accent-tv)', to: '/catalog' },
-          { label: 'This Week', value: addedThisWeek, icon: CalendarPlus, color: 'var(--color-accent-music)', to: '/catalog' },
-          { label: 'Avg Rating', value: stats.avgRating || '—', icon: Star, color: '#f59e0b' },
-          { label: 'Finished', value: stats.byStatus.finished, icon: Trophy, color: 'var(--color-accent-books)' },
-        ].map((stat) => {
-          const { label, value, color, to } = stat
-          const Icon = stat.icon
-          const tileStyle = {
-            backgroundColor: `color-mix(in srgb, ${color} 16%, var(--color-bg-secondary))`,
-          }
-          const inner = (
-            <>
-              <span
-                className="absolute top-0 right-0 w-8 h-8 rounded-bl-2xl"
-                style={{ backgroundColor: color }}
-                aria-hidden="true"
-              />
-              <span
-                className="text-3xl md:text-4xl font-extrabold text-text-primary leading-none tracking-tight"
-                style={{ fontFamily: 'var(--font-heading)' }}
-              >
-                {value}
-              </span>
-              <span className="text-xs font-semibold text-text-secondary flex items-center gap-1.5">
-                <Icon size={12} style={{ color: 'var(--color-text-secondary)' }} />
-                {label}
-              </span>
-            </>
-          )
-          return to ? (
-            <Link key={label} to={to} className="ink-tile relative overflow-hidden rounded-2xl p-4 flex flex-col items-start gap-1.5 hover:scale-[1.02] transition-transform" style={tileStyle}>
-              {inner}
-            </Link>
-          ) : (
-            <div key={label} className="ink-tile relative overflow-hidden rounded-2xl p-4 flex flex-col items-start gap-1.5" style={tileStyle}>
-              {inner}
-            </div>
-          )
-        })}
-      </div>
-
-
+      {/* Weekly Radar first on mobile — it lives in the right column on desktop */}
+      <div className="lg:hidden mb-6">{radarCard}</div>
 
       {/* ─── Main Grid ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
@@ -250,7 +277,7 @@ export default function Dashboard() {
               <MessageCircle size={18} className="text-accent-primary" />
               <h2 className="font-semibold text-text-primary">Someone Told Me About...</h2>
             </div>
-            <p className="text-xs text-text-muted mb-3">Your parking lot for when you are vetting recommendations to add to your catalog.</p>
+            <p className="text-xs text-text-muted mb-3">Your parking lot for when you are vetting recommendations to add to your log.</p>
 
             {/* Type toggle — determines which API to search */}
             <div className="flex gap-1 mb-3">
@@ -346,7 +373,7 @@ export default function Dashboard() {
                       </div>
                       {note.type && (
                         inCatalog(note.text, note.type) ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-accent-books shrink-0" title="Already in your catalog">
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-accent-books shrink-0" title="Already in your log">
                             <Check size={12} />
                             Saved
                           </span>
@@ -365,7 +392,7 @@ export default function Dashboard() {
                               deleteNote(note.id)
                             }}
                             className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-accent-primary text-white hover:bg-accent-hover transition-colors shrink-0"
-                            title="Move to your catalog (Want to Try)"
+                            title="Move to your log (Want to Try)"
                           >
                             <Plus size={12} />
                             Add
@@ -399,13 +426,10 @@ export default function Dashboard() {
                 See all <ArrowRight size={14} />
               </Link>
             </div>
-            <p className="text-xs text-text-muted mb-2">Tap Add to grab something for your catalog.</p>
+            <p className="text-xs text-text-muted mb-2">Tap anything to check it out.</p>
             {friendsFeed.items.length > 0 ? (
-              <FriendsFeedRows
+              <FriendsFeedShelf
                 items={friendsFeed.items}
-                addItem={addItem}
-                inCatalog={inCatalog}
-                compact
                 onItemClick={(it) => setFriendDetailItem({ ...it, friendName: it.displayName })}
               />
             ) : (
@@ -420,48 +444,8 @@ export default function Dashboard() {
 
         {/* Right column */}
         <div className="space-y-6">
-          {/* Radar preview — one pick from each bucket */}
-          <div className="ink-card bg-bg-secondary rounded-2xl p-5">
-            <div className="flex items-center justify-between mb-1">
-              <h2 className="font-semibold text-text-primary">Weekly Radar</h2>
-              <Link to="/radar" className="text-sm text-accent-primary hover:underline flex items-center gap-1">
-                See all picks <ArrowRight size={14} />
-              </Link>
-            </div>
-            <p className="text-xs text-text-muted mb-3">New & Trending · Hyped · Critics' Darlings.</p>
-            {radarIsDemo && radar && (
-              <p className="text-xs text-text-muted mb-3 italic">
-                Demo picks. Sign in for real ones.
-              </p>
-            )}
-            {radar && radarPreview.length > 0 ? (
-              <div className="space-y-2">
-                {radarPreview.map(({ bucket, item }, i) => (
-                  <Link to="/radar" key={i} className="flex items-center gap-3 p-2 rounded-lg hover:bg-bg-hover transition-colors">
-                    <CoverArt title={item.title} type={item.type} coverUrl={item.coverUrl} size="sm" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[10px] uppercase tracking-wide text-accent-primary font-medium">{bucket}</p>
-                      <p className="text-sm font-medium text-text-primary truncate">{item.title}</p>
-                      <p className="text-xs text-text-muted truncate">{item.creator}</p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            ) : radarLoading ? (
-              <div className="text-center py-8">
-                <Radar size={24} className="mx-auto text-text-muted/30 mb-2 animate-pulse" />
-                <p className="text-text-muted text-sm">Pulling this week's picks…</p>
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Radar size={24} className="mx-auto text-text-muted/30 mb-2" />
-                <p className="text-text-muted text-sm mb-3">Set up your taste profile for recommendations</p>
-                <Link to="/me?tab=taste" className="inline-flex items-center gap-1 text-sm text-accent-primary hover:underline">
-                  Build profile <ArrowRight size={14} />
-                </Link>
-              </div>
-            )}
-          </div>
+          {/* Radar preview — rendered from radarCard (mobile + desktop slots) */}
+          <div className="hidden lg:block">{radarCard}</div>
 
           {/* Popular with Users — anonymous aggregate of what people are adding */}
           {popular.items.length > 0 && (
@@ -481,7 +465,7 @@ export default function Dashboard() {
                         <p className="text-sm font-medium text-text-primary truncate">{item.title}</p>
                         <p className="text-xs text-text-muted truncate">
                           {item.creator ? `${item.creator} · ` : ''}
-                          <span style={{ color: getMediaColor(item.type) }}>{item.userCount} people added this</span>
+                          <span style={{ color: getMediaColor(item.type) }}>{item.userCount} people logged this</span>
                         </p>
                       </div>
                       {owned ? (
@@ -514,26 +498,23 @@ export default function Dashboard() {
           {/* Recent in Catalog */}
           <div className="ink-card bg-bg-secondary rounded-2xl p-5">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold text-text-primary">Recent in Catalog</h2>
+              <h2 className="font-semibold text-text-primary">Recently Logged</h2>
               <Link to="/catalog" className="text-sm text-accent-primary hover:underline flex items-center gap-1">
                 View all <ArrowRight size={14} />
               </Link>
             </div>
             {recentItems.length > 0 ? (
-              <div className="space-y-2">
+              <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-1 px-1 pb-1">
                 {recentItems.map((item) => {
                   return (
-                    <Link to="/catalog" key={item.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-bg-hover transition-colors">
-                      <CoverArt title={item.title} type={item.type} coverUrl={item.coverUrl} size="sm" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-text-primary truncate">{item.title}</p>
-                        <p className="text-xs text-text-muted truncate">{item.creator}</p>
-                      </div>
+                    <Link to="/catalog" key={item.id} className="w-24 shrink-0 group" title={item.title}>
+                      <CoverArt title={item.title} type={item.type} creator={item.creator} coverUrl={item.coverUrl} size="md" />
+                      <p className="text-xs font-medium text-text-primary truncate mt-1.5">{item.title}</p>
                       {item.rating > 0 && (
-                        <div className="flex items-center gap-1 text-amber-500 shrink-0">
-                          <Star size={12} fill="currentColor" />
-                          <span className="text-xs font-medium">{item.rating}</span>
-                        </div>
+                        <span className="flex items-center gap-0.5 text-[10px] font-semibold text-amber-500">
+                          <Star size={9} fill="currentColor" />
+                          {item.rating}
+                        </span>
                       )}
                     </Link>
                   )

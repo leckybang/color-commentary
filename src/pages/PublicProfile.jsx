@@ -238,7 +238,7 @@ export default function PublicProfile({ isSelf }) {
       {/* Quick stats — visible on own profile and on a friend's (from their catalog) */}
       <div className="grid grid-cols-3 gap-3 mb-8">
         {[
-          { label: 'Cataloged', value: stats.total, color: 'var(--color-accent-tv)' },
+          { label: 'Logged', value: stats.total, color: 'var(--color-accent-tv)' },
           { label: 'Avg Rating', value: stats.avgRating || '—', color: '#f59e0b' },
           { label: 'Finished', value: stats.byStatus.finished, color: 'var(--color-accent-books)' },
         ].map((s) => (
@@ -306,11 +306,11 @@ export default function PublicProfile({ isSelf }) {
         <div className="flex items-center justify-between mb-1">
           <h2 className="text-lg font-bold text-text-primary">Right Now</h2>
           {isOwnProfile && (
-            <Link to="/catalog" className="text-xs text-accent-primary hover:underline">View catalog</Link>
+            <Link to="/catalog" className="text-xs text-accent-primary hover:underline">View log</Link>
           )}
         </div>
         <p className="text-xs text-text-muted mb-4">
-          {isOwnProfile ? 'Most recent in the catalog' : 'Most recent additions'}
+          {isOwnProfile ? 'Most recent in the log' : 'Most recent additions'}
         </p>
         {recentlyAdded.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
