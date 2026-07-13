@@ -49,7 +49,12 @@ async function fetchVolumes(q, { signal } = {}) {
       return []
     }
     const data = await res.json()
-    return data.items || []
+    // langRestrict is leaky: foreign editions come back with their own
+    // language field intact. Trust the field, in every query path.
+    return (data.items || []).filter((it) => {
+      const lang = it?.volumeInfo?.language
+      return !lang || lang === 'en'
+    })
   } catch (err) {
     if (err.name !== 'AbortError') console.error('Google Books search failed', err)
     return []
@@ -121,10 +126,6 @@ export async function searchGoogleBooks(query, { signal } = {}) {
     for (const item of items) {
       if (!item?.id || seen.has(item.id)) continue
       seen.add(item.id)
-      // langRestrict is leaky — foreign editions slip through with their own
-      // language field intact. Trust the field.
-      const lang = item.volumeInfo?.language
-      if (lang && lang !== 'en') continue
       scored.push({ score: readabilityScore(item, q), item })
     }
   }
