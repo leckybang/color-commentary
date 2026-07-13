@@ -29,7 +29,8 @@ function weekKey() {
 }
 
 function cacheKey(uid) {
-  return `cc_radar_${uid}_${weekKey()}`
+  // v2: bucket shape gained `fresh` (New & Trending); old caches lack it.
+  return `cc_radar_v2_${uid}_${weekKey()}`
 }
 
 function readCache(uid) {
@@ -184,7 +185,45 @@ async function buildRealRadar({ signal } = {}) {
   const tag = (items, bucket, extras = {}) =>
     items.map((it) => ({ ...it, bucket, isTastemaker: true, ...extras(it) }))
 
-  // ── HYPED ──
+  const daysOld = (d) => (d ? (Date.now() - new Date(d).getTime()) / 86400000 : Infinity)
+  const itemKey = (it) => `${it.type}:${(it.externalId || it.title || '').toString().toLowerCase()}`
+
+  // ── NEW & TRENDING — strictly current, built first so the other buckets
+  // can exclude anything shown here. This is the antidote to list warhorses
+  // (a book can sit on the NYT list for a year; it isn't *new*).
+  const freshBooks = booksNYT
+    .filter((b) => (b.weeksOnList ?? 99) <= 4)
+    .sort((a, b) => (a.rank || 99) - (b.rank || 99))
+    .slice(0, 3)
+  const freshMovies = [...movies]
+    .filter((m) => daysOld(m.releaseDate) <= 21 && (m.voteCount || 0) >= 10)
+    .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
+    .slice(0, 2)
+  const freshTV = [...tv]
+    .filter((t) => daysOld(t.releaseDate) <= 30 && (t.voteCount || 0) >= 5)
+    .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
+    .slice(0, 2)
+  const freshPitchfork = pitchfork
+    .filter((p) => daysOld(p.releaseDate) <= 14)
+    .slice(0, 2)
+    .map((p) => ({ ...p, bucket: 'fresh', isTastemaker: true }))
+  // Spotify tag:new is inherently ≤ ~2 weeks old — it lives here now.
+  const freshSpotify = tag((music || []).slice(0, 2), 'fresh', () => ({ source: 'New on Spotify', blurb: '' }))
+
+  const fresh = [
+    ...tag(freshBooks, 'fresh', (b) => ({
+      source: (b.weeksOnList ?? 99) <= 1 ? 'Debuted on the NYT list this week' : `New to the NYT list${b.rank ? ` · #${b.rank}` : ''}`,
+      blurb: b.description || '',
+    })),
+    ...tag(freshMovies, 'fresh', (m) => ({ source: 'Just released · trending', blurb: m.description || '' })),
+    ...tag(freshTV, 'fresh', (t) => ({ source: 'Just premiered · trending', blurb: t.description || '' })),
+    ...freshPitchfork,
+    ...freshSpotify,
+  ]
+  const freshKeys = new Set(fresh.map(itemKey))
+
+  // ── HYPED ── (long-running list warhorses capped at ~3 months so the same
+  // titles don't park here forever)
   const hypedMovies = [...movies]
     .filter((m) => (m.voteAverage || 0) >= 7 && (m.voteCount || 0) >= 100)
     .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
@@ -193,21 +232,21 @@ async function buildRealRadar({ signal } = {}) {
     .filter((t) => (t.voteAverage || 0) >= 7 && (t.voteCount || 0) >= 50)
     .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
     .slice(0, 3)
-  const hypedBooks = booksNYT.filter((b) => (b.rank || 99) <= 5).slice(0, 3)
+  const hypedBooks = booksNYT
+    .filter((b) => (b.rank || 99) <= 5 && (b.weeksOnList ?? 99) <= 8)
+    .sort((a, b) => (a.weeksOnList ?? 99) - (b.weeksOnList ?? 99))
+    .slice(0, 3)
 
   // Music: Pitchfork is the reliable backbone (real titles + real review
-  // URLs). Spotify supplements when available. Each pick keeps its own
-  // honest source/review tag.
+  // URLs). Each pick keeps its own honest source/review tag.
   const hypedPitchfork = pitchfork.slice(0, 2).map((p) => ({ ...p, bucket: 'hyped', isTastemaker: true }))
-  const hypedSpotify = tag((music || []).slice(0, 2), 'hyped', () => ({ source: 'New on Spotify', blurb: '' }))
 
   const hyped = [
     ...tag(hypedBooks, 'hyped', (b) => ({ source: `NYT Best Seller${b.rank ? ` · #${b.rank}` : ''}`, blurb: b.description || 'A current New York Times best seller.' })),
     ...tag(hypedMovies, 'hyped', (m) => ({ source: `Critics ${m.voteAverage.toFixed(1)}/10 · trending`, blurb: m.description || '' })),
     ...tag(hypedTV, 'hyped', (t) => ({ source: `Critics ${t.voteAverage.toFixed(1)}/10 · trending`, blurb: t.description || '' })),
     ...hypedPitchfork,
-    ...hypedSpotify,
-  ]
+  ].filter((it) => !freshKeys.has(itemKey(it)))
 
   // ── CRITICS' DARLINGS ──
   const reviewedBooks = booksNYT.filter((b) => b.reviewUrl).slice(0, 3)
@@ -230,20 +269,25 @@ async function buildRealRadar({ signal } = {}) {
     ...darlingsPitchfork,
     ...tag(acclaimedMovies, 'darlings', (m) => ({ source: `Critics' score ${m.voteAverage.toFixed(1)}/10`, blurb: m.description || '' })),
     ...tag(acclaimedTV, 'darlings', (t) => ({ source: `Critics' score ${t.voteAverage.toFixed(1)}/10`, blurb: t.description || '' })),
-  ]
+  ].filter((it) => !freshKeys.has(itemKey(it)))
 
   // Backfill cover art for anything missing it (e.g. Pitchfork RSS items).
-  let [hypedFinal, darlingsFinal] = await Promise.all([
+  let [freshFinal, hypedFinal, darlingsFinal] = await Promise.all([
+    enrichCoverArt(fresh, { signal }),
     enrichCoverArt(hyped, { signal }),
     enrichCoverArt(darlings, { signal }),
   ])
 
   // Enrich TMDB items (movies / TV) with director + lead cast. Cheap parallel
   // calls; missing credits just leave creator/cast empty.
-  hypedFinal = await enrichTMDBCredits(hypedFinal, { signal })
-  darlingsFinal = await enrichTMDBCredits(darlingsFinal, { signal })
+  ;[freshFinal, hypedFinal, darlingsFinal] = await Promise.all([
+    enrichTMDBCredits(freshFinal, { signal }),
+    enrichTMDBCredits(hypedFinal, { signal }),
+    enrichTMDBCredits(darlingsFinal, { signal }),
+  ])
 
   return {
+    fresh: freshFinal,
     hyped: hypedFinal,
     darlings: darlingsFinal,
     generatedAt: new Date().toISOString(),
