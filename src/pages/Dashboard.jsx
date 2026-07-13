@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { Music, Film, Tv, BookOpen, Radar, Star, CalendarPlus, Plus, ArrowRight, SlidersHorizontal, Trophy, Library, MessageCircle, Users, X, Send, Flame, Check } from 'lucide-react'
+import { Music, Film, Tv, BookOpen, Radar, Star, CalendarPlus, Plus, ArrowRight, SlidersHorizontal, Trophy, Library, MessageCircle, Users, X, Send, Flame, Check, Play } from 'lucide-react'
 import { useCatalog } from '../hooks/useCatalog'
 import { useTasteProfile } from '../hooks/useTasteProfile'
 import { useScratchpad } from '../hooks/useScratchpad'
@@ -175,6 +175,29 @@ export default function Dashboard() {
       <div className="mb-6">
         <QuickAdd addItem={addItem} />
       </div>
+
+      {/* ─── Jump back in — the #1 reason to open a tracker ─── */}
+      {items.some((i) => i.status === 'watching') && (
+        <div className="ink-card bg-bg-secondary rounded-2xl p-5 mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Play size={18} className="text-accent-tv" />
+              <h2 className="font-semibold text-text-primary">Jump back in</h2>
+            </div>
+            <Link to="/catalog" className="text-sm text-accent-primary hover:underline flex items-center gap-1">
+              Catalog <ArrowRight size={14} />
+            </Link>
+          </div>
+          <div className="flex gap-3 overflow-x-auto pb-1">
+            {items.filter((i) => i.status === 'watching').slice(0, 8).map((it) => (
+              <Link key={it.id} to="/catalog" className="shrink-0 w-20" title={it.title}>
+                <CoverArt title={it.title} type={it.type} creator={it.creator} coverUrl={it.coverUrl} size="md" />
+                <p className="text-[10px] text-text-muted truncate mt-1">{it.title}</p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ─── Catalog seeds — activation for (nearly) empty catalogs ─── */}
       {items.length < 3 && <CatalogSeeds profile={profile} addItem={addItem} />}

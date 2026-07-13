@@ -3,9 +3,9 @@ import { useSearchParams } from 'react-router-dom'
 import { Plus, LayoutGrid, List, Music, Film, Tv, BookOpen, Trash2, Pin, PinOff, GripVertical, ArrowUp, ArrowDown, Search, SlidersHorizontal, Target, Library, Play, Check, X, Eye, EyeOff } from 'lucide-react'
 import { useCatalog } from '../hooks/useCatalog'
 import { useNextUp } from '../hooks/useNextUp'
-import MediaCard from '../components/common/MediaCard'
 import FilterBar from '../components/common/FilterBar'
 import StarRating from '../components/common/StarRating'
+import CoverArt from '../components/common/CoverArt'
 import Modal from '../components/common/Modal'
 import ExternalLinks from '../components/common/ExternalLinks'
 import MediaPickerInput from '../components/common/MediaPickerInput'
@@ -234,33 +234,47 @@ export default function Catalog() {
   }
 
   // Render an item card in a status section, with optional pin affordance
+  // Dense, cover-first tile: a dozen visible at once, tap for the full
+  // lightbox (status changes, rating, delete all live there).
   const renderCatalogItem = (item) => {
     const showPin = item.status === 'want' && !isInNextUp(item.id)
     const pinned = isInNextUp(item.id)
+    const section = STATUS_SECTIONS.find((s) => s.key === item.status)
     return (
-      <div key={item.id} className="relative group">
-        <MediaCard item={item} onClick={openLightbox} onUpdate={updateItem} onFinish={handleFinish} />
-        {item.status === 'want' && (
-          <button
-            type="button"
-            onClick={(e) => togglePin(item, e)}
-            disabled={showPin && nextUpFull}
-            title={
-              pinned
-                ? 'Unpin from Next Up'
-                : nextUpFull
-                ? `Next Up is full (${MAX_NEXT_UP} max)`
-                : 'Pin to Next Up'
-            }
-            className={`absolute top-3 right-3 p-1.5 rounded-lg transition-all ${
-              pinned
-                ? 'bg-accent-primary text-white shadow-md'
-                : 'bg-bg-tertiary text-text-muted opacity-0 group-hover:opacity-100 hover:text-accent-primary disabled:cursor-not-allowed disabled:opacity-30'
-            }`}
-          >
-            {pinned ? <PinOff size={13} /> : <Pin size={13} />}
-          </button>
-        )}
+      <div key={item.id} className="group cursor-pointer" onClick={() => openLightbox(item)}>
+        <div className="relative w-28 mx-auto">
+          <CoverArt title={item.title} type={item.type} creator={item.creator} coverUrl={item.coverUrl} size="lg" />
+          {item.status === 'want' && (
+            <button
+              type="button"
+              onClick={(e) => togglePin(item, e)}
+              disabled={showPin && nextUpFull}
+              title={
+                pinned
+                  ? 'Unpin from Next Up'
+                  : nextUpFull
+                  ? `Next Up is full (${MAX_NEXT_UP} max)`
+                  : 'Pin to Next Up'
+              }
+              className={`absolute top-1.5 right-1.5 p-1.5 rounded-lg transition-all ${
+                pinned
+                  ? 'bg-accent-primary text-white shadow-md'
+                  : 'bg-bg-primary/80 text-text-muted opacity-70 sm:opacity-0 sm:group-hover:opacity-100 hover:text-accent-primary disabled:cursor-not-allowed disabled:opacity-30'
+              }`}
+            >
+              {pinned ? <PinOff size={13} /> : <Pin size={13} />}
+            </button>
+          )}
+        </div>
+        <p className="text-xs font-medium text-text-primary truncate mt-1.5 text-center">{item.title}</p>
+        <div className="flex items-center justify-center gap-1 mt-0.5 min-h-[14px]">
+          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: section?.color || 'var(--color-text-muted)' }} aria-hidden="true" />
+          {item.rating > 0 ? (
+            <span className="text-[10px] font-semibold text-amber-500">★ {item.rating}</span>
+          ) : (
+            <span className="text-[10px] text-text-muted truncate">{section?.label || ''}</span>
+          )}
+        </div>
       </div>
     )
   }
@@ -282,7 +296,7 @@ export default function Catalog() {
             {sectionItems.length}
           </span>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-x-3 gap-y-5">
           {sectionItems.map(renderCatalogItem)}
         </div>
       </section>
@@ -380,6 +394,46 @@ export default function Catalog() {
         <CatalogInsights items={items} onItemClick={openLightbox} />
       </div>
 
+      {/* Just added — the thing you entered ten seconds ago, visibly here */}
+      {!hasActiveFilters && items.length > 0 && (
+        <div className="mb-5">
+          <p className="text-[11px] font-bold uppercase tracking-[2px] text-text-muted mb-2">Just added</p>
+          <div className="flex gap-3 overflow-x-auto pb-1">
+            {[...items]
+              .sort((a, b) => new Date(b.dateAdded || 0) - new Date(a.dateAdded || 0))
+              .slice(0, 6)
+              .map((it) => (
+                <button key={it.id} onClick={() => openLightbox(it)} className="shrink-0 w-16 text-left" title={it.title}>
+                  <CoverArt title={it.title} type={it.type} creator={it.creator} coverUrl={it.coverUrl} size="radar" />
+                  <p className="text-[10px] text-text-muted truncate mt-1">{it.title}</p>
+                </button>
+              ))}
+          </div>
+        </div>
+      )}
+
+      {/* Status pills — one tap to the shelf you're looking for */}
+      <div className="flex gap-2 overflow-x-auto pb-1 mb-4">
+        {[{ key: 'all', label: 'All', color: 'var(--color-accent-primary)' }, ...STATUS_SECTIONS].map((s) => {
+          const count = s.key === 'all' ? items.length : items.filter((i) => i.status === s.key).length
+          if (s.key === 'dropped' && count === 0) return null
+          const active = (filters.status || 'all') === s.key
+          return (
+            <button
+              key={s.key}
+              onClick={() => setFilters({ ...filters, status: s.key === 'all' ? undefined : s.key })}
+              className={`shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold border-[1.5px] transition-all ${
+                active ? 'border-transparent' : 'border-border bg-bg-secondary text-text-muted hover:text-text-secondary hover:bg-bg-hover'
+              }`}
+              style={active ? { backgroundColor: `color-mix(in srgb, ${s.color} 20%, var(--color-bg-secondary))`, color: s.color, borderColor: `color-mix(in srgb, ${s.color} 45%, transparent)` } : {}}
+            >
+              {s.label}
+              <span className={active ? 'opacity-80' : 'opacity-60'}>{count}</span>
+            </button>
+          )
+        })}
+      </div>
+
       {/* Secondary: filter / search existing items. Demoted under the primary action. */}
       <details className="mb-6 group">
         <summary className="cursor-pointer list-none flex items-center justify-between text-xs text-text-muted hover:text-text-secondary transition-colors px-1 py-1.5 select-none">
@@ -423,7 +477,7 @@ export default function Catalog() {
       ) : hasActiveFilters || viewMode === 'list' ? (
         // Flat grid / list when filters active or list view requested
         viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-x-3 gap-y-5">
             {filtered.map(renderCatalogItem)}
           </div>
         ) : (
