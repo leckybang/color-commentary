@@ -10,6 +10,7 @@ import { X, Star, Bookmark, Play, Check, Library } from 'lucide-react'
 import CoverArt from './common/CoverArt'
 import ExternalLinks from './common/ExternalLinks'
 import { getMediaColor } from '../utils/filterUtils'
+import { splitAccolades } from '../utils/mediaText'
 
 const TYPE_LABELS = { music: 'Music', movie: 'Movie', tv: 'TV', book: 'Book' }
 
@@ -137,8 +138,36 @@ export default function FriendItemLightbox({ item, isOpen, onClose, addItem, inC
             </div>
           </div>
 
-          {detail?.description && (
-            <p className="text-sm text-text-secondary leading-relaxed">{detail.description}</p>
+          {detail?.description && (() => {
+            const { accolades, body } = splitAccolades(detail.description)
+            return (
+              <div className="space-y-2">
+                {accolades && (
+                  <p className="text-[11px] text-text-muted italic leading-relaxed border-l-2 border-border pl-2.5">
+                    {accolades}
+                  </p>
+                )}
+                <p className="text-sm text-text-secondary leading-relaxed">{body}</p>
+              </div>
+            )
+          })()}
+
+          {(detail?.credits?.director || (detail?.credits?.cast || []).length > 0) && (
+            <p className="text-xs text-text-secondary leading-relaxed">
+              {detail.credits.director && (
+                <>
+                  <span className="text-text-muted">{item.type === 'tv' ? 'Created by' : 'Directed by'}</span>{' '}
+                  <span className="font-medium">{detail.credits.director}</span>
+                </>
+              )}
+              {detail.credits.director && (detail.credits.cast || []).length > 0 && ' · '}
+              {(detail.credits.cast || []).length > 0 && (
+                <>
+                  <span className="text-text-muted">Starring</span>{' '}
+                  <span className="font-medium">{detail.credits.cast.join(', ')}</span>
+                </>
+              )}
+            </p>
           )}
 
           <ExternalLinks type={item.type} title={item.title} creator={item.creator} />

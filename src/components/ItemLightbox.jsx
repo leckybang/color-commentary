@@ -14,6 +14,7 @@ import CoverArt from './common/CoverArt'
 import ExternalLinks from './common/ExternalLinks'
 import SuggestionLightbox from './SuggestionLightbox'
 import { getMediaColor } from '../utils/filterUtils'
+import { splitAccolades } from '../utils/mediaText'
 
 const DETAIL_TTL_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
 
@@ -28,7 +29,7 @@ const STATUS_PICKER = [
 ]
 
 function detailCacheKey(itemId) {
-  return `cc_detail_v1_${itemId}`
+  return `cc_detail_v2_${itemId}`
 }
 
 function readDetailCache(itemId) {
@@ -341,13 +342,38 @@ export default function ItemLightbox({ item, isOpen, onClose, onEdit, onUpdate, 
 
               {!detailLoading && !detailError && detail && (
                 <>
-                  {/* About */}
-                  {detail.description && (
-                    <div>
-                      <h3 className="text-sm font-semibold text-text-primary mb-1.5">About</h3>
-                      <p className="text-sm text-text-secondary leading-relaxed">{detail.description}</p>
-                    </div>
-                  )}
+                  {/* About — praise quotes split from the actual synopsis */}
+                  {detail.description && (() => {
+                    const { accolades, body } = splitAccolades(detail.description)
+                    return (
+                      <div>
+                        <h3 className="text-sm font-semibold text-text-primary mb-1.5">About</h3>
+                        {accolades && (
+                          <p className="text-[11px] text-text-muted italic leading-relaxed border-l-2 border-border pl-2.5 mb-2">
+                            {accolades}
+                          </p>
+                        )}
+                        <p className="text-sm text-text-secondary leading-relaxed">{body}</p>
+                        {(detail.credits?.director || (detail.credits?.cast || []).length > 0) && (
+                          <p className="text-xs text-text-secondary leading-relaxed mt-2">
+                            {detail.credits.director && (
+                              <>
+                                <span className="text-text-muted">{item.type === 'tv' ? 'Created by' : 'Directed by'}</span>{' '}
+                                <span className="font-medium">{detail.credits.director}</span>
+                              </>
+                            )}
+                            {detail.credits.director && (detail.credits.cast || []).length > 0 && ' · '}
+                            {(detail.credits.cast || []).length > 0 && (
+                              <>
+                                <span className="text-text-muted">Starring</span>{' '}
+                                <span className="font-medium">{detail.credits.cast.join(', ')}</span>
+                              </>
+                            )}
+                          </p>
+                        )}
+                      </div>
+                    )
+                  })()}
 
                   {/* Related / More by */}
                   {related.length > 0 && (
