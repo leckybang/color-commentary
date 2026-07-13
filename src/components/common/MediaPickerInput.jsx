@@ -107,7 +107,7 @@ export default function MediaPickerInput({
           onKeyDown={handleKeyDown}
           onFocus={() => !hasPicked && setShowDropdown(true)}
           placeholder={placeholder}
-          className="w-full bg-bg-tertiary border border-border rounded-lg pl-9 pr-9 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-primary transition-colors"
+          className="w-full bg-bg-secondary border border-border rounded-lg pl-9 pr-9 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-primary transition-colors"
         />
         {loading && !hasPicked && (
           <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted animate-spin" />
