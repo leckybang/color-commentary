@@ -1,7 +1,8 @@
 /**
- * FriendItemLightbox — tap into something a friend cataloged, learn more,
- * and grab it for your own catalog with the status that fits (Want to Try /
- * In Progress / Finished). Used by the friends feed and friend profiles.
+ * FriendItemLightbox — tap into something a friend cataloged (or a note you
+ * parked in the scratchpad), learn more, and grab it for your own catalog
+ * with the status that fits (Want to Try / In Progress / Finished). Used by
+ * the friends feed, friend profiles, and Someone Told Me About.
  */
 
 import { useEffect, useRef, useState } from 'react'
@@ -21,7 +22,7 @@ const ADD_OPTIONS = [
 // Session-scoped detail cache so reopening the same title doesn't refetch.
 const detailCache = new Map()
 
-export default function FriendItemLightbox({ item, isOpen, onClose, addItem, inCatalog }) {
+export default function FriendItemLightbox({ item, isOpen, onClose, addItem, inCatalog, onAdded }) {
   const overlayRef = useRef(null)
   const fetchRef = useRef(0)
   const [detail, setDetail] = useState(null)
@@ -88,6 +89,7 @@ export default function FriendItemLightbox({ item, isOpen, onClose, addItem, inC
       ...(status === 'finished' ? { dateConsumed: new Date().toISOString() } : {}),
     })
     setAddedAs(status)
+    onAdded?.(item, status)
   }
 
   return (
@@ -103,7 +105,7 @@ export default function FriendItemLightbox({ item, isOpen, onClose, addItem, inC
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
           <p className="text-xs font-semibold uppercase tracking-wide text-text-muted">
-            {item.friendName ? `From ${item.friendName}'s catalog` : 'From a friend'}
+            {item.sourceLabel || (item.friendName ? `From ${item.friendName}'s catalog` : 'From a friend')}
           </p>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-bg-hover transition-colors text-text-secondary">
             <X size={18} />

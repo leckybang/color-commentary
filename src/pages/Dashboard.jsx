@@ -297,7 +297,19 @@ export default function Dashboard() {
                   const TypeIcon = note.type ? TYPE_ICONS[note.type] : null
                   const typeColor = note.type ? getMediaColor(note.type) : null
                   return (
-                    <div key={note.id} className="flex items-center gap-3 group p-2 rounded-lg hover:bg-bg-tertiary transition-colors">
+                    <div
+                      key={note.id}
+                      className={`flex items-center gap-3 group p-2 rounded-lg hover:bg-bg-tertiary transition-colors ${note.type ? 'cursor-pointer' : ''}`}
+                      onClick={note.type ? () => setFriendDetailItem({
+                        title: note.text,
+                        creator: note.creator || '',
+                        type: note.type,
+                        year: note.year || '',
+                        coverUrl: note.coverUrl || '',
+                        sourceLabel: 'From your scratchpad',
+                        noteId: note.id,
+                      }) : undefined}
+                    >
                       {note.coverUrl ? (
                         <img
                           src={note.coverUrl}
@@ -329,7 +341,8 @@ export default function Dashboard() {
                           </span>
                         ) : (
                           <button
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation()
                               addItem({
                                 title: note.text,
                                 creator: note.creator || '',
@@ -349,7 +362,7 @@ export default function Dashboard() {
                         )
                       )}
                       <button
-                        onClick={() => deleteNote(note.id)}
+                        onClick={(e) => { e.stopPropagation(); deleteNote(note.id) }}
                         className="p-1 rounded text-text-muted/0 group-hover:text-text-muted hover:text-accent-movies transition-colors shrink-0"
                         title="Not interested, remove"
                       >
@@ -532,6 +545,7 @@ export default function Dashboard() {
         onClose={() => setFriendDetailItem(null)}
         addItem={addItem}
         inCatalog={inCatalog}
+        onAdded={(it) => { if (it.noteId) deleteNote(it.noteId) }}
       />
     </div>
   )
