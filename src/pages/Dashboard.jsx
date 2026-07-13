@@ -139,6 +139,53 @@ export default function Dashboard() {
       (i) => i.type === type && i.title.trim().toLowerCase() === String(title).trim().toLowerCase()
     )
 
+  const radarCard = (
+    <>
+{/* Radar preview — one pick from each bucket */}
+<div className="ink-card bg-bg-secondary rounded-2xl p-5">
+  <div className="flex items-center justify-between mb-1">
+    <h2 className="font-semibold text-text-primary">Weekly Radar</h2>
+    <Link to="/radar" className="text-sm text-accent-primary hover:underline flex items-center gap-1">
+      See all picks <ArrowRight size={14} />
+    </Link>
+  </div>
+  <p className="text-xs text-text-muted mb-3">New & Trending · Hyped · Critics' Darlings.</p>
+  {radarIsDemo && radar && (
+    <p className="text-xs text-text-muted mb-3 italic">
+      Demo picks. Sign in for real ones.
+    </p>
+  )}
+  {radar && radarPreview.length > 0 ? (
+    <div className="space-y-2">
+      {radarPreview.map(({ bucket, item }, i) => (
+        <Link to="/radar" key={i} className="flex items-center gap-3 p-2 rounded-lg hover:bg-bg-hover transition-colors">
+          <CoverArt title={item.title} type={item.type} coverUrl={item.coverUrl} size="sm" />
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] uppercase tracking-wide text-accent-primary font-medium">{bucket}</p>
+            <p className="text-sm font-medium text-text-primary truncate">{item.title}</p>
+            <p className="text-xs text-text-muted truncate">{item.creator}</p>
+          </div>
+        </Link>
+      ))}
+    </div>
+  ) : radarLoading ? (
+    <div className="text-center py-8">
+      <Radar size={24} className="mx-auto text-text-muted/30 mb-2 animate-pulse" />
+      <p className="text-text-muted text-sm">Pulling this week's picks…</p>
+    </div>
+  ) : (
+    <div className="text-center py-8">
+      <Radar size={24} className="mx-auto text-text-muted/30 mb-2" />
+      <p className="text-text-muted text-sm mb-3">Set up your taste profile for recommendations</p>
+      <Link to="/me?tab=taste" className="inline-flex items-center gap-1 text-sm text-accent-primary hover:underline">
+        Build profile <ArrowRight size={14} />
+      </Link>
+    </div>
+  )}
+</div>
+    </>
+  )
+
   return (
     <div>
       {showOnboarding && (
@@ -169,7 +216,7 @@ export default function Dashboard() {
       </div>
 
       {/* ─── Insights — front and center + shareable ─── */}
-      <InsightsHero items={items} />
+      <InsightsHero items={items} stats={{ total: stats.total, addedThisWeek, avgRating: stats.avgRating }} />
 
       {/* ─── Quick Add ─── */}
       <div className="mb-6">
@@ -216,51 +263,8 @@ export default function Dashboard() {
       )}
       {!showBuildProfile && <div className="mb-2" />}
 
-      {/* ─── Stats Row — pastel-tinted tiles, numbers lead ─── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
-        {[
-          { label: 'Cataloged', value: stats.total, icon: Library, color: 'var(--color-accent-tv)', to: '/catalog' },
-          { label: 'This Week', value: addedThisWeek, icon: CalendarPlus, color: 'var(--color-accent-music)', to: '/catalog' },
-          { label: 'Avg Rating', value: stats.avgRating || '—', icon: Star, color: '#f59e0b' },
-          { label: 'Finished', value: stats.byStatus.finished, icon: Trophy, color: 'var(--color-accent-books)' },
-        ].map((stat) => {
-          const { label, value, color, to } = stat
-          const Icon = stat.icon
-          const tileStyle = {
-            backgroundColor: `color-mix(in srgb, ${color} 16%, var(--color-bg-secondary))`,
-          }
-          const inner = (
-            <>
-              <span
-                className="absolute top-0 right-0 w-8 h-8 rounded-bl-2xl"
-                style={{ backgroundColor: color }}
-                aria-hidden="true"
-              />
-              <span
-                className="text-3xl md:text-4xl font-extrabold text-text-primary leading-none tracking-tight"
-                style={{ fontFamily: 'var(--font-heading)' }}
-              >
-                {value}
-              </span>
-              <span className="text-xs font-semibold text-text-secondary flex items-center gap-1.5">
-                <Icon size={12} style={{ color: 'var(--color-text-secondary)' }} />
-                {label}
-              </span>
-            </>
-          )
-          return to ? (
-            <Link key={label} to={to} className="ink-tile relative overflow-hidden rounded-2xl p-4 flex flex-col items-start gap-1.5 hover:scale-[1.02] transition-transform" style={tileStyle}>
-              {inner}
-            </Link>
-          ) : (
-            <div key={label} className="ink-tile relative overflow-hidden rounded-2xl p-4 flex flex-col items-start gap-1.5" style={tileStyle}>
-              {inner}
-            </div>
-          )
-        })}
-      </div>
-
-
+      {/* Weekly Radar first on mobile — it lives in the right column on desktop */}
+      <div className="lg:hidden mb-6">{radarCard}</div>
 
       {/* ─── Main Grid ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
@@ -443,48 +447,8 @@ export default function Dashboard() {
 
         {/* Right column */}
         <div className="space-y-6">
-          {/* Radar preview — one pick from each bucket */}
-          <div className="ink-card bg-bg-secondary rounded-2xl p-5">
-            <div className="flex items-center justify-between mb-1">
-              <h2 className="font-semibold text-text-primary">Weekly Radar</h2>
-              <Link to="/radar" className="text-sm text-accent-primary hover:underline flex items-center gap-1">
-                See all picks <ArrowRight size={14} />
-              </Link>
-            </div>
-            <p className="text-xs text-text-muted mb-3">New & Trending · Hyped · Critics' Darlings.</p>
-            {radarIsDemo && radar && (
-              <p className="text-xs text-text-muted mb-3 italic">
-                Demo picks. Sign in for real ones.
-              </p>
-            )}
-            {radar && radarPreview.length > 0 ? (
-              <div className="space-y-2">
-                {radarPreview.map(({ bucket, item }, i) => (
-                  <Link to="/radar" key={i} className="flex items-center gap-3 p-2 rounded-lg hover:bg-bg-hover transition-colors">
-                    <CoverArt title={item.title} type={item.type} coverUrl={item.coverUrl} size="sm" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[10px] uppercase tracking-wide text-accent-primary font-medium">{bucket}</p>
-                      <p className="text-sm font-medium text-text-primary truncate">{item.title}</p>
-                      <p className="text-xs text-text-muted truncate">{item.creator}</p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            ) : radarLoading ? (
-              <div className="text-center py-8">
-                <Radar size={24} className="mx-auto text-text-muted/30 mb-2 animate-pulse" />
-                <p className="text-text-muted text-sm">Pulling this week's picks…</p>
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Radar size={24} className="mx-auto text-text-muted/30 mb-2" />
-                <p className="text-text-muted text-sm mb-3">Set up your taste profile for recommendations</p>
-                <Link to="/me?tab=taste" className="inline-flex items-center gap-1 text-sm text-accent-primary hover:underline">
-                  Build profile <ArrowRight size={14} />
-                </Link>
-              </div>
-            )}
-          </div>
+          {/* Radar preview — rendered from radarCard (mobile + desktop slots) */}
+          <div className="hidden lg:block">{radarCard}</div>
 
           {/* Popular with Users — anonymous aggregate of what people are adding */}
           {popular.items.length > 0 && (
