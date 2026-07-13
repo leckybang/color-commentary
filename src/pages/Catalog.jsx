@@ -486,6 +486,11 @@ export default function Catalog() {
         onEdit={openEdit}
         onUpdate={updateItem}
         onFinish={handleFinish}
+        onDelete={(item) => {
+          if (isInNextUp(item.id)) removeFromNextUp(item.id)
+          deleteItem(item.id)
+          setLightboxItem(null)
+        }}
         addItem={addItem}
       />
 

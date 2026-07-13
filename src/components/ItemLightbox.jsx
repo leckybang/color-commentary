@@ -9,7 +9,7 @@
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { X, Edit2, Loader2, Music, Film, Tv, BookOpen, Star, Award } from 'lucide-react'
+import { X, Edit2, Loader2, Music, Film, Tv, BookOpen, Star, Award, Trash2 } from 'lucide-react'
 import CoverArt from './common/CoverArt'
 import ExternalLinks from './common/ExternalLinks'
 import SuggestionLightbox from './SuggestionLightbox'
@@ -93,11 +93,19 @@ function SuggestionCard({ suggestion, onOpen }) {
   )
 }
 
-export default function ItemLightbox({ item, isOpen, onClose, onEdit, onUpdate, onFinish, addItem }) {
+export default function ItemLightbox({ item, isOpen, onClose, onEdit, onUpdate, onFinish, onDelete, addItem }) {
   const [detail, setDetail] = useState(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState(null)
   const [activeSuggestion, setActiveSuggestion] = useState(null)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  // Reset the delete confirmation when a different item opens (adjust-during-
+  // render pattern; an effect here would double-render).
+  const [confirmItemId, setConfirmItemId] = useState(null)
+  if (item && confirmItemId !== item.id) {
+    setConfirmItemId(item.id)
+    if (confirmDelete) setConfirmDelete(false)
+  }
   const overlayRef = useRef(null)
   const fetchRef = useRef(0)
 
@@ -186,6 +194,26 @@ export default function ItemLightbox({ item, isOpen, onClose, onEdit, onUpdate, 
           {/* Modal header */}
           <div className="flex items-center justify-end px-5 py-4 border-b border-border shrink-0">
             <div className="flex items-center gap-2">
+              {onDelete && (
+                <button
+                  onClick={() => {
+                    if (!confirmDelete) {
+                      setConfirmDelete(true)
+                      return
+                    }
+                    onDelete(item)
+                    onClose()
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    confirmDelete
+                      ? 'bg-accent-movies text-white hover:opacity-90'
+                      : 'text-accent-movies hover:bg-accent-movies/10'
+                  }`}
+                >
+                  <Trash2 size={13} />
+                  {confirmDelete ? 'Really delete?' : 'Delete'}
+                </button>
+              )}
               <button
                 onClick={() => onEdit(item)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-colors"
