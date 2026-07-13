@@ -29,8 +29,8 @@ function weekKey() {
 }
 
 function cacheKey(uid) {
-  // v2: bucket shape gained `fresh` (New & Trending); old caches lack it.
-  return `cc_radar_v2_${uid}_${weekKey()}`
+  // v3: edition-duplicate fix — v2 caches can hold the same book twice.
+  return `cc_radar_v3_${uid}_${weekKey()}`
 }
 
 function readCache(uid) {
@@ -186,7 +186,9 @@ async function buildRealRadar({ signal } = {}) {
     items.map((it) => ({ ...it, bucket, isTastemaker: true, ...extras(it) }))
 
   const daysOld = (d) => (d ? (Date.now() - new Date(d).getTime()) / 86400000 : Infinity)
-  const itemKey = (it) => `${it.type}:${(it.externalId || it.title || '').toString().toLowerCase()}`
+  // Key on type+title (not externalId): the same work can carry different
+  // provider ids across editions, and a duplicate title IS the bug.
+  const itemKey = (it) => `${it.type}:${(it.title || '').toLowerCase().trim()}`
 
   // ── NEW & TRENDING — strictly current, built first so the other buckets
   // can exclude anything shown here. This is the antidote to list warhorses

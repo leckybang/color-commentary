@@ -84,13 +84,24 @@ export default function Dashboard() {
 
   // Dashboard Radar preview now shows one pick from each of the three radar
   // buckets (Hyped / Overhyped / Critics' Darlings) — generic, no letter.
+  const previewKey = (i) => `${i.type}:${(i.title || '').toLowerCase().trim()}`
   const radarPreview = useMemo(() => {
     if (!radar) return []
-    return [
-      { bucket: 'New & Trending', item: radar.fresh?.[0] },
-      { bucket: 'Hyped', item: radar.hyped?.[0] },
-      { bucket: "Critics' Darlings", item: radar.darlings?.[0] },
-    ].filter((p) => p.item)
+    // One pick per bucket, never the same title twice (the same work can
+    // appear in multiple buckets via different editions).
+    const seen = new Set()
+    const picks = []
+    const take = (bucket, arr) => {
+      const item = (arr || []).find((i) => !seen.has(previewKey(i)))
+      if (item) {
+        seen.add(previewKey(item))
+        picks.push({ bucket, item })
+      }
+    }
+    take('New & Trending', radar.fresh)
+    take('Hyped', radar.hyped)
+    take("Critics' Darlings", radar.darlings)
+    return picks
   }, [radar])
 
   // Only nudge profile-building when it's empty. (Radar link removed — Radar
