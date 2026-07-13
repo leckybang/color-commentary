@@ -58,17 +58,25 @@ async function fetchVolumes(q, { signal } = {}) {
 
 // Titles from the summary mills — "(Book Analysis)", study guides, workbooks —
 // technically match but are never what someone is trying to catalog.
-const JUNK_TITLE = /book analysis|summary of|study guide|conversation starters|workbook|sparknotes|in \d+ minutes/i
+const JUNK_TITLE = /book analysis|summary of|study guide|conversation starters|workbook|sparknotes|in \d+ minutes|companion to|critical guide|casebook|literary criticism|books? collection|collection set|box ?set|estuche|boxed set/i
 
 /**
  * Score how likely this is a book people actually read, vs. a digitized 1873
  * sermon or an academic scan. Google's raw relevance ranks those highly for
  * name-like queries; real books have covers, publishers, descriptions, and
- * post-1950 dates.
+ * post-1950 dates. Match bonuses are verified against the actual fields —
+ * Google's intitle:/inauthor: operators match loosely (inauthor:"John of
+ * John" happily returns John of Worcester), so the probe that found an item
+ * proves nothing.
  */
-function readabilityScore(item, operatorHit) {
+function readabilityScore(item, query) {
   const vi = item.volumeInfo || {}
-  let s = operatorHit ? 2 : 0
+  const ql = query.toLowerCase()
+  const title = (vi.title || '').toLowerCase()
+  let s = 0
+  if (title === ql) s += 3
+  else if (title.includes(ql)) s += 2
+  if ((vi.authors || []).some((a) => a.toLowerCase().includes(ql))) s += 2
   if (vi.imageLinks) s += 3
   const rc = vi.ratingsCount || 0
   s += rc >= 100 ? 3 : rc >= 10 ? 2 : rc > 0 ? 1 : 0
@@ -109,15 +117,30 @@ export async function searchGoogleBooks(query, { signal } = {}) {
 
   const seen = new Set()
   const scored = []
-  for (const [operatorHit, items] of [[true, byTitle], [true, byAuthor], [false, plain]]) {
+  for (const items of [byTitle, byAuthor, plain]) {
     for (const item of items) {
       if (!item?.id || seen.has(item.id)) continue
       seen.add(item.id)
-      scored.push({ score: readabilityScore(item, operatorHit), item })
+      // langRestrict is leaky — foreign editions slip through with their own
+      // language field intact. Trust the field.
+      const lang = item.volumeInfo?.language
+      if (lang && lang !== 'en') continue
+      scored.push({ score: readabilityScore(item, q), item })
     }
   }
   scored.sort((a, b) => b.score - a.score)
-  const results = scored.map((s) => normalizeBook(s.item)).filter(Boolean).slice(0, 8)
+  // Collapse edition twins (same title + author under different volume ids).
+  const seenWork = new Set()
+  const results = scored
+    .map((s) => normalizeBook(s.item))
+    .filter((b) => {
+      if (!b) return false
+      const k = `${b.title.toLowerCase().trim()}:${b.creator.toLowerCase().trim()}`
+      if (seenWork.has(k)) return false
+      seenWork.add(k)
+      return true
+    })
+    .slice(0, 8)
   // Only cache useful answers — a rate-limited miss shouldn't stick.
   if (results.length > 0) {
     if (searchCache.size >= CACHE_MAX) searchCache.delete(searchCache.keys().next().value)
