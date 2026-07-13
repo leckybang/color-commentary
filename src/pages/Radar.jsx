@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Radar as RadarIcon, BadgeCheck, Calendar, Loader2, RefreshCw, ChevronDown, ChevronUp, Check, Bookmark, Info, Music, Film, Tv, BookOpen, Newspaper, ExternalLink, TrendingUp, Award, Users } from 'lucide-react'
+import { Radar as RadarIcon, BadgeCheck, Calendar, Loader2, RefreshCw, ChevronDown, ChevronUp, Check, Bookmark, Info, Music, Film, Tv, BookOpen, Newspaper, ExternalLink, TrendingUp, Award, Users, Zap } from 'lucide-react'
 import CoverArt from '../components/common/CoverArt'
 import ExternalLinks from '../components/common/ExternalLinks'
 import { useCatalog } from '../hooks/useCatalog'
@@ -44,6 +44,13 @@ function reviewLink(item) {
 }
 
 const BUCKETS = [
+  {
+    key: 'fresh',
+    label: 'New & Trending',
+    icon: Zap,
+    color: 'var(--color-accent-movies)',
+    blurb: 'Just dropped: this week\'s releases and brand-new list arrivals.',
+  },
   {
     key: 'hyped',
     label: 'Hyped',
@@ -244,6 +251,10 @@ export default function Radar() {
     setDismissed((prev) => new Set([...prev, item.title]))
   }
 
+  const fresh = useMemo(
+    () => (radar?.fresh || []).filter((r) => !dismissed.has(r.title)),
+    [radar, dismissed]
+  )
   const hyped = useMemo(
     () => (radar?.hyped || []).filter((r) => !dismissed.has(r.title)),
     [radar, dismissed]
@@ -252,7 +263,8 @@ export default function Radar() {
     () => (radar?.darlings || []).filter((r) => !dismissed.has(r.title)),
     [radar, dismissed]
   )
-  const totalPicks = hyped.length + darlings.length
+  const totalPicks = fresh.length + hyped.length + darlings.length
+  const bucketItems = { fresh, hyped, darlings }
 
   // catalogItems isn't read directly here — useCatalog is consumed for addItem.
   void catalogItems
@@ -306,11 +318,11 @@ export default function Radar() {
 
       {radar && totalPicks > 0 ? (
         <>
-          {BUCKETS.map((b) => (
+          {BUCKETS.filter((b) => b.key !== 'fresh' || radar?.fresh !== undefined).map((b) => (
             <BucketSection
               key={b.key}
               bucket={b}
-              items={b.key === 'hyped' ? hyped : darlings}
+              items={bucketItems[b.key]}
               onAdd={handleAdd}
               onDismiss={handleDismiss}
               addedItems={addedItems}

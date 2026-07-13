@@ -85,8 +85,8 @@ export default function Dashboard() {
   const radarPreview = useMemo(() => {
     if (!radar) return []
     return [
+      { bucket: 'New & Trending', item: radar.fresh?.[0] },
       { bucket: 'Hyped', item: radar.hyped?.[0] },
-      { bucket: 'Hyped', item: radar.hyped?.[1] },
       { bucket: "Critics' Darlings", item: radar.darlings?.[0] },
     ].filter((p) => p.item)
   }, [radar])
@@ -401,7 +401,7 @@ export default function Dashboard() {
                 See all picks <ArrowRight size={14} />
               </Link>
             </div>
-            <p className="text-xs text-text-muted mb-3">Hyped · Critics' Darlings.</p>
+            <p className="text-xs text-text-muted mb-3">New & Trending · Hyped · Critics' Darlings.</p>
             {radarIsDemo && radar && (
               <p className="text-xs text-text-muted mb-3 italic">
                 Demo picks. Sign in for real ones.

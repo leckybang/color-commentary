@@ -28,6 +28,9 @@ function normalize(book, publishedDate) {
     coverUrl: book.book_image || '',
     description: book.description || '',
     rank: typeof book.rank === 'number' ? book.rank : 99,
+    // How long it's been on the list — 1 means it debuted this week. Lets the
+    // radar tell a fresh arrival from a book that's been parked for months.
+    weeksOnList: typeof book.weeks_on_list === 'number' ? book.weeks_on_list : 99,
     reviewUrl,
     isNewRelease: true,
   }
