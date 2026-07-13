@@ -125,8 +125,10 @@ async function booksDetail(item) {
   const q = `intitle:${item.title}${item.creator ? `+inauthor:${item.creator}` : ''}`
   // Pull a few editions so we can pick the one with the richest metadata —
   // averageRating and description are sparse and edition-dependent.
+  // country=US: Google Books rejects requests from many serverless egress
+  // IPs with 403 "cannot determine user location" unless it's specified.
   const search = await getJson(
-    `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=5${keyParam}`
+    `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=5&country=US${keyParam}`
   )
   const editions = (search?.items || []).map((b) => b.volumeInfo).filter(Boolean)
   if (editions.length === 0) return { description: '', rating: null, related: [] }
@@ -146,7 +148,7 @@ async function booksDetail(item) {
   let related = []
   if (author) {
     const more = await getJson(
-      `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(`inauthor:"${author}"`)}&maxResults=20&orderBy=relevance${keyParam}`
+      `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(`inauthor:"${author}"`)}&maxResults=20&orderBy=relevance&country=US${keyParam}`
     )
     const authorNorm = author.toLowerCase()
     const candidates = (more?.items || [])

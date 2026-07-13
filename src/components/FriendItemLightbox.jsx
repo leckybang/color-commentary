@@ -12,6 +12,7 @@ import StarRating from './common/StarRating'
 import ExternalLinks from './common/ExternalLinks'
 import { getMediaColor } from '../utils/filterUtils'
 import { splitAccolades } from '../utils/mediaText'
+import { searchGoogleBooks } from '../services/providers/googleBooks'
 
 const TYPE_LABELS = { music: 'Music', movie: 'Movie', tv: 'TV', book: 'Book' }
 
@@ -58,13 +59,27 @@ export default function FriendItemLightbox({ item, isOpen, onClose, addItem, inC
       }),
     })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
-      .then((data) => {
+      .catch(() => null)
+      .then(async (data) => {
+        // Server-side Google Books calls can fail from serverless IPs even
+        // when the API itself is fine — fill missing book descriptions from
+        // the browser, where the same lookup reliably works. Also covers the
+        // detail function erroring outright.
+        let result = data || { description: '', rating: null, related: [] }
+        if (item.type === 'book' && !result.description) {
+          try {
+            const results = await searchGoogleBooks(
+              item.creator ? `intitle:"${item.title}" inauthor:"${item.creator}"` : `intitle:"${item.title}"`
+            )
+            const hit = results.find((r) => r.overview)
+            if (hit) result = { ...result, description: hit.overview }
+          } catch {
+            /* fallback is best-effort */
+          }
+        }
         if (fetchRef.current !== fetchId) return
-        detailCache.set(key, data)
-        setDetail(data)
-      })
-      .catch(() => {
-        /* detail is a bonus; the add actions work without it */
+        detailCache.set(key, result)
+        setDetail(result)
       })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, key])
