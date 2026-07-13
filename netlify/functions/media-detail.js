@@ -88,9 +88,14 @@ async function tmdbDetail(item) {
   const hit = search?.results?.[0]
   if (!hit) return { description: '', rating: null, related: [] }
 
-  const rec = await getJson(
-    `https://api.themoviedb.org/3/${kind}/${hit.id}/recommendations?api_key=${TMDB_KEY}&language=en-US`
-  )
+  const [rec, details] = await Promise.all([
+    getJson(
+      `https://api.themoviedb.org/3/${kind}/${hit.id}/recommendations?api_key=${TMDB_KEY}&language=en-US`
+    ),
+    getJson(
+      `https://api.themoviedb.org/3/${kind}/${hit.id}?api_key=${TMDB_KEY}&append_to_response=credits&language=en-US`
+    ),
+  ])
   const related = (rec?.results || []).slice(0, MAX_RELATED).map((r) => ({
     title: r.title || r.name || '',
     creator: '',
@@ -104,7 +109,14 @@ async function tmdbDetail(item) {
     ? { label: `${Math.round(vote * 10)}% · TMDB`, pct: Math.round(vote * 10) }
     : null
 
-  return { description: clip(hit.overview), rating, related }
+  // Who made it, who's in it — the two questions a movie/TV tile invites.
+  const director =
+    kind === 'tv'
+      ? (details?.created_by || []).map((c) => c.name).filter(Boolean).join(', ')
+      : (details?.credits?.crew || []).filter((c) => c.job === 'Director').map((c) => c.name).join(', ')
+  const cast = (details?.credits?.cast || []).slice(0, 3).map((c) => c.name).filter(Boolean)
+
+  return { description: clip(hit.overview), rating, related, credits: { director, cast } }
 }
 
 // ─── Books (Google Books) ───
