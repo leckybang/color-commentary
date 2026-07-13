@@ -14,7 +14,7 @@ import CalibrationOnboarding from '../components/CalibrationOnboarding'
 import InsightsHero from '../components/InsightsHero'
 import QuickAdd from '../components/QuickAdd'
 import CatalogSeeds from '../components/CatalogSeeds'
-import FriendsFeedRows from '../components/FriendsFeedRows'
+import { FriendsFeedShelf } from '../components/FriendsFeedRows'
 import FriendItemLightbox from '../components/FriendItemLightbox'
 import { useFriendsFeed } from '../hooks/useFriendsFeed'
 import { usePopularItems } from '../hooks/usePopularItems'
@@ -426,13 +426,10 @@ export default function Dashboard() {
                 See all <ArrowRight size={14} />
               </Link>
             </div>
-            <p className="text-xs text-text-muted mb-2">Tap Add to grab something for your catalog.</p>
+            <p className="text-xs text-text-muted mb-2">Tap anything to check it out.</p>
             {friendsFeed.items.length > 0 ? (
-              <FriendsFeedRows
+              <FriendsFeedShelf
                 items={friendsFeed.items}
-                addItem={addItem}
-                inCatalog={inCatalog}
-                compact
                 onItemClick={(it) => setFriendDetailItem({ ...it, friendName: it.displayName })}
               />
             ) : (
@@ -507,20 +504,17 @@ export default function Dashboard() {
               </Link>
             </div>
             {recentItems.length > 0 ? (
-              <div className="space-y-2">
+              <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-1 px-1 pb-1">
                 {recentItems.map((item) => {
                   return (
-                    <Link to="/catalog" key={item.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-bg-hover transition-colors">
-                      <CoverArt title={item.title} type={item.type} coverUrl={item.coverUrl} size="sm" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-text-primary truncate">{item.title}</p>
-                        <p className="text-xs text-text-muted truncate">{item.creator}</p>
-                      </div>
+                    <Link to="/catalog" key={item.id} className="w-24 shrink-0 group" title={item.title}>
+                      <CoverArt title={item.title} type={item.type} creator={item.creator} coverUrl={item.coverUrl} size="md" />
+                      <p className="text-xs font-medium text-text-primary truncate mt-1.5">{item.title}</p>
                       {item.rating > 0 && (
-                        <div className="flex items-center gap-1 text-amber-500 shrink-0">
-                          <Star size={12} fill="currentColor" />
-                          <span className="text-xs font-medium">{item.rating}</span>
-                        </div>
+                        <span className="flex items-center gap-0.5 text-[10px] font-semibold text-amber-500">
+                          <Star size={9} fill="currentColor" />
+                          {item.rating}
+                        </span>
                       )}
                     </Link>
                   )

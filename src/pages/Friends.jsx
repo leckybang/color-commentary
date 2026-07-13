@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Users } from 'lucide-react'
 import FriendsPanel from '../components/FriendsPanel'
-import FriendsFeedRows from '../components/FriendsFeedRows'
+import { FriendsFeedShelf } from '../components/FriendsFeedRows'
 import FriendItemLightbox from '../components/FriendItemLightbox'
 import { useFriendsFeed } from '../hooks/useFriendsFeed'
 import { useCatalog } from '../hooks/useCatalog'
@@ -65,10 +65,10 @@ export default function Friends() {
           <h2 className="text-lg font-semibold text-text-primary">Fresh from friends</h2>
         </div>
         <p className="text-xs text-text-muted mb-3">
-          What the people you follow have been adding, watching, and finishing. Tap Add to grab one for your own log.
+          What the people you follow have been adding, watching, and finishing. Tap anything to check it out and grab it for your own log.
         </p>
         {feed.items.length > 0 ? (
-          <FriendsFeedRows items={feed.items} addItem={addItem} inCatalog={inCatalog} onItemClick={(it) => setDetailItem({ ...it, friendName: it.displayName })} />
+          <FriendsFeedShelf items={feed.items} onItemClick={(it) => setDetailItem({ ...it, friendName: it.displayName })} />
         ) : feed.loading ? (
           <p className="text-sm text-text-muted italic py-4 text-center">Checking in on your people…</p>
         ) : feed.hasFriends ? (

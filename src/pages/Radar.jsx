@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react'
-import { Radar as RadarIcon, BadgeCheck, Calendar, Loader2, RefreshCw, ChevronDown, ChevronUp, Check, Bookmark, Info, Music, Film, Tv, BookOpen, Newspaper, ExternalLink, TrendingUp, Award, Users, Zap } from 'lucide-react'
+import { Radar as RadarIcon, BadgeCheck, Calendar, Loader2, RefreshCw, ChevronDown, ChevronUp, Check, Bookmark, Info, Music, Film, Tv, BookOpen, Newspaper, ExternalLink, TrendingUp, Award, Users, Zap, Flame } from 'lucide-react'
 import CoverArt from '../components/common/CoverArt'
+import FriendItemLightbox from '../components/FriendItemLightbox'
+import { usePopularItems } from '../hooks/usePopularItems'
 import ExternalLinks from '../components/common/ExternalLinks'
 import { useCatalog } from '../hooks/useCatalog'
 import { useWeeklyRadar } from '../hooks/useWeeklyRadar'
@@ -230,6 +232,13 @@ function BucketSection({ bucket, items, onAdd, onDismiss, addedItems }) {
 export default function Radar() {
   const { items: catalogItems, addItem } = useCatalog()
   const { radar, loading, error, refresh: refreshRadar, isDemo } = useWeeklyRadar()
+  const popular = usePopularItems()
+  const [popularDetail, setPopularDetail] = useState(null)
+
+  const inCatalog = (title, type) =>
+    catalogItems.some(
+      (i) => i.type === type && i.title.trim().toLowerCase() === String(title).trim().toLowerCase()
+    )
 
   const [dismissed, setDismissed] = useState(new Set())
   const [addedItems, setAddedItems] = useState(new Set())
@@ -316,6 +325,32 @@ export default function Radar() {
         </div>
       )}
 
+      {/* Popular with Users — what real people here are logging right now */}
+      {popular.items.length > 0 && (
+        <section className="mb-8">
+          <div className="flex items-center gap-2 mb-1">
+            <Flame size={18} className="text-accent-primary" />
+            <h2 className="text-lg font-semibold text-text-primary">Popular with Users</h2>
+          </div>
+          <p className="text-xs text-text-muted mb-3">What multiple people logged lately. Tap to check one out.</p>
+          <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-1 px-1 pb-1">
+            {popular.items.map((item) => (
+              <div
+                key={`${item.type}-${item.title}`}
+                className="w-28 shrink-0 cursor-pointer group"
+                onClick={() => setPopularDetail({ ...item, sourceLabel: 'Popular with users' })}
+              >
+                <CoverArt title={item.title} type={item.type} creator={item.creator} coverUrl={item.coverUrl} size="lg" />
+                <p className="text-xs font-medium text-text-primary truncate mt-1.5">{item.title}</p>
+                <p className="text-[10px] truncate" style={{ color: getMediaColor(item.type) }}>
+                  {item.userCount} people logged this
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {radar && totalPicks > 0 ? (
         <>
           {BUCKETS.filter((b) => b.key !== 'fresh' || radar?.fresh !== undefined).map((b) => (
@@ -335,6 +370,14 @@ export default function Radar() {
           <p className="text-text-secondary">Nothing on the radar right now. Try refreshing.</p>
         </div>
       ) : null}
+
+      <FriendItemLightbox
+        item={popularDetail}
+        isOpen={!!popularDetail}
+        onClose={() => setPopularDetail(null)}
+        addItem={addItem}
+        inCatalog={inCatalog}
+      />
 
       {/* What this means — small footer */}
       {radar && (
