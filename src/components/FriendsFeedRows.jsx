@@ -66,7 +66,7 @@ export function AddFromFriendButton({ item, addItem, inCatalog }) {
  * and the Dashboard module. Pass addItem + inCatalog (from ONE useCatalog
  * instance at the page level) to enable one-tap adding.
  */
-export default function FriendsFeedRows({ items, addItem, inCatalog, compact = false }) {
+export default function FriendsFeedRows({ items, addItem, inCatalog, compact = false, onItemClick }) {
   const itemIds = useMemo(() => items.map((i) => i.id), [items])
   const { enabled: reactionsEnabled, counts, mine, toggle } = useItemReactions(itemIds)
 
@@ -75,14 +75,18 @@ export default function FriendsFeedRows({ items, addItem, inCatalog, compact = f
       {items.map((item) => {
         const color = getMediaColor(item.type)
         const name = item.username ? (
-          <Link to={`/u/${item.username}`} className="font-bold text-text-primary hover:text-accent-primary transition-colors">
+          <Link to={`/u/${item.username}`} onClick={(e) => e.stopPropagation()} className="font-bold text-text-primary hover:text-accent-primary transition-colors">
             {item.displayName}
           </Link>
         ) : (
           <span className="font-bold text-text-primary">{item.displayName}</span>
         )
         return (
-          <div key={item.id} className={`flex items-center gap-3 ${compact ? 'py-2.5' : 'py-3'} border-b border-dotted border-border last:border-b-0`}>
+          <div
+            key={item.id}
+            className={`flex items-center gap-3 ${compact ? 'py-2.5' : 'py-3'} border-b border-dotted border-border last:border-b-0 ${onItemClick ? 'cursor-pointer hover:bg-bg-tertiary/40 rounded-lg px-1 -mx-1 transition-colors' : ''}`}
+            onClick={onItemClick ? () => onItemClick(item) : undefined}
+          >
             {!compact && (
               item.avatarEmoji ? (
                 <div className="w-9 h-9 rounded-full bg-bg-tertiary flex items-center justify-center text-lg shrink-0">

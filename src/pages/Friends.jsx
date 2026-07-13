@@ -1,7 +1,8 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Users } from 'lucide-react'
 import FriendsPanel from '../components/FriendsPanel'
 import FriendsFeedRows from '../components/FriendsFeedRows'
+import FriendItemLightbox from '../components/FriendItemLightbox'
 import { useFriendsFeed } from '../hooks/useFriendsFeed'
 import { useCatalog } from '../hooks/useCatalog'
 import { useNewFollowers } from '../hooks/useNewFollowers'
@@ -12,6 +13,7 @@ export default function Friends() {
   const { items: ownItems, addItem } = useCatalog()
   const { markFollowersSeen } = useNewFollowers()
   const { reactions, markReactionsSeen } = useReactionsOnMyItems()
+  const [detailItem, setDetailItem] = useState(null)
 
   // Visiting this page counts as seeing your followers and reactions —
   // clears the nav dot.
@@ -66,7 +68,7 @@ export default function Friends() {
           What the people you follow have been adding, watching, and finishing. Tap Add to grab one for your own catalog.
         </p>
         {feed.items.length > 0 ? (
-          <FriendsFeedRows items={feed.items} addItem={addItem} inCatalog={inCatalog} />
+          <FriendsFeedRows items={feed.items} addItem={addItem} inCatalog={inCatalog} onItemClick={(it) => setDetailItem({ ...it, friendName: it.displayName })} />
         ) : feed.loading ? (
           <p className="text-sm text-text-muted italic py-4 text-center">Checking in on your people…</p>
         ) : feed.hasFriends ? (
@@ -79,6 +81,13 @@ export default function Friends() {
           </p>
         )}
       </div>
+      <FriendItemLightbox
+        item={detailItem}
+        isOpen={!!detailItem}
+        onClose={() => setDetailItem(null)}
+        addItem={addItem}
+        inCatalog={inCatalog}
+      />
     </div>
   )
 }

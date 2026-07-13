@@ -13,6 +13,7 @@ import { getMediaColor } from '../utils/filterUtils'
 import CoverArt from '../components/common/CoverArt'
 import EmojiPicker from '../components/common/EmojiPicker'
 import { AddFromFriendButton } from '../components/FriendsFeedRows'
+import FriendItemLightbox from '../components/FriendItemLightbox'
 import { isSupabaseConfigured } from '../lib/supabase'
 
 // Inline stats so we can compute over either the owner's catalog or a
@@ -42,6 +43,7 @@ export default function PublicProfile({ isSelf }) {
   const { profile } = useTasteProfile()
   const myProfile = usePublicProfile()
   const { items: ownItems, addItem } = useCatalog()
+  const [detailItem, setDetailItem] = useState(null)
   const friendsApi = useFriends()
 
   // Fetch a Supabase profile when viewing someone else's slug
@@ -258,7 +260,11 @@ export default function PublicProfile({ isSelf }) {
         {currentFavorites.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
             {currentFavorites.map((item) => (
-              <div key={item.id} className="text-center">
+              <div
+                key={item.id}
+                className={`text-center ${canGrab ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''}`}
+                onClick={canGrab ? () => setDetailItem(item) : undefined}
+              >
                 <CoverArt title={item.title} type={item.type} creator={item.creator} coverUrl={item.coverUrl} size="lg" className="mx-auto" />
                 <p className="text-xs font-medium text-text-primary mt-2 truncate">{item.title}</p>
                 <p className="text-xs text-text-muted truncate">{item.creator}</p>
@@ -308,7 +314,11 @@ export default function PublicProfile({ isSelf }) {
             {recentlyAdded.map((item) => {
               const color = getMediaColor(item.type)
               return (
-                <div key={item.id} className="flex items-center gap-3 p-2 rounded-lg bg-bg-tertiary">
+                <div
+                  key={item.id}
+                  className={`flex items-center gap-3 p-2 rounded-lg bg-bg-tertiary ${canGrab ? 'cursor-pointer hover:bg-bg-hover transition-colors' : ''}`}
+                  onClick={canGrab ? () => setDetailItem(item) : undefined}
+                >
                   <CoverArt title={item.title} type={item.type} coverUrl={item.coverUrl} size="sm" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-text-primary truncate">{item.title}</p>
@@ -418,6 +428,14 @@ export default function PublicProfile({ isSelf }) {
           Taste DNA, Taste Map, and Insights stay private to the owner.
         </div>
       )}
+
+      <FriendItemLightbox
+        item={detailItem ? { ...detailItem, friendName: displayProfile.displayName?.split(' ')[0] } : null}
+        isOpen={!!detailItem}
+        onClose={() => setDetailItem(null)}
+        addItem={addItem}
+        inCatalog={inCatalog}
+      />
     </div>
   )
 
@@ -445,3 +463,4 @@ export default function PublicProfile({ isSelf }) {
   }
   return content
 }
+
