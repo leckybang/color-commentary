@@ -76,6 +76,13 @@ export function determineArchetype(profile) {
     totalPicks: allPicks.length,
   }
 
+  // A truly empty profile is The Blank Page — without this, the Cozy
+  // Rewatcher test (small numbers) matches all-zero stats and the default
+  // never fires.
+  if (stats.totalGenres === 0 && stats.totalPicks === 0) {
+    return DEFAULT_ARCHETYPE
+  }
+
   for (const archetype of ARCHETYPES) {
     if (archetype.test(stats)) {
       return { name: archetype.name, emoji: archetype.emoji, description: archetype.description }
