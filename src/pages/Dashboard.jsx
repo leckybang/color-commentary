@@ -87,20 +87,22 @@ export default function Dashboard() {
   const previewKey = (i) => `${i.type}:${(i.title || '').toLowerCase().trim()}`
   const radarPreview = useMemo(() => {
     if (!radar) return []
-    // One pick per bucket, never the same title twice (the same work can
-    // appear in multiple buckets via different editions).
+    // Up to eight picks interleaved across buckets, never the same title
+    // twice (the same work can appear in multiple buckets via editions).
     const seen = new Set()
     const picks = []
-    const take = (bucket, arr) => {
-      const item = (arr || []).find((i) => !seen.has(previewKey(i)))
-      if (item) {
+    const take = (bucket, arr, n) => {
+      for (const item of arr || []) {
+        if (picks.length >= 8 || n <= 0) return
+        if (seen.has(previewKey(item))) continue
         seen.add(previewKey(item))
         picks.push({ bucket, item })
+        n--
       }
     }
-    take('New & Trending', radar.fresh)
-    take('Hyped', radar.hyped)
-    take("Critics' Darlings", radar.darlings)
+    take('New & Trending', radar.fresh, 3)
+    take('Hyped', radar.hyped, 3)
+    take("Critics' Darlings", radar.darlings, 2)
     return picks
   }, [radar])
 
@@ -156,15 +158,12 @@ export default function Dashboard() {
     </p>
   )}
   {radar && radarPreview.length > 0 ? (
-    <div className="space-y-2">
+    <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-1 px-1 pb-1">
       {radarPreview.map(({ bucket, item }, i) => (
-        <Link to="/radar" key={i} className="flex items-center gap-3 p-2 rounded-lg hover:bg-bg-hover transition-colors">
-          <CoverArt title={item.title} type={item.type} coverUrl={item.coverUrl} size="sm" />
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] uppercase tracking-wide text-accent-primary font-medium">{bucket}</p>
-            <p className="text-sm font-medium text-text-primary truncate">{item.title}</p>
-            <p className="text-xs text-text-muted truncate">{item.creator}</p>
-          </div>
+        <Link to="/radar" key={i} className="w-24 shrink-0 group" title={item.title}>
+          <CoverArt title={item.title} type={item.type} creator={item.creator} coverUrl={item.coverUrl} size="md" />
+          <p className="text-xs font-medium text-text-primary truncate mt-1.5">{item.title}</p>
+          <p className="text-[10px] text-accent-primary truncate">{bucket}</p>
         </Link>
       ))}
     </div>
@@ -330,14 +329,14 @@ export default function Dashboard() {
 
             {/* Notes list */}
             {notes.length > 0 ? (
-              <div className="space-y-2 max-h-[240px] overflow-y-auto">
+              <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-1 px-1 pb-1">
                 {notes.map((note) => {
                   const TypeIcon = note.type ? TYPE_ICONS[note.type] : null
                   const typeColor = note.type ? getMediaColor(note.type) : null
                   return (
                     <div
                       key={note.id}
-                      className={`flex items-center gap-3 group p-2 rounded-lg hover:bg-bg-tertiary transition-colors ${note.type ? 'cursor-pointer' : ''}`}
+                      className={`w-24 shrink-0 group ${note.type ? 'cursor-pointer' : ''}`}
                       onClick={note.type ? () => setFriendDetailItem({
                         title: note.text,
                         creator: note.creator || '',
@@ -352,60 +351,59 @@ export default function Dashboard() {
                         <img
                           src={note.coverUrl}
                           alt=""
-                          className="w-8 h-10 rounded object-cover shrink-0"
+                          className="w-24 h-32 rounded-xl object-cover"
                           loading="lazy"
                           referrerPolicy="no-referrer"
                         />
-                      ) : TypeIcon ? (
+                      ) : (
                         <div
-                          className="w-8 h-10 rounded flex items-center justify-center shrink-0"
-                          style={{ backgroundColor: `color-mix(in srgb, ${typeColor} 15%, transparent)` }}
+                          className="w-24 h-32 rounded-xl flex items-center justify-center"
+                          style={{ backgroundColor: `color-mix(in srgb, ${typeColor || 'var(--color-text-muted)'} 15%, transparent)` }}
                         >
-                          <TypeIcon size={14} style={{ color: typeColor }} />
+                          {TypeIcon && <TypeIcon size={22} style={{ color: typeColor }} />}
                         </div>
-                      ) : null}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-text-primary truncate">{note.text}</p>
-                        <p className="text-xs text-text-muted mt-0.5 truncate">
-                          {note.creator && <span>{note.creator}{note.year ? ` · ${note.year}` : ''} · </span>}
-                          {formatDate(note.createdAt)}
-                        </p>
-                      </div>
-                      {note.type && (
-                        inCatalog(note.text, note.type) ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-accent-books shrink-0" title="Already in your log">
-                            <Check size={12} />
-                            Saved
-                          </span>
-                        ) : (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              addItem({
-                                title: note.text,
-                                creator: note.creator || '',
-                                type: note.type,
-                                year: note.year || '',
-                                coverUrl: note.coverUrl || '',
-                                status: 'want',
-                              })
-                              deleteNote(note.id)
-                            }}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-accent-primary text-white hover:bg-accent-hover transition-colors shrink-0"
-                            title="Move to your log (Want to Try)"
-                          >
-                            <Plus size={12} />
-                            Add
-                          </button>
-                        )
                       )}
-                      <button
-                        onClick={(e) => { e.stopPropagation(); deleteNote(note.id) }}
-                        className="p-1 rounded text-text-muted/0 group-hover:text-text-muted hover:text-accent-movies transition-colors shrink-0"
-                        title="Not interested, remove"
-                      >
-                        <X size={14} />
-                      </button>
+                      <p className="text-xs font-medium text-text-primary truncate mt-1.5">{note.text}</p>
+                      <p className="text-[10px] text-text-muted truncate">
+                        {note.creator || formatDate(note.createdAt)}
+                      </p>
+                      <div className="flex items-center gap-1 mt-1">
+                        {note.type && (
+                          inCatalog(note.text, note.type) ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-accent-books" title="Already in your log">
+                              <Check size={11} />
+                              Saved
+                            </span>
+                          ) : (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                addItem({
+                                  title: note.text,
+                                  creator: note.creator || '',
+                                  type: note.type,
+                                  year: note.year || '',
+                                  coverUrl: note.coverUrl || '',
+                                  status: 'want',
+                                })
+                                deleteNote(note.id)
+                              }}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-accent-primary text-white hover:bg-accent-hover transition-colors"
+                              title="Move to your log (Want to Try)"
+                            >
+                              <Plus size={11} />
+                              Add
+                            </button>
+                          )
+                        )}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); deleteNote(note.id) }}
+                          className="p-1 rounded text-text-muted hover:text-accent-movies transition-colors"
+                          title="Not interested, remove"
+                        >
+                          <X size={13} />
+                        </button>
+                      </div>
                     </div>
                   )
                 })}
@@ -454,40 +452,28 @@ export default function Dashboard() {
                 <Flame size={18} className="text-accent-primary" />
                 <h2 className="font-semibold text-text-primary">Popular with Users</h2>
               </div>
-              <p className="text-xs text-text-muted mb-3">What multiple people cataloged lately.</p>
-              <div className="space-y-2">
+              <p className="text-xs text-text-muted mb-3">What multiple people logged lately.</p>
+              <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-1 px-1 pb-1">
                 {popular.items.map((item) => {
                   const owned = inCatalog(item.title, item.type)
                   return (
-                    <div key={`${item.type}-${item.title}`} className="flex items-center gap-3 p-2 rounded-lg hover:bg-bg-hover transition-colors">
-                      <CoverArt title={item.title} type={item.type} creator={item.creator} coverUrl={item.coverUrl} size="sm" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-text-primary truncate">{item.title}</p>
-                        <p className="text-xs text-text-muted truncate">
-                          {item.creator ? `${item.creator} · ` : ''}
-                          <span style={{ color: getMediaColor(item.type) }}>{item.userCount} people logged this</span>
-                        </p>
-                      </div>
-                      {owned ? (
-                        <span className="shrink-0 flex items-center gap-1 text-xs font-medium text-accent-books">
-                          <Check size={13} /> In catalog
-                        </span>
-                      ) : (
-                        <button
-                          onClick={() =>
-                            addItem({
-                              title: item.title,
-                              creator: item.creator,
-                              type: item.type,
-                              coverUrl: item.coverUrl,
-                              status: 'want',
-                            })
-                          }
-                          className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-accent-primary/10 text-accent-primary hover:bg-accent-primary/20 transition-colors"
-                        >
-                          <Plus size={13} /> Add
-                        </button>
-                      )}
+                    <div
+                      key={`${item.type}-${item.title}`}
+                      className="w-24 shrink-0 cursor-pointer group"
+                      onClick={() =>
+                        setFriendDetailItem({
+                          ...item,
+                          source: `${item.userCount} people logged this`,
+                          sourceLabel: 'Popular with users',
+                        })
+                      }
+                      title={item.title}
+                    >
+                      <CoverArt title={item.title} type={item.type} creator={item.creator} coverUrl={item.coverUrl} size="md" />
+                      <p className="text-xs font-medium text-text-primary truncate mt-1.5">{item.title}</p>
+                      <p className="text-[10px] truncate" style={{ color: owned ? 'var(--color-accent-books)' : getMediaColor(item.type) }}>
+                        {owned ? '✓ In your log' : `${item.userCount} logged this`}
+                      </p>
                     </div>
                   )
                 })}

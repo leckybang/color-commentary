@@ -126,12 +126,12 @@ export default function CatalogSeeds({ profile, addItem }) {
       <p className="text-xs text-text-muted mb-4">
         Pulled from the taste picks you made. Tap to add, then rate anything you have already finished.
       </p>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-1 px-1 pb-1">
         {seeds.map((seed) => {
           const key = `${seed.type}:${seed.title}`
           const isAdded = added.has(key)
           return (
-            <div key={key} className="flex flex-col rounded-xl bg-bg-tertiary/60 p-3">
+            <div key={key} className="flex flex-col rounded-xl bg-bg-tertiary/60 p-3 w-36 shrink-0">
               <CoverArt title={seed.title} type={seed.type} creator={seed.creator} coverUrl={seed.coverUrl} size="md" className="mx-auto mb-2" />
               <p className="text-xs font-semibold text-text-primary leading-snug line-clamp-2">{seed.title}</p>
               {seed.creator && <p className="text-[11px] text-text-muted truncate mt-0.5">{seed.creator}</p>}
