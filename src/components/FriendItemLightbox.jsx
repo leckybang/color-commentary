@@ -8,6 +8,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { X, Star, Bookmark, Play, Check, Library, Newspaper, ExternalLink as ExternalLinkIcon } from 'lucide-react'
 import CoverArt from './common/CoverArt'
+import StarRating from './common/StarRating'
 import ExternalLinks from './common/ExternalLinks'
 import { getMediaColor } from '../utils/filterUtils'
 import { splitAccolades } from '../utils/mediaText'
@@ -28,6 +29,11 @@ export default function FriendItemLightbox({ item, isOpen, onClose, addItem, inC
   const fetchRef = useRef(0)
   const [detail, setDetail] = useState(null)
   const [addedAs, setAddedAs] = useState(null)
+  // Finishing something deserves a beat: rate it and jot a take before it
+  // files into the log.
+  const [finishing, setFinishing] = useState(false)
+  const [finishRating, setFinishRating] = useState(0)
+  const [finishReview, setFinishReview] = useState('')
 
   // Reset per item (adjust-during-render pattern).
   const [itemKey, setItemKey] = useState(null)
@@ -35,6 +41,9 @@ export default function FriendItemLightbox({ item, isOpen, onClose, addItem, inC
   if (key !== itemKey) {
     setItemKey(key)
     setAddedAs(null)
+    setFinishing(false)
+    setFinishRating(0)
+    setFinishReview('')
     setDetail(key ? detailCache.get(key) || null : null)
   }
 
@@ -78,7 +87,7 @@ export default function FriendItemLightbox({ item, isOpen, onClose, addItem, inC
   const color = getMediaColor(item.type)
   const owned = inCatalog?.(item.title, item.type)
 
-  const handleAdd = (status) => {
+  const handleAdd = (status, extras = {}) => {
     addItem({
       title: item.title,
       creator: item.creator || '',
@@ -88,6 +97,7 @@ export default function FriendItemLightbox({ item, isOpen, onClose, addItem, inC
       coverUrl: item.coverUrl || '',
       status,
       ...(status === 'finished' ? { dateConsumed: new Date().toISOString() } : {}),
+      ...extras,
     })
     setAddedAs(status)
     onAdded?.(item, status)
@@ -205,6 +215,36 @@ export default function FriendItemLightbox({ item, isOpen, onClose, addItem, inC
                 <Check size={15} />
                 Added as {ADD_OPTIONS.find((o) => o.status === addedAs)?.label}
               </p>
+            ) : finishing ? (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-text-muted mb-2">Nice! How was it?</p>
+                <div className="flex justify-center mb-3">
+                  <StarRating rating={finishRating} onChange={setFinishRating} size={26} />
+                </div>
+                <textarea
+                  value={finishReview}
+                  onChange={(e) => setFinishReview(e.target.value)}
+                  placeholder="Your quick take (optional)"
+                  rows={2}
+                  className="w-full bg-bg-tertiary border border-border rounded-xl px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-primary resize-none mb-2"
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setFinishing(false)}
+                    className="px-3 py-2 rounded-xl text-xs font-medium text-text-muted hover:text-text-secondary hover:bg-bg-hover transition-colors"
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={() => handleAdd('finished', { rating: finishRating, review: finishReview.trim() })}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold text-white transition-all active:scale-95"
+                    style={{ backgroundColor: 'var(--color-accent-books)' }}
+                  >
+                    <Check size={13} />
+                    {finishRating > 0 || finishReview.trim() ? 'Save to log' : 'Log without rating'}
+                  </button>
+                </div>
+              </div>
             ) : (
               <>
                 <p className="text-xs font-semibold uppercase tracking-wide text-text-muted mb-2">Add to your log</p>
@@ -214,7 +254,7 @@ export default function FriendItemLightbox({ item, isOpen, onClose, addItem, inC
                     return (
                       <button
                         key={o.status}
-                        onClick={() => handleAdd(o.status)}
+                        onClick={() => (o.status === 'finished' ? setFinishing(true) : handleAdd(o.status))}
                         className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold border transition-all active:scale-95 hover:opacity-90"
                         style={{
                           backgroundColor: `color-mix(in srgb, ${o.color} 15%, transparent)`,
