@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
-import { X, Star, Bookmark, Play, Check, Library } from 'lucide-react'
+import { X, Star, Bookmark, Play, Check, Library, Newspaper, ExternalLink as ExternalLinkIcon } from 'lucide-react'
 import CoverArt from './common/CoverArt'
 import ExternalLinks from './common/ExternalLinks'
 import { getMediaColor } from '../utils/filterUtils'
@@ -23,7 +23,7 @@ const ADD_OPTIONS = [
 // Session-scoped detail cache so reopening the same title doesn't refetch.
 const detailCache = new Map()
 
-export default function FriendItemLightbox({ item, isOpen, onClose, addItem, inCatalog, onAdded }) {
+export default function FriendItemLightbox({ item, isOpen, onClose, addItem, inCatalog, onAdded, onDismiss }) {
   const overlayRef = useRef(null)
   const fetchRef = useRef(0)
   const [detail, setDetail] = useState(null)
@@ -127,6 +127,27 @@ export default function FriendItemLightbox({ item, isOpen, onClose, addItem, inC
                   {TYPE_LABELS[item.type] || item.type}
                 </span>
                 {item.year && <span className="text-xs text-text-muted">{item.year}</span>}
+                {item.source && (
+                  item.sourceLink?.url ? (
+                    <a
+                      href={item.sourceLink.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium bg-accent-primary/15 text-accent-primary hover:bg-accent-primary/25 transition-colors"
+                      title={`Read the ${item.sourceLink.label || ''} review`}
+                    >
+                      <Newspaper size={10} />
+                      {item.source}
+                      <ExternalLinkIcon size={9} />
+                    </a>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium bg-accent-primary/15 text-accent-primary">
+                      <Newspaper size={10} />
+                      {item.source}
+                    </span>
+                  )
+                )}
               </div>
               {item.rating > 0 && (
                 <p className="flex items-center gap-1 mt-2 text-sm font-semibold text-amber-500">
@@ -138,8 +159,8 @@ export default function FriendItemLightbox({ item, isOpen, onClose, addItem, inC
             </div>
           </div>
 
-          {detail?.description && (() => {
-            const { accolades, body } = splitAccolades(detail.description)
+          {(detail?.description || item.blurb || item.description) && (() => {
+            const { accolades, body } = splitAccolades(detail?.description || item.blurb || item.description)
             return (
               <div className="space-y-2">
                 {accolades && (
@@ -208,6 +229,17 @@ export default function FriendItemLightbox({ item, isOpen, onClose, addItem, inC
                   })}
                 </div>
               </>
+            )}
+            {onDismiss && !owned && !addedAs && (
+              <button
+                onClick={() => {
+                  onDismiss(item)
+                  onClose()
+                }}
+                className="w-full mt-2 py-1.5 text-xs text-text-muted hover:text-text-secondary transition-colors"
+              >
+                Not for me
+              </button>
             )}
           </div>
         </div>
