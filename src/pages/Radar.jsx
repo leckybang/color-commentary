@@ -72,20 +72,18 @@ function BucketSection({ bucket, items, onItemClick, inCatalog }) {
   const Icon = bucket.icon
   if (!items || items.length === 0) {
     return (
-      <section className="mb-6">
+      <section className="ink-card bg-bg-secondary rounded-2xl p-5 mb-6">
         <div className="flex items-center gap-2 mb-1">
           <Icon size={18} style={{ color: bucket.color }} />
           <h2 className="text-lg font-semibold text-text-primary">{bucket.label}</h2>
         </div>
         <p className="text-xs text-text-muted mb-3">{bucket.blurb}</p>
-        <div className="text-xs text-text-muted italic bg-bg-secondary border border-border rounded-xl p-4">
-          Nothing in this bucket this week.
-        </div>
+        <p className="text-xs text-text-muted italic">Nothing in this bucket this week.</p>
       </section>
     )
   }
   return (
-    <section className="mb-8">
+    <section className="ink-card bg-bg-secondary rounded-2xl p-5 mb-6">
       <div className="flex items-center gap-2 mb-1">
         <Icon size={18} style={{ color: bucket.color }} />
         <h2 className="text-lg font-semibold text-text-primary">{bucket.label}</h2>
@@ -203,7 +201,7 @@ export default function Radar() {
 
       {/* Popular with Users — what real people here are logging right now */}
       {popular.items.length > 0 && (
-        <section className="mb-8">
+        <section className="ink-card bg-bg-secondary rounded-2xl p-5 mb-6">
           <div className="flex items-center gap-2 mb-1">
             <Flame size={18} className="text-accent-primary" />
             <h2 className="text-lg font-semibold text-text-primary">Popular with Users</h2>
