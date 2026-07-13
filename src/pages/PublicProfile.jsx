@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { Lock, Settings, Star, UserPlus, UserMinus, Check, Users, ArrowUpRight } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
