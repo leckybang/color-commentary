@@ -223,7 +223,7 @@ export default function Profile({ hidePublicProfile = false, hideHeader = false 
                 Pick your favorites
               </button>
             ) : (
-              <p className="text-xs text-text-muted">Add items to your catalog first</p>
+              <p className="text-xs text-text-muted">Log some items first</p>
             )}
           </div>
         )}
@@ -231,7 +231,7 @@ export default function Profile({ hidePublicProfile = false, hideHeader = false 
 
       {/* Heavy Rotation picker modal */}
       <Modal isOpen={showRotationPicker} onClose={() => setShowRotationPicker(false)} title="Add to Heavy Rotation" maxWidth="500px">
-        <p className="text-sm text-text-muted mb-4">Pick up to {8 - itemIds.length} more items from your catalog.</p>
+        <p className="text-sm text-text-muted mb-4">Pick up to {8 - itemIds.length} more items from your log.</p>
         {availableForRotation.length > 0 ? (
           <div className="space-y-2 max-h-[400px] overflow-y-auto">
             {availableForRotation.map((item) => (
@@ -447,7 +447,7 @@ export default function Profile({ hidePublicProfile = false, hideHeader = false 
                 style={{ borderColor: `color-mix(in srgb, ${activeCat.color} 35%, transparent)`, backgroundColor: 'var(--color-bg-tertiary)' }}
               >
                 <p className="text-xs font-medium uppercase tracking-wide mb-2" style={{ color: activeCat.color }}>
-                  From your catalog
+                  From your log
                 </p>
                 <p className="text-[11px] text-text-muted mb-3">
                   Auto-pulled from items you've added and rated. The more you log, the more this fills in.

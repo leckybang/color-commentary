@@ -258,7 +258,7 @@ export default function Catalog() {
     const pinned = isInNextUp(item.id)
     const section = STATUS_SECTIONS.find((s) => s.key === item.status)
     return (
-      <div key={item.id} className="group cursor-pointer" onClick={() => openLightbox(item)}>
+      <div key={item.id} className="group cursor-pointer w-28 shrink-0" onClick={() => openLightbox(item)}>
         <div className="relative w-28 mx-auto">
           <CoverArt title={item.title} type={item.type} creator={item.creator} coverUrl={item.coverUrl} size="lg" />
           {item.status === 'want' && (
@@ -323,7 +323,7 @@ export default function Catalog() {
           </span>
         </button>
         {!collapsed && (
-          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-x-3 gap-y-5">
+          <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-1 px-1 pb-1">
             {sectionItems.map(renderCatalogItem)}
           </div>
         )}
@@ -337,7 +337,7 @@ export default function Catalog() {
     <div>
       <div className="flex items-start justify-between mb-4">
         <div>
-          <h1 className="text-2xl font-bold text-text-primary">Catalog</h1>
+          <h1 className="text-2xl font-bold text-text-primary">Log</h1>
           <p className="text-text-secondary text-sm mt-1">{items.length} items in your library</p>
         </div>
         <button
@@ -437,7 +437,7 @@ export default function Catalog() {
       ) : hasActiveFilters || viewMode === 'list' ? (
         // Flat grid / list when filters active or list view requested
         viewMode === 'grid' ? (
-          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-x-3 gap-y-5">
+          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-x-3 gap-y-5 justify-items-center">
             {filtered.map(renderCatalogItem)}
           </div>
         ) : (
@@ -682,7 +682,7 @@ export default function Catalog() {
             <span className="flex-1">
               <span className="block text-sm font-medium text-text-primary">Hide from profile</span>
               <span className="block text-xs text-text-muted mt-0.5">
-                Stays in your catalog and counts, but friends and profile visitors never see it.
+                Stays in your log and counts, but friends and profile visitors never see it.
               </span>
             </span>
             <span

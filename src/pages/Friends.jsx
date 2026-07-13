@@ -65,7 +65,7 @@ export default function Friends() {
           <h2 className="text-lg font-semibold text-text-primary">Fresh from friends</h2>
         </div>
         <p className="text-xs text-text-muted mb-3">
-          What the people you follow have been adding, watching, and finishing. Tap Add to grab one for your own catalog.
+          What the people you follow have been adding, watching, and finishing. Tap Add to grab one for your own log.
         </p>
         {feed.items.length > 0 ? (
           <FriendsFeedRows items={feed.items} addItem={addItem} inCatalog={inCatalog} onItemClick={(it) => setDetailItem({ ...it, friendName: it.displayName })} />
@@ -73,7 +73,7 @@ export default function Friends() {
           <p className="text-sm text-text-muted italic py-4 text-center">Checking in on your people…</p>
         ) : feed.hasFriends ? (
           <p className="text-sm text-text-muted italic py-4 text-center">
-            Quiet so far: nothing from your friends yet. (Private profiles keep their catalogs to themselves.)
+            Quiet so far. Nothing from your friends yet. (Private profiles keep their catalogs to themselves.)
           </p>
         ) : (
           <p className="text-sm text-text-muted italic py-4 text-center">

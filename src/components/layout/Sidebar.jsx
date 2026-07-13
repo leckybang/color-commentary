@@ -9,7 +9,7 @@ import { useReactionsOnMyItems } from '../../hooks/useReactionsOnMyItems'
 const NAV_ITEMS = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/radar', icon: Radar, label: 'Radar' },
-  { to: '/catalog', icon: Library, label: 'Catalog' },
+  { to: '/catalog', icon: Library, label: 'Log' },
   { to: '/friends', icon: Users, label: 'Friends' },
   { to: '/me', icon: User, label: 'Profile' },
 ]

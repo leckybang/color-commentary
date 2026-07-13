@@ -76,7 +76,7 @@ export default function InsightsHero({ items, stats = {} }) {
           to="/catalog"
           className="inline-flex items-center gap-1.5 text-sm font-medium text-accent-primary hover:underline"
         >
-          Go to your catalog <ArrowRight size={14} />
+          Go to your log <ArrowRight size={14} />
         </Link>
       </div>
     )
@@ -124,23 +124,22 @@ export default function InsightsHero({ items, stats = {} }) {
         )}
 
         {/* Quantified self — the numbers that matter, at a glance */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+        <div className="grid grid-cols-3 gap-2 mt-4 max-w-md">
           {[
             { label: insights.usingMonth ? `Finished in ${insights.monthLabel}` : 'Finished all time', value: insights.count, color: 'var(--color-accent-books)' },
-            { label: 'Cataloged', value: stats.total ?? '—', color: 'var(--color-accent-tv)' },
-            { label: 'Added this week', value: stats.addedThisWeek ?? '—', color: 'var(--color-accent-music)' },
+            { label: 'Logged', value: stats.total ?? '—', color: 'var(--color-accent-tv)' },
             { label: 'Avg rating', value: stats.avgRating || '—', color: '#f59e0b' },
           ].map((t) => (
             <div
               key={t.label}
-              className="relative overflow-hidden rounded-xl p-3 border-[1.5px] border-text-primary"
+              className="relative overflow-hidden rounded-xl p-2.5 border-[1.5px] border-text-primary"
               style={{ backgroundColor: `color-mix(in srgb, ${t.color} 16%, var(--color-bg-secondary))` }}
             >
-              <span className="absolute top-0 right-0 w-5 h-5 rounded-bl-xl" style={{ backgroundColor: t.color }} aria-hidden="true" />
-              <p className="text-2xl font-extrabold text-text-primary leading-none" style={{ fontFamily: 'var(--font-heading)' }}>
+              <span className="absolute top-0 right-0 w-4 h-4 rounded-bl-xl" style={{ backgroundColor: t.color }} aria-hidden="true" />
+              <p className="text-xl font-extrabold text-text-primary leading-none" style={{ fontFamily: 'var(--font-heading)' }}>
                 {t.value}
               </p>
-              <p className="text-[11px] font-semibold text-text-secondary mt-1">{t.label}</p>
+              <p className="text-[10px] font-semibold text-text-secondary mt-1 leading-tight">{t.label}</p>
             </div>
           ))}
         </div>
@@ -163,6 +162,11 @@ export default function InsightsHero({ items, stats = {} }) {
               {insights.finishedThisYear > 0 && (
                 <span className="text-xs px-3 py-1 rounded-full font-bold text-text-primary border-[1.5px] border-text-primary bg-bg-secondary">
                   {insights.finishedThisYear} this year
+                </span>
+              )}
+              {(stats.addedThisWeek ?? 0) > 0 && (
+                <span className="text-xs px-3 py-1 rounded-full font-bold text-text-primary border-[1.5px] border-text-primary bg-bg-secondary">
+                  {stats.addedThisWeek} added this week
                 </span>
               )}
             </div>
@@ -212,7 +216,7 @@ export default function InsightsHero({ items, stats = {} }) {
             />
             {!username && (
               <p className="text-xs text-text-muted mb-3 -mt-1">
-                Psst: set your @username in{' '}
+                Psst! Set your @username in{' '}
                 <Link to="/me?tab=settings" className="text-accent-primary font-semibold hover:underline">
                   Settings
                 </Link>{' '}

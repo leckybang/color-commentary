@@ -159,7 +159,7 @@ function RadarCard({ item, onAdd, onDismiss, isAdded }) {
             {isAdded ? (
               <div className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium text-accent-books">
                 <Check size={14} />
-                Added to Catalog
+                Logged
               </div>
             ) : (
               <button

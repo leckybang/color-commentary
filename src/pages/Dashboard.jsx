@@ -277,7 +277,7 @@ export default function Dashboard() {
               <MessageCircle size={18} className="text-accent-primary" />
               <h2 className="font-semibold text-text-primary">Someone Told Me About...</h2>
             </div>
-            <p className="text-xs text-text-muted mb-3">Your parking lot for when you are vetting recommendations to add to your catalog.</p>
+            <p className="text-xs text-text-muted mb-3">Your parking lot for when you are vetting recommendations to add to your log.</p>
 
             {/* Type toggle — determines which API to search */}
             <div className="flex gap-1 mb-3">
@@ -373,7 +373,7 @@ export default function Dashboard() {
                       </div>
                       {note.type && (
                         inCatalog(note.text, note.type) ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-accent-books shrink-0" title="Already in your catalog">
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-accent-books shrink-0" title="Already in your log">
                             <Check size={12} />
                             Saved
                           </span>
@@ -392,7 +392,7 @@ export default function Dashboard() {
                               deleteNote(note.id)
                             }}
                             className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-accent-primary text-white hover:bg-accent-hover transition-colors shrink-0"
-                            title="Move to your catalog (Want to Try)"
+                            title="Move to your log (Want to Try)"
                           >
                             <Plus size={12} />
                             Add
@@ -468,7 +468,7 @@ export default function Dashboard() {
                         <p className="text-sm font-medium text-text-primary truncate">{item.title}</p>
                         <p className="text-xs text-text-muted truncate">
                           {item.creator ? `${item.creator} · ` : ''}
-                          <span style={{ color: getMediaColor(item.type) }}>{item.userCount} people added this</span>
+                          <span style={{ color: getMediaColor(item.type) }}>{item.userCount} people logged this</span>
                         </p>
                       </div>
                       {owned ? (
@@ -501,7 +501,7 @@ export default function Dashboard() {
           {/* Recent in Catalog */}
           <div className="ink-card bg-bg-secondary rounded-2xl p-5">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold text-text-primary">Recent in Catalog</h2>
+              <h2 className="font-semibold text-text-primary">Recently Logged</h2>
               <Link to="/catalog" className="text-sm text-accent-primary hover:underline flex items-center gap-1">
                 View all <ArrowRight size={14} />
               </Link>
