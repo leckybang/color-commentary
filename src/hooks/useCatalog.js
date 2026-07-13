@@ -19,6 +19,7 @@ function fromDb(row) {
     year: row.year || '',
     dateAdded: row.date_added || row.created_at,
     dateConsumed: row.date_consumed || null,
+    hidden: !!row.hidden,
   }
 }
 
@@ -40,6 +41,7 @@ function toDb(item, userId) {
     year: item.year || null,
     date_added: item.dateAdded || new Date().toISOString(),
     date_consumed: item.dateConsumed || null,
+    hidden: !!item.hidden,
   }
 }
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Plus, LayoutGrid, List, Music, Film, Tv, BookOpen, Trash2, Pin, PinOff, GripVertical, ArrowUp, ArrowDown, Search, SlidersHorizontal, Target, Library, Play, Check, X } from 'lucide-react'
+import { Plus, LayoutGrid, List, Music, Film, Tv, BookOpen, Trash2, Pin, PinOff, GripVertical, ArrowUp, ArrowDown, Search, SlidersHorizontal, Target, Library, Play, Check, X, Eye, EyeOff } from 'lucide-react'
 import { useCatalog } from '../hooks/useCatalog'
 import { useNextUp } from '../hooks/useNextUp'
 import MediaCard from '../components/common/MediaCard'
@@ -16,7 +16,7 @@ import QuickAdd from '../components/QuickAdd'
 import { filterCatalog, sortCatalog, MEDIA_TYPES, STATUS_OPTIONS, getMediaColor } from '../utils/filterUtils'
 import { getCountsByType } from '../utils/catalogStats'
 
-const EMPTY_ITEM = { title: '', creator: '', type: null, genre: '', status: 'want', rating: 0, review: '', coverUrl: '', year: '' }
+const EMPTY_ITEM = { title: '', creator: '', type: null, genre: '', status: 'want', rating: 0, review: '', coverUrl: '', year: '', hidden: false }
 
 const TYPE_TO_SEARCH_TYPES = {
   music: ['music'],
@@ -652,6 +652,32 @@ export default function Catalog() {
               <ExternalLinks type={formData.type} title={formData.title} creator={formData.creator} />
             </div>
           )}
+
+          {/* Privacy: keep it in your catalog, off your public profile */}
+          <button
+            type="button"
+            onClick={() => setFormData({ ...formData, hidden: !formData.hidden })}
+            className="w-full flex items-start gap-3 p-3 rounded-xl bg-bg-tertiary/60 border border-border text-left hover:bg-bg-hover/50 transition-colors"
+            aria-pressed={!!formData.hidden}
+          >
+            {formData.hidden ? (
+              <EyeOff size={16} className="text-accent-primary mt-0.5 shrink-0" />
+            ) : (
+              <Eye size={16} className="text-text-muted mt-0.5 shrink-0" />
+            )}
+            <span className="flex-1">
+              <span className="block text-sm font-medium text-text-primary">Hide from profile</span>
+              <span className="block text-xs text-text-muted mt-0.5">
+                Stays in your catalog and counts, but friends and profile visitors never see it.
+              </span>
+            </span>
+            <span
+              className={`shrink-0 mt-0.5 w-9 h-5 rounded-full transition-colors relative ${formData.hidden ? 'bg-accent-primary' : 'bg-bg-secondary border border-border'}`}
+              aria-hidden="true"
+            >
+              <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${formData.hidden ? 'left-[18px]' : 'left-0.5'}`} />
+            </span>
+          </button>
 
           <div className="flex gap-3 pt-2">
             {editItem && (
