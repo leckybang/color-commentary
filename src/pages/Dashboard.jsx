@@ -234,8 +234,8 @@ export default function Dashboard() {
               Catalog <ArrowRight size={14} />
             </Link>
           </div>
-          <div className="flex gap-3">
-            {items.filter((i) => i.status === 'watching').slice(0, 4).map((it) => (
+          <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-1 px-1 pb-1">
+            {items.filter((i) => i.status === 'watching').slice(0, 8).map((it) => (
               <Link key={it.id} to="/catalog" className="shrink-0 w-20" title={it.title}>
                 <CoverArt title={it.title} type={it.type} creator={it.creator} coverUrl={it.coverUrl} size="md" />
                 <p className="text-[10px] text-text-muted truncate mt-1">{it.title}</p>
@@ -276,10 +276,10 @@ export default function Dashboard() {
               <MessageCircle size={18} className="text-accent-primary" />
               <h2 className="font-semibold text-text-primary">Someone Told Me About...</h2>
             </div>
-            <p className="text-xs text-text-muted mb-3">Your parking lot for when you are vetting recommendations to add to your log.</p>
+            <p className="text-xs text-text-muted mb-4">Your parking lot for when you are vetting recommendations to add to your log.</p>
 
             {/* Type toggle — determines which API to search */}
-            <div className="flex gap-1 mb-3">
+            <div className="flex gap-1.5 mb-4">
               {MEDIA_TYPES.map((t) => (
                 <button
                   key={t.value}
@@ -288,15 +288,14 @@ export default function Dashboard() {
                     setNoteType(t.value)
                     setNoteMeta(null)
                   }}
-                  className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-all ${
-                    noteType === t.value
-                      ? 'border-transparent'
-                      : 'bg-bg-tertiary border-border text-text-muted hover:bg-bg-hover'
+                  className={`flex-1 py-2 rounded-lg text-xs font-bold border-[1.5px] transition-all ${
+                    noteType === t.value ? '' : 'hover:opacity-90'
                   }`}
-                  style={noteType === t.value ? {
-                    backgroundColor: `color-mix(in srgb, ${t.color} 20%, transparent)`,
+                  style={{
+                    backgroundColor: `color-mix(in srgb, ${t.color} ${noteType === t.value ? 22 : 9}%, var(--color-bg-secondary))`,
                     color: t.color,
-                  } : {}}
+                    borderColor: noteType === t.value ? `color-mix(in srgb, ${t.color} 55%, transparent)` : 'transparent',
+                  }}
                 >
                   {t.label}
                 </button>
@@ -304,7 +303,7 @@ export default function Dashboard() {
             </div>
 
             {/* Search input (auto-populates from real APIs) */}
-            <div className="flex gap-2 mb-4">
+            <div className="flex gap-2 mb-5">
               <div className="flex-1">
                 <MediaPickerInput
                   value={noteText}
@@ -313,7 +312,7 @@ export default function Dashboard() {
                     if (noteMeta && v !== noteMeta.title) setNoteMeta(null)
                   }}
                   onPick={handlePick}
-                  placeholder={`Search ${noteType === 'music' ? 'Spotify' : noteType === 'book' ? 'books' : noteType === 'tv' ? 'TV shows' : 'movies'}...`}
+                  placeholder="Search for media..."
                   preferredTypes={SCRATCHPAD_TYPE_TO_SEARCH[noteType] || ['movie']}
                 />
               </div>
