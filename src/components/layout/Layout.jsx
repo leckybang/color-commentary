@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar'
+import UpdateToast from '../common/UpdateToast'
 
 // Renders nested routes via <Outlet/>, or explicit children when used as a
 // plain wrapper (e.g. the signed-in view of /u/:username).
@@ -12,6 +13,7 @@ export default function Layout({ children }) {
           {children ?? <Outlet />}
         </div>
       </main>
+      <UpdateToast />
     </div>
   )
 }
