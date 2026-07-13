@@ -65,12 +65,15 @@ export async function fetchNYTBestsellers(limit = 10, { signal } = {}) {
       }
     }
 
-    // Dedupe by ISBN (same book can appear on multiple lists).
+    // Dedupe by TITLE, not ISBN — the same book appears on multiple lists
+    // under different editions (print vs audio) with different ISBNs, which
+    // an ISBN-keyed dedupe lets straight through.
     const seen = new Set()
     const deduped = []
     for (const p of picks) {
-      if (!p || seen.has(p.externalId)) continue
-      seen.add(p.externalId)
+      const key = (p?.title || '').toLowerCase().trim()
+      if (!p || !key || seen.has(key)) continue
+      seen.add(key)
       deduped.push(p)
     }
 
