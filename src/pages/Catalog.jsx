@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Plus, LayoutGrid, List, Music, Film, Tv, BookOpen, Trash2, Pin, PinOff, GripVertical, ArrowUp, ArrowDown, Search, SlidersHorizontal, Target, Library, Play, Check, X, Eye, EyeOff } from 'lucide-react'
+import { Plus, LayoutGrid, List, Music, Film, Tv, BookOpen, Trash2, Pin, PinOff, GripVertical, ArrowUp, ArrowDown, Search, SlidersHorizontal, Target, Library, Play, Check, X, Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react'
 import { useCatalog } from '../hooks/useCatalog'
 import { useNextUp } from '../hooks/useNextUp'
 import FilterBar from '../components/common/FilterBar'
@@ -14,7 +14,6 @@ import Celebration from '../components/common/Celebration'
 import CatalogInsights from '../components/CatalogInsights'
 import QuickAdd from '../components/QuickAdd'
 import { filterCatalog, sortCatalog, MEDIA_TYPES, STATUS_OPTIONS, getMediaColor } from '../utils/filterUtils'
-import { getCountsByType } from '../utils/catalogStats'
 
 const EMPTY_ITEM = { title: '', creator: '', type: null, genre: '', status: 'want', rating: 0, review: '', coverUrl: '', year: '', hidden: false }
 
@@ -44,6 +43,27 @@ export default function Catalog() {
   const [editItem, setEditItem] = useState(null)
   const [formData, setFormData] = useState(EMPTY_ITEM)
   const [lightboxItem, setLightboxItem] = useState(null)
+  const [collapsedSections, setCollapsedSections] = useState(() => new Set())
+
+  const toggleSection = (key) => {
+    setCollapsedSections((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+
+  const jumpToSection = (key) => {
+    setCollapsedSections((prev) => {
+      const next = new Set(prev)
+      next.delete(key)
+      return next
+    })
+    requestAnimationFrame(() => {
+      document.getElementById(`section-${key}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }
   const [saveAttempted, setSaveAttempted] = useState(false)
   const [dragIndex, setDragIndex] = useState(null)
   const [celebrating, setCelebrating] = useState(null)
@@ -80,13 +100,10 @@ export default function Catalog() {
   const filtered = sortCatalog(filterCatalog(items, filters), sortBy)
   // A type-only filter (from the top tab strip) should still show the status
   // groupings — only "non-type" filters collapse the view to flat.
-  const hasNonTypeFilters = !!(filters.status && filters.status !== 'all') ||
+  const hasActiveFilters = !!(filters.status && filters.status !== 'all') ||
     !!(filters.search && filters.search.trim()) ||
     !!(filters.genre && filters.genre.trim()) ||
     !!filters.rating
-  const hasTypeFilter = !!(filters.type && filters.type !== 'all')
-  const hasActiveFilters = hasNonTypeFilters
-  const typeCounts = getCountsByType(items)
 
   // Build Next Up items (in order) from catalog
   const nextUpItems = nextUpIds
@@ -287,18 +304,29 @@ export default function Catalog() {
     }
     if (sectionItems.length === 0) return null
     const Icon = section.icon
+    const collapsed = collapsedSections.has(section.key)
     return (
-      <section key={section.key} className="mb-8">
-        <div className="flex items-center gap-2 mb-3">
+      <section key={section.key} id={`section-${section.key}`} className="mb-8 scroll-mt-4">
+        <button
+          onClick={() => toggleSection(section.key)}
+          className="w-full flex items-center gap-2 mb-3 text-left group/section"
+          title={collapsed ? `Show ${section.label}` : `Hide ${section.label} for now`}
+        >
           <Icon size={18} style={{ color: section.color }} />
           <h2 className="text-lg font-semibold text-text-primary">{section.label}</h2>
           <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: `color-mix(in srgb, ${section.color} 15%, transparent)`, color: section.color }}>
             {sectionItems.length}
           </span>
-        </div>
-        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-x-3 gap-y-5">
-          {sectionItems.map(renderCatalogItem)}
-        </div>
+          <span className="flex-1" />
+          <span className="p-1 rounded-lg text-text-muted group-hover/section:text-text-secondary group-hover/section:bg-bg-hover transition-colors">
+            {collapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+          </span>
+        </button>
+        {!collapsed && (
+          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-x-3 gap-y-5">
+            {sectionItems.map(renderCatalogItem)}
+          </div>
+        )}
       </section>
     )
   }
@@ -336,72 +364,14 @@ export default function Catalog() {
         Add with rating &amp; review
       </button>
 
-      {/* Media-type tabs */}
-      <div className="flex gap-1 mb-4 overflow-x-auto -mx-1 px-1 pb-1">
-        {[
-          { value: 'all', label: 'All', icon: Library, color: 'var(--color-accent-primary)', count: items.length },
-          ...MEDIA_TYPES.map((t) => ({
-            value: t.value,
-            label: t.label,
-            icon: t.value === 'music' ? Music : t.value === 'movie' ? Film : t.value === 'tv' ? Tv : BookOpen,
-            color: t.color,
-            count: typeCounts[t.value] || 0,
-          })),
-        ].map((tab) => {
-          const { value, label, color, count } = tab
-          const Icon = tab.icon
-          const isActive = value === 'all' ? !hasTypeFilter : filters.type === value
-          return (
-            <button
-              key={value}
-              onClick={() => {
-                setFilters({ ...filters, type: value === 'all' ? 'all' : value })
-              }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-all whitespace-nowrap"
-              style={
-                isActive
-                  ? {
-                      backgroundColor: `color-mix(in srgb, ${color} 18%, transparent)`,
-                      color,
-                      borderColor: `color-mix(in srgb, ${color} 50%, transparent)`,
-                    }
-                  : {
-                      backgroundColor: 'transparent',
-                      color: 'var(--color-text-muted)',
-                      borderColor: 'var(--color-border)',
-                    }
-              }
-            >
-              <Icon size={14} />
-              {label}
-              <span
-                className="text-[10px] px-1.5 rounded-full"
-                style={
-                  isActive
-                    ? { backgroundColor: `color-mix(in srgb, ${color} 25%, transparent)`, color }
-                    : { backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-muted)' }
-                }
-              >
-                {count}
-              </span>
-            </button>
-          )
-        })}
-      </div>
-
-      {/* Insights — collapsed by default */}
-      <div className="mb-6">
-        <CatalogInsights items={items} onItemClick={openLightbox} />
-      </div>
-
       {/* Just added — the thing you entered ten seconds ago, visibly here */}
       {!hasActiveFilters && items.length > 0 && (
         <div className="mb-5">
           <p className="text-[11px] font-bold uppercase tracking-[2px] text-text-muted mb-2">Just added</p>
-          <div className="flex gap-3 overflow-x-auto pb-1">
+          <div className="flex gap-3">
             {[...items]
               .sort((a, b) => new Date(b.dateAdded || 0) - new Date(a.dateAdded || 0))
-              .slice(0, 6)
+              .slice(0, 4)
               .map((it) => (
                 <button key={it.id} onClick={() => openLightbox(it)} className="shrink-0 w-16 text-left" title={it.title}>
                   <CoverArt title={it.title} type={it.type} creator={it.creator} coverUrl={it.coverUrl} size="radar" />
@@ -412,41 +382,31 @@ export default function Catalog() {
         </div>
       )}
 
-      {/* Status pills — one tap to the shelf you're looking for */}
-      <div className="flex gap-2 overflow-x-auto pb-1 mb-4">
-        {[{ key: 'all', label: 'All', color: 'var(--color-accent-primary)' }, ...STATUS_SECTIONS].map((s) => {
-          const count = s.key === 'all' ? items.length : items.filter((i) => i.status === s.key).length
-          if (s.key === 'dropped' && count === 0) return null
-          const active = (filters.status || 'all') === s.key
-          return (
-            <button
-              key={s.key}
-              onClick={() => setFilters({ ...filters, status: s.key === 'all' ? undefined : s.key })}
-              className={`shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold border-[1.5px] transition-all ${
-                active ? 'border-transparent' : 'border-border bg-bg-secondary text-text-muted hover:text-text-secondary hover:bg-bg-hover'
-              }`}
-              style={active ? { backgroundColor: `color-mix(in srgb, ${s.color} 20%, var(--color-bg-secondary))`, color: s.color, borderColor: `color-mix(in srgb, ${s.color} 45%, transparent)` } : {}}
-            >
-              {s.label}
-              <span className={active ? 'opacity-80' : 'opacity-60'}>{count}</span>
-            </button>
-          )
-        })}
-      </div>
-
-      {/* Secondary: filter / search existing items. Demoted under the primary action. */}
-      <details className="mb-6 group">
-        <summary className="cursor-pointer list-none flex items-center justify-between text-xs text-text-muted hover:text-text-secondary transition-colors px-1 py-1.5 select-none">
-          <span className="flex items-center gap-1.5">
-            <SlidersHorizontal size={13} />
-            Filter or search what's already here
-          </span>
-          <span className="text-text-muted/60 group-open:rotate-180 transition-transform">▾</span>
-        </summary>
-        <div className="mt-2">
-          <FilterBar filters={filters} onChange={setFilters} sortBy={sortBy} onSortChange={setSortBy} />
+      {/* Status jump links — anchor straight to the shelf you want */}
+      {!hasActiveFilters && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          {STATUS_SECTIONS.map((s) => {
+            const count = items.filter((i) => i.status === s.key).length
+            if (count === 0) return null
+            return (
+              <button
+                key={s.key}
+                onClick={() => jumpToSection(s.key)}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold border-[1.5px] border-border bg-bg-secondary transition-all hover:bg-bg-hover"
+                style={{ color: s.color }}
+              >
+                {s.label}
+                <span className="opacity-60">{count}</span>
+              </button>
+            )
+          })}
         </div>
-      </details>
+      )}
+
+      {/* Search + filters — always visible */}
+      <div className="mb-6">
+        <FilterBar filters={filters} onChange={setFilters} sortBy={sortBy} onSortChange={setSortBy} />
+      </div>
 
       {filtered.length === 0 ? (
         <div className="text-center py-16 bg-bg-secondary border border-border rounded-2xl">

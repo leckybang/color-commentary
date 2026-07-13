@@ -188,8 +188,8 @@ export default function Dashboard() {
               Catalog <ArrowRight size={14} />
             </Link>
           </div>
-          <div className="flex gap-3 overflow-x-auto pb-1">
-            {items.filter((i) => i.status === 'watching').slice(0, 8).map((it) => (
+          <div className="flex gap-3">
+            {items.filter((i) => i.status === 'watching').slice(0, 4).map((it) => (
               <Link key={it.id} to="/catalog" className="shrink-0 w-20" title={it.title}>
                 <CoverArt title={it.title} type={it.type} creator={it.creator} coverUrl={it.coverUrl} size="md" />
                 <p className="text-[10px] text-text-muted truncate mt-1">{it.title}</p>
