@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Users, Search, UserPlus, UserMinus, ArrowUpRight, Loader2 } from 'lucide-react'
+import { Users, Search, UserPlus, UserMinus, ArrowUpRight, Loader2, ChevronDown, ChevronUp } from 'lucide-react'
 import { useFriends } from '../hooks/useFriends'
 import { usePublicProfile } from '../hooks/usePublicProfile'
 
@@ -36,10 +36,14 @@ function PersonRow({ person, action }) {
  * Lives on the owner's Profile tab. Search hits public Supabase profiles
  * (mock users in demo mode), follows sync via the follows table.
  */
+// Keep the panel short so friend activity stays above the fold.
+const FOLLOWING_PREVIEW = 5
+
 export default function FriendsPanel() {
   const friends = useFriends()
   const publicProfile = usePublicProfile()
   const [query, setQuery] = useState('')
+  const [showAllFollowing, setShowAllFollowing] = useState(false)
   const [results, setResults] = useState([])
   const [searching, setSearching] = useState(false)
   const searchSeq = useRef(0)
@@ -151,7 +155,7 @@ export default function FriendsPanel() {
           Following · {friends.following.length}
         </p>
         {friends.following.length > 0 ? (
-          friends.following.map((f) => (
+          (showAllFollowing ? friends.following : friends.following.slice(0, FOLLOWING_PREVIEW)).map((f) => (
             <PersonRow
               key={f.userId}
               person={f}
@@ -181,6 +185,18 @@ export default function FriendsPanel() {
           <p className="text-xs text-text-muted italic py-2">
             Nobody yet. Search above and be the friend who makes the first move.
           </p>
+        )}
+        {friends.following.length > FOLLOWING_PREVIEW && (
+          <button
+            onClick={() => setShowAllFollowing((v) => !v)}
+            className="w-full flex items-center justify-center gap-1 mt-1 py-2 rounded-lg text-xs font-bold text-accent-primary hover:bg-bg-hover/50 transition-colors"
+          >
+            {showAllFollowing ? (
+              <>Show fewer <ChevronUp size={13} /></>
+            ) : (
+              <>Show all {friends.following.length} <ChevronDown size={13} /></>
+            )}
+          </button>
         )}
       </div>
 
