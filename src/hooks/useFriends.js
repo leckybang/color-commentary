@@ -3,11 +3,11 @@ import { useAuth } from './useAuth'
 import { supabase, shouldSync } from '../lib/syncToSupabase'
 
 const MOCK_USERS = [
-  { userId: 'mock-1', displayName: 'Alex Rivera', email: 'alex@example.com', archetype: 'The Feral Librarian' },
+  { userId: 'mock-1', displayName: 'Alex Rivera', email: 'alex@example.com', archetype: 'The Shelf Stacker' },
   { userId: 'mock-2', displayName: 'Sam Chen', email: 'sam@example.com', archetype: 'The Completionist' },
   { userId: 'mock-3', displayName: 'Jordan Blake', email: 'jordan@example.com', archetype: 'The Gatekeeper' },
   { userId: 'mock-4', displayName: 'Casey Moreno', email: 'casey@example.com', archetype: 'The Cozy Rewatcher' },
-  { userId: 'mock-5', displayName: 'Riley Park', email: 'riley@example.com', archetype: 'The Tastemaker-at-Large' },
+  { userId: 'mock-5', displayName: 'Riley Park', email: 'riley@example.com', archetype: 'The Influencer' },
 ]
 
 /**
