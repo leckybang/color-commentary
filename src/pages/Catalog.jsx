@@ -306,7 +306,7 @@ export default function Catalog() {
     const Icon = section.icon
     const collapsed = collapsedSections.has(section.key)
     return (
-      <section key={section.key} id={`section-${section.key}`} className="mb-8 scroll-mt-4">
+      <section key={section.key} id={`section-${section.key}`} className="ink-card bg-bg-secondary rounded-2xl p-5 mb-6 scroll-mt-4">
         <button
           onClick={() => toggleSection(section.key)}
           className="w-full flex items-center gap-2 mb-3 text-left group/section"
@@ -366,7 +366,7 @@ export default function Catalog() {
 
       {/* Just added — the thing you entered ten seconds ago, visibly here */}
       {!hasActiveFilters && items.length > 0 && (
-        <div className="mb-5">
+        <div className="ink-card bg-bg-secondary rounded-2xl p-5 mb-6">
           <p className="text-[11px] font-bold uppercase tracking-[2px] text-text-muted mb-2">Just added</p>
           <div className="flex gap-3">
             {[...items]
@@ -437,8 +437,10 @@ export default function Catalog() {
       ) : hasActiveFilters || viewMode === 'list' ? (
         // Flat grid / list when filters active or list view requested
         viewMode === 'grid' ? (
-          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-x-3 gap-y-5 justify-items-center">
-            {filtered.map(renderCatalogItem)}
+          <div className="ink-card bg-bg-secondary rounded-2xl p-5">
+            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-x-3 gap-y-5 justify-items-center">
+              {filtered.map(renderCatalogItem)}
+            </div>
           </div>
         ) : (
           <div className="space-y-2">
@@ -471,7 +473,7 @@ export default function Catalog() {
         <>
           {/* Next Up — always shown if any items are pinned */}
           {nextUpItems.length > 0 && (
-            <section className="mb-8">
+            <section className="ink-card bg-bg-secondary rounded-2xl p-5 mb-6">
               <div className="flex items-center gap-2 mb-1">
                 <Target size={18} className="text-accent-primary" />
                 <h2 className="text-lg font-semibold text-text-primary">Next Up</h2>
