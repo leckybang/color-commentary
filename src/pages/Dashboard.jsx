@@ -15,6 +15,7 @@ import InsightsHero from '../components/InsightsHero'
 import QuickAdd from '../components/QuickAdd'
 import CatalogSeeds from '../components/CatalogSeeds'
 import FriendsFeedRows from '../components/FriendsFeedRows'
+import FriendItemLightbox from '../components/FriendItemLightbox'
 import { useFriendsFeed } from '../hooks/useFriendsFeed'
 import { usePopularItems } from '../hooks/usePopularItems'
 import { CALIBRATION_QUESTIONS } from '../data/calibrationData'
@@ -48,6 +49,7 @@ export default function Dashboard() {
   const [noteText, setNoteText] = useState('')
   const [noteType, setNoteType] = useState('movie')
   const [noteMeta, setNoteMeta] = useState(null) // from picked search result
+  const [friendDetailItem, setFriendDetailItem] = useState(null)
 
   // Onboarding: show once when profile is empty and user hasn't gone through it yet
   const onboardingKey = user ? `cc_onboarding_done_${user.uid}` : null
@@ -380,6 +382,7 @@ export default function Dashboard() {
                 addItem={addItem}
                 inCatalog={inCatalog}
                 compact
+                onItemClick={(it) => setFriendDetailItem({ ...it, friendName: it.displayName })}
               />
             ) : (
               <p className="text-xs text-text-muted italic text-center py-4">
@@ -523,6 +526,13 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+      <FriendItemLightbox
+        item={friendDetailItem}
+        isOpen={!!friendDetailItem}
+        onClose={() => setFriendDetailItem(null)}
+        addItem={addItem}
+        inCatalog={inCatalog}
+      />
     </div>
   )
 }
