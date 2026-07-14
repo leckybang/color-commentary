@@ -32,11 +32,12 @@ export default function Modal({ isOpen, onClose, title, children, maxWidth = '50
       style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
       onClick={(e) => e.target === overlayRef.current && onClose()}
     >
-      {/* Bottom sheet on phones (stable height, keyboard-friendly);
-          centered card on larger screens. */}
+      {/* Bottom sheet on phones (full-bleed, stable height, keyboard-friendly);
+          centered max-width card on larger screens. The max width must NOT
+          apply in sheet mode or page content peeks out beside the sheet. */}
       <div
-        className="bg-bg-secondary border border-border rounded-t-2xl sm:rounded-2xl w-full overflow-hidden shadow-2xl h-[92dvh] sm:h-auto"
-        style={{ maxWidth, maxHeight: '92dvh', display: 'flex', flexDirection: 'column' }}
+        className="bg-bg-secondary border-t sm:border border-border rounded-t-2xl sm:rounded-2xl w-full overflow-hidden shadow-2xl h-[92dvh] sm:h-auto sm:max-w-[var(--modal-max-w)]"
+        style={{ '--modal-max-w': maxWidth, maxHeight: '92dvh', display: 'flex', flexDirection: 'column' }}
       >
         <div className="flex items-center justify-between p-5 border-b border-border">
           <h2 className="text-lg font-semibold text-text-primary">{title}</h2>
