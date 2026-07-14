@@ -298,10 +298,12 @@ export default function ItemLightbox({ item, isOpen, onClose, onEdit, onUpdate, 
                     <button
                       key={s.value}
                       onClick={() => handleStatus(s.value)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all active:scale-95 ${
-                        active ? 'border-transparent' : 'bg-bg-tertiary border-border text-text-muted hover:bg-bg-hover'
-                      }`}
-                      style={active ? { backgroundColor: `color-mix(in srgb, ${s.color} 22%, transparent)`, color: s.color } : {}}
+                      className={`px-3 py-1.5 rounded-lg text-xs border-[1.5px] transition-all active:scale-95 ${active ? 'font-bold' : 'font-semibold hover:opacity-90'}`}
+                      style={{
+                        color: s.color,
+                        backgroundColor: `color-mix(in srgb, ${s.color} ${active ? 22 : 8}%, var(--color-bg-secondary))`,
+                        borderColor: active ? `color-mix(in srgb, ${s.color} 55%, transparent)` : 'transparent',
+                      }}
                     >
                       {s.label}
                     </button>

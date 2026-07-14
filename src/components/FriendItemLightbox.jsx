@@ -6,13 +6,16 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
-import { X, Star, Bookmark, Play, Check, Library, Newspaper, ExternalLink as ExternalLinkIcon } from 'lucide-react'
+import { X, Star, Bookmark, Play, Check, Library, Newspaper, ExternalLink as ExternalLinkIcon, Share2, Loader2 } from 'lucide-react'
 import CoverArt from './common/CoverArt'
 import StarRating from './common/StarRating'
 import ExternalLinks from './common/ExternalLinks'
 import { getMediaColor } from '../utils/filterUtils'
 import { splitAccolades } from '../utils/mediaText'
 import { searchGoogleBooks } from '../services/providers/googleBooks'
+import { buildItemCard } from '../utils/shareCard'
+import { usePublicProfile } from '../hooks/usePublicProfile'
+import ShareCardPreview from './common/ShareCardPreview'
 
 const TYPE_LABELS = { music: 'Music', movie: 'Movie', tv: 'TV', book: 'Book' }
 
@@ -37,6 +40,9 @@ export default function FriendItemLightbox({ item, isOpen, onClose, addItem, inC
   const [finishing, setFinishing] = useState(false)
   const [finishRating, setFinishRating] = useState(0)
   const [finishReview, setFinishReview] = useState('')
+  const { username } = usePublicProfile()
+  const [shareCard, setShareCard] = useState(null) // { url, blob, filename }
+  const [buildingCard, setBuildingCard] = useState(false)
 
   // Reset per item (adjust-during-render pattern).
   const [itemKey, setItemKey] = useState(null)
@@ -47,6 +53,7 @@ export default function FriendItemLightbox({ item, isOpen, onClose, addItem, inC
     setFinishing(false)
     setFinishRating(0)
     setFinishReview('')
+    setShareCard(null)
     setDetail(key ? detailCache.get(key) || null : null)
   }
 
@@ -119,6 +126,23 @@ export default function FriendItemLightbox({ item, isOpen, onClose, addItem, inC
     setAddedAs(status)
     onAdded?.(item, status)
   }
+
+  const handleBuildShare = async () => {
+    if (buildingCard) return
+    setBuildingCard(true)
+    try {
+      const { blob, filename } = await buildItemCard(
+        { ...item, rating: finishRating, review: finishReview.trim() },
+        { username }
+      )
+      setShareCard({ blob, filename, url: URL.createObjectURL(blob) })
+    } catch (err) {
+      console.error('Item share card failed', err)
+    } finally {
+      setBuildingCard(false)
+    }
+  }
+
 
   return (
     <div
@@ -228,10 +252,26 @@ export default function FriendItemLightbox({ item, isOpen, onClose, addItem, inC
                 Already in your log
               </p>
             ) : addedAs ? (
-              <p className="flex items-center justify-center gap-1.5 py-2 text-sm font-medium text-text-primary">
-                <Check size={15} />
-                Added as {ADD_OPTIONS.find((o) => o.status === addedAs)?.label}
-              </p>
+              <div className="py-1 text-center">
+                <p className="flex items-center justify-center gap-1.5 py-1 text-sm font-medium text-text-primary">
+                  <Check size={15} />
+                  Added as {ADD_OPTIONS.find((o) => o.status === addedAs)?.label}
+                </p>
+                {addedAs === 'finished' && (
+                  <button
+                    onClick={handleBuildShare}
+                    disabled={buildingCard}
+                    className="mt-2 inline-flex items-center gap-1.5 px-5 py-2 rounded-full text-xs font-bold transition-all active:scale-95 disabled:opacity-60"
+                    style={{ backgroundColor: 'var(--color-nav-bg)', color: 'var(--color-nav-text)', boxShadow: '2px 2px 0 var(--color-accent-primary)' }}
+                  >
+                    {buildingCard ? (
+                      <><Loader2 size={13} className="animate-spin" /> Making your card…</>
+                    ) : (
+                      <><Share2 size={13} /> Share it</>
+                    )}
+                  </button>
+                )}
+              </div>
             ) : finishing ? (
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-text-muted mb-2">Nice! How was it?</p>
@@ -287,6 +327,8 @@ export default function FriendItemLightbox({ item, isOpen, onClose, addItem, inC
                 </div>
               </>
             )}
+            <ShareCardPreview card={shareCard} onClose={() => setShareCard(null)} />
+
             {onDismiss && !owned && !addedAs && (
               <button
                 onClick={() => {

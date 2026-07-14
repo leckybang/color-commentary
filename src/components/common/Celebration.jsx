@@ -9,8 +9,11 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
-import { PartyPopper, X } from 'lucide-react'
+import { PartyPopper, X, Share2, Loader2 } from 'lucide-react'
 import StarRating from './StarRating'
+import { buildItemCard } from '../../utils/shareCard'
+import { usePublicProfile } from '../../hooks/usePublicProfile'
+import ShareCardPreview from './ShareCardPreview'
 
 // getMediaColor returns CSS var() strings, which a canvas fillStyle can't
 // resolve — so read the concrete computed values here instead.
@@ -127,6 +130,9 @@ export default function Celebration({ item, onRate, onReview, onClose }) {
   const [rating, setRating] = useState(0)
   const [thoughts, setThoughts] = useState('')
   const [step, setStep] = useState('rate') // 'rate' | 'thoughts' | 'done'
+  const { username } = usePublicProfile()
+  const [shareCard, setShareCard] = useState(null)
+  const [buildingCard, setBuildingCard] = useState(false)
 
   useEffect(() => {
     if (!item || !canvasRef.current) return
@@ -158,7 +164,22 @@ export default function Celebration({ item, onRate, onReview, onClose }) {
     const t = thoughts.trim()
     if (t) onReview(t)
     setStep('done')
-    setTimeout(onClose, 900)
+  }
+
+  const handleBuildShare = async () => {
+    if (buildingCard) return
+    setBuildingCard(true)
+    try {
+      const { blob, filename } = await buildItemCard(
+        { ...item, rating, review: thoughts.trim() },
+        { username }
+      )
+      setShareCard({ blob, filename, url: URL.createObjectURL(blob) })
+    } catch (err) {
+      console.error('Item share card failed', err)
+    } finally {
+      setBuildingCard(false)
+    }
   }
 
   return (
@@ -246,7 +267,27 @@ export default function Celebration({ item, onRate, onReview, onClose }) {
         )}
 
         {step === 'done' && (
-          <p className="mt-6 text-sm font-medium text-accent-books">Saved ✓</p>
+          <>
+          <div className="mt-6 flex flex-col items-center gap-3">
+            <p className="text-sm font-medium" style={{ color: 'var(--color-status-finished)' }}>Saved ✓</p>
+            <button
+              onClick={handleBuildShare}
+              disabled={buildingCard}
+              className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full text-xs font-bold transition-all active:scale-95 disabled:opacity-60"
+              style={{ backgroundColor: 'var(--color-nav-bg)', color: 'var(--color-nav-text)', boxShadow: '2px 2px 0 var(--color-accent-primary)' }}
+            >
+              {buildingCard ? (
+                <><Loader2 size={13} className="animate-spin" /> Making your card…</>
+              ) : (
+                <><Share2 size={13} /> Share it</>
+              )}
+            </button>
+            <button onClick={onClose} className="text-xs text-text-muted hover:text-text-secondary transition-colors">
+              Done
+            </button>
+          </div>
+          <ShareCardPreview card={shareCard} onClose={() => setShareCard(null)} />
+          </>
         )}
       </div>
     </div>

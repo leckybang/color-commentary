@@ -182,12 +182,12 @@ export default function QuickAdd({ addItem, onAdded }) {
                   key={s.value}
                   onClick={() => setStatus(s.value)}
                   className={`px-2.5 py-1 text-[11px] rounded-md transition-colors ${
-                    status === s.value ? 'font-bold' : 'text-text-muted hover:text-text-secondary'
+                    status === s.value ? 'font-bold' : 'font-medium hover:opacity-80'
                   }`}
-                  style={status === s.value ? {
+                  style={{
                     color: s.color,
-                    backgroundColor: `color-mix(in srgb, ${s.color} 14%, var(--color-bg-secondary))`,
-                  } : {}}
+                    backgroundColor: `color-mix(in srgb, ${s.color} ${status === s.value ? 16 : 6}%, var(--color-bg-secondary))`,
+                  }}
                 >
                   {s.label}
                 </button>
