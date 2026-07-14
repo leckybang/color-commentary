@@ -19,6 +19,11 @@
   --color-nav-bg: #1b1a16;
   --color-nav-text: #f5f4ef;
   --color-nav-active: #f6a8c5;
+  /* Status palette — deliberately distinct from the media-type accents:
+     coral = wishlist appetite, teal = in motion, gold = medal earned. */
+  --color-status-want: #e2734d;
+  --color-status-progress: #2f9e93;
+  --color-status-finished: #d9930b;
   --font-heading: 'Bricolage Grotesque', sans-serif;
   --font-body: 'Karla', -apple-system, BlinkMacSystemFont, sans-serif;
 }

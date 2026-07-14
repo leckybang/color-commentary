@@ -25,10 +25,12 @@ const TYPE_TO_SEARCH_TYPES = {
 }
 
 // Ordered sections rendered when no status filter is active
+// Statuses have their OWN palette (coral/teal/gold), deliberately distinct
+// from the media-type accents so a finished movie never dresses like a book.
 const STATUS_SECTIONS = [
-  { key: 'want',     label: 'Want to Try',  icon: Library, color: 'var(--color-accent-primary)' },
-  { key: 'watching', label: 'In Progress',  icon: Play,    color: 'var(--color-accent-tv)' },
-  { key: 'finished', label: 'Finished',     icon: Check,   color: 'var(--color-accent-books)' },
+  { key: 'want',     label: 'Want to Try',  icon: Library, color: 'var(--color-status-want)' },
+  { key: 'watching', label: 'In Progress',  icon: Play,    color: 'var(--color-status-progress)' },
+  { key: 'finished', label: 'Finished',     icon: Check,   color: 'var(--color-status-finished)' },
   { key: 'dropped',  label: 'Dropped',      icon: X,       color: 'var(--color-text-muted)' },
 ]
 
@@ -82,7 +84,9 @@ export default function Catalog() {
     ? items.find((i) => i.id === lightboxItem.id) || lightboxItem
     : null
 
-  // Auto-open the Add modal when navigated here with ?add=1 (e.g. Dashboard's Log Media button)
+  // Auto-open the Add modal when ?add=1 appears — on mount AND while already
+  // on this page (the nav + button links here; with mount-only deps it did
+  // nothing if you were already on the Log).
   useEffect(() => {
     if (searchParams.get('add') === '1') {
       setFormData(EMPTY_ITEM)
@@ -95,7 +99,7 @@ export default function Catalog() {
       setSearchParams(next, { replace: true })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [searchParams])
 
   const filtered = sortCatalog(filterCatalog(items, filters), sortBy)
   // A type-only filter (from the top tab strip) should still show the status
@@ -392,8 +396,12 @@ export default function Catalog() {
               <button
                 key={s.key}
                 onClick={() => jumpToSection(s.key)}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold border-[1.5px] border-border bg-bg-secondary transition-all hover:bg-bg-hover"
-                style={{ color: s.color }}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold border-[1.5px] transition-all hover:opacity-90"
+                style={{
+                  color: s.color,
+                  backgroundColor: `color-mix(in srgb, ${s.color} 12%, var(--color-bg-secondary))`,
+                  borderColor: `color-mix(in srgb, ${s.color} 40%, transparent)`,
+                }}
               >
                 {s.label}
                 <span className="opacity-60">{count}</span>
@@ -524,7 +532,7 @@ export default function Catalog() {
       <Modal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
-        title={editItem ? 'Edit Item' : 'Add to Catalog'}
+        title={editItem ? 'Edit Item' : 'Add to your Log'}
         maxWidth="550px"
       >
         <div className="space-y-4">
@@ -717,7 +725,7 @@ export default function Catalog() {
               disabled={!formData.title.trim() || (!editItem && !formData.type)}
               className="px-6 py-2.5 rounded-lg text-sm font-medium bg-accent-primary hover:bg-accent-hover text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {editItem ? 'Save Changes' : 'Add to Catalog'}
+              {editItem ? 'Save Changes' : 'Add to your Log'}
             </button>
           </div>
         </div>

@@ -21,10 +21,12 @@ const DETAIL_TTL_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
 const TYPE_LABELS = { music: 'Music', movie: 'Movie', tv: 'TV', book: 'Book' }
 
 // Status picker shown right under the title — colors mirror the Catalog sections.
+// Statuses have their own palette (coral/teal/gold), distinct from the
+// media-type accents.
 const STATUS_PICKER = [
-  { value: 'want', label: 'Want to Try', color: 'var(--color-accent-primary)' },
-  { value: 'watching', label: 'In Progress', color: 'var(--color-accent-tv)' },
-  { value: 'finished', label: 'Finished', color: 'var(--color-accent-books)' },
+  { value: 'want', label: 'Want to Try', color: 'var(--color-status-want)' },
+  { value: 'watching', label: 'In Progress', color: 'var(--color-status-progress)' },
+  { value: 'finished', label: 'Finished', color: 'var(--color-status-finished)' },
   { value: 'dropped', label: 'Dropped', color: 'var(--color-text-muted)' },
 ]
 
@@ -296,10 +298,12 @@ export default function ItemLightbox({ item, isOpen, onClose, onEdit, onUpdate, 
                     <button
                       key={s.value}
                       onClick={() => handleStatus(s.value)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all active:scale-95 ${
-                        active ? 'border-transparent' : 'bg-bg-tertiary border-border text-text-muted hover:bg-bg-hover'
-                      }`}
-                      style={active ? { backgroundColor: `color-mix(in srgb, ${s.color} 22%, transparent)`, color: s.color } : {}}
+                      className={`px-3 py-1.5 rounded-lg text-xs border-[1.5px] transition-all active:scale-95 ${active ? 'font-bold' : 'font-semibold hover:opacity-90'}`}
+                      style={{
+                        color: s.color,
+                        backgroundColor: `color-mix(in srgb, ${s.color} ${active ? 22 : 8}%, var(--color-bg-secondary))`,
+                        borderColor: active ? `color-mix(in srgb, ${s.color} 55%, transparent)` : 'transparent',
+                      }}
                     >
                       {s.label}
                     </button>

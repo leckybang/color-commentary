@@ -142,7 +142,7 @@ export default function CatalogSeeds({ profile, addItem }) {
               )}
               <div className="mt-auto pt-2">
                 {isAdded ? (
-                  <span className="flex items-center justify-center gap-1 py-1.5 text-xs font-medium text-accent-books">
+                  <span className="flex items-center justify-center gap-1 py-1.5 text-xs font-medium text-text-primary">
                     <Check size={13} /> Added
                   </span>
                 ) : (

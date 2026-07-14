@@ -297,6 +297,166 @@ export async function buildInsightCard(insights, { username = '' } = {}) {
 }
 
 /** Whether the native share sheet can take this file. */
+/** Naive word-wrap: split into at most maxLines lines of ~maxChars. */
+function wrapText(s = '', maxChars, maxLines) {
+  const words = String(s).split(/\s+/).filter(Boolean)
+  const lines = []
+  let line = ''
+  for (const w of words) {
+    if ((line + ' ' + w).trim().length > maxChars && line) {
+      lines.push(line)
+      line = w
+      if (lines.length === maxLines) break
+    } else {
+      line = (line + ' ' + w).trim()
+    }
+  }
+  if (lines.length < maxLines && line) lines.push(line)
+  else if (lines.length === maxLines && line) lines[maxLines - 1] = truncate(lines[maxLines - 1] + '…', maxChars + 1)
+  return lines
+}
+
+/** A pull-quote wants one clean sentence, not a truncated paragraph. */
+function firstSentence(s = '') {
+  const m = String(s).trim().match(/^[^.!?]{8,}?[.!?]+/)
+  return m ? m[0].trim() : String(s).trim()
+}
+
+function buildItemSvg(item, coverDataUrl, username, fontDataUrl) {
+  const color = TYPE_COLORS[item.type] || '#c49bff'
+  const stars = item.rating > 0 ? '★'.repeat(item.rating) + '☆'.repeat(Math.max(0, 5 - item.rating)) : ''
+  const titleLines = wrapText(item.title, 22, 2)
+  const quote = item.review ? firstSentence(item.review) : ''
+  const reviewLines = quote ? wrapText(quote, 42, 2) : []
+
+  let usernamePill = ''
+  if (username) {
+    const label = `@${username}`
+    const pillW = Math.min(430, 34 + label.length * 15.5)
+    const pillX = 990 - pillW
+    usernamePill = `
+      <rect x="${pillX}" y="84" width="${pillW}" height="52" rx="26" fill="${PINK}"/>
+      <text x="${pillX + pillW / 2}" y="118" text-anchor="middle" font-family="${DISPLAY_FONT}" font-size="26" font-weight="700" fill="#ffffff">${escapeXml(label)}</text>`
+  }
+
+  // ── Vertical layout: measure the content stack, then center it between
+  // the wordmark row (~y 190) and the footer pill (y 1244) so the card
+  // balances itself whatever the content length. ──
+  const coverW = 380
+  const coverH = 500
+  const coverX = (W - coverW) / 2
+
+  const eyebrowH = 34
+  const gapEyebrowPill = 40
+  const pillH = 44
+  const gapPillCover = 26
+  const gapCoverTitle = 84
+  const titleH = titleLines.length * 62
+  const creatorH = item.creator ? 52 : 0
+  const starsH = stars ? 66 : 0
+  const reviewBoxH = reviewLines.length > 0 ? 40 + reviewLines.length * 40 : 0
+  const gapStarsReview = reviewLines.length > 0 ? 34 : 0
+
+  const contentH =
+    eyebrowH + gapEyebrowPill + pillH + gapPillCover + coverH +
+    gapCoverTitle + titleH + creatorH + starsH + gapStarsReview + reviewBoxH
+
+  const regionTop = 190
+  const regionBottom = 1210
+  const startY = regionTop + Math.max(0, (regionBottom - regionTop - contentH) / 2)
+
+  const eyebrowY = startY + 27
+  const pillY = startY + eyebrowH + gapEyebrowPill
+  const coverY = pillY + pillH + gapPillCover
+  let y = coverY + coverH + gapCoverTitle
+
+  const titleSvg = titleLines.map((line, i) =>
+    `<text x="${W / 2}" y="${y + i * 62}" text-anchor="middle" font-family="${DISPLAY_FONT}" font-size="52" font-weight="800" fill="${INK}" letter-spacing="-1.5">${escapeXml(line)}</text>`
+  ).join('')
+  y += titleLines.length * 62
+
+  const creatorSvg = item.creator
+    ? `<text x="${W / 2}" y="${y}" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="30" fill="${SEC}">${escapeXml(truncate(item.creator, 44))}</text>`
+    : ''
+  if (item.creator) y += 52
+
+  const starsSvg = stars
+    ? `<text x="${W / 2}" y="${y + 6}" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="44" fill="#d97706" letter-spacing="6">${stars}</text>`
+    : ''
+  if (stars) y += 66
+
+  let reviewSvg = ''
+  if (reviewLines.length > 0) {
+    y += gapStarsReview
+    const n = reviewLines.length
+    // Baselines centered in the box: the text's visual center sits ~9px
+    // above the baseline at this size.
+    const lineY = (i) => reviewBoxH / 2 + 9 + (i - (n - 1) / 2) * 40
+    reviewSvg = `
+      <g transform="translate(${(W - 820) / 2} ${y})">
+        <rect x="0" y="0" width="820" height="${reviewBoxH}" rx="20" fill="${CARD}" stroke="${INK}" stroke-width="2.5"/>
+        ${reviewLines.map((line, i) =>
+          `<text x="410" y="${lineY(i)}" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="27" font-style="italic" fill="${SEC}">${escapeXml(i === 0 ? '“' + line : line)}${i === n - 1 ? '”' : ''}</text>`
+        ).join('')}
+      </g>`
+  }
+
+  const fontFace = fontDataUrl
+    ? `<style>@font-face{font-family:'Bricolage Grotesque';src:url(${fontDataUrl}) format('woff2');font-weight:200 800;font-style:normal;}</style>`
+    : ''
+
+  const typePill = `
+    <rect x="${W / 2 - 70}" y="${pillY}" width="140" height="44" rx="22" fill="${color}" fill-opacity="0.28"/>
+    <rect x="${W / 2 - 70}" y="${pillY}" width="140" height="44" rx="22" fill="none" stroke="${INK}" stroke-width="2"/>
+    <text x="${W / 2}" y="${pillY + 30}" text-anchor="middle" font-family="${DISPLAY_FONT}" font-size="24" font-weight="700" fill="${INK}">${escapeXml(TYPE_LABELS[item.type] || item.type)}</text>`
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+    ${fontFace}
+    <rect width="${W}" height="${H}" fill="${PORCELAIN}"/>
+    <rect x="24" y="24" width="${W - 48}" height="${H - 48}" rx="34" fill="none" stroke="${INK}" stroke-width="3"/>
+
+    ${logoSvg(90, 76, 66)}
+    <text x="176" y="106" font-family="${DISPLAY_FONT}" font-size="36" font-weight="800" fill="${INK}" letter-spacing="-1">color</text>
+    <text x="176" y="142" font-family="${DISPLAY_FONT}" font-size="36" font-weight="800" fill="${INK}" letter-spacing="-1">commentary</text>
+    <rect x="176" y="150" width="212" height="6" rx="3" fill="${PINK}"/>
+    ${usernamePill}
+
+    <text x="${W / 2}" y="${eyebrowY}" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="27" font-weight="bold" fill="#a16207" letter-spacing="7">JUST FINISHED</text>
+    ${typePill}
+
+    ${coverSvg({ dataUrl: coverDataUrl, type: item.type, x: coverX, y: coverY, w: coverW, h: coverH, clipId: 'item-cover' })}
+
+    ${titleSvg}
+    ${creatorSvg}
+    ${starsSvg}
+    ${reviewSvg}
+
+    ${(() => {
+      const label = username ? `follow @${username} · ${SITE_URL}` : SITE_URL
+      const pillW = Math.min(940, 56 + label.length * 12.6)
+      const pillX = (W - pillW) / 2
+      return `
+        <rect x="${pillX}" y="1244" width="${pillW}" height="54" rx="27" fill="${INK}"/>
+        <text x="${W / 2}" y="1279" text-anchor="middle" font-family="${DISPLAY_FONT}" font-size="23" font-weight="700" fill="${PORCELAIN}">${escapeXml(label)}</text>`
+    })()}
+  </svg>`
+}
+
+/**
+ * Build a single-title "just finished" story card (1080x1350) — cover, stars,
+ * and the quick take, ready for the share sheet.
+ */
+export async function buildItemCard(item, { username = '' } = {}) {
+  const [coverDataUrl, fontDataUrl] = await Promise.all([
+    fetchAsDataUrl(item.coverUrl),
+    getDisplayFontDataUrl(),
+  ])
+  const svg = buildItemSvg(item, coverDataUrl, username, fontDataUrl)
+  const blob = await svgToPngBlob(svg)
+  const slug = (item.title || 'finished').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40)
+  return { blob, filename: `color-commentary-${slug}.png` }
+}
+
 export function canShareFile(blob, filename) {
   const file = new File([blob], filename, { type: 'image/png' })
   return !!(navigator.canShare && navigator.canShare({ files: [file] }))

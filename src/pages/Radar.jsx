@@ -49,7 +49,7 @@ const BUCKETS = [
     key: 'fresh',
     label: 'New & Trending',
     icon: Zap,
-    color: 'var(--color-accent-movies)',
+    color: 'var(--color-accent-primary)',
     blurb: 'Just dropped: this week\'s releases and brand-new list arrivals.',
   },
   {
@@ -63,7 +63,7 @@ const BUCKETS = [
     key: 'darlings',
     label: "Critics' Darlings",
     icon: Award,
-    color: 'var(--color-accent-books)',
+    color: 'var(--color-accent-primary)',
     blurb: 'Quietly raved picks from NYT Books, Pitchfork, and top-scored screen.',
   },
 ]
@@ -106,7 +106,7 @@ function BucketSection({ bucket, items, onItemClick, inCatalog }) {
             >
               <CoverArt title={item.title} type={item.type} creator={item.creator} coverUrl={item.coverUrl} size="lg" />
               <p className="text-xs font-medium text-text-primary truncate mt-1.5">{item.title}</p>
-              <p className="text-[10px] truncate" style={{ color: owned ? 'var(--color-accent-books)' : getMediaColor(item.type) }}>
+              <p className="text-[10px] truncate" style={{ color: owned ? 'var(--color-status-finished)' : getMediaColor(item.type) }}>
                 {owned ? '✓ In your log' : item.source || item.creator || ''}
               </p>
             </div>
