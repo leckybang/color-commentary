@@ -21,10 +21,11 @@ const DETAIL_TTL_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
 const TYPE_LABELS = { music: 'Music', movie: 'Movie', tv: 'TV', book: 'Book' }
 
 // Status picker shown right under the title — colors mirror the Catalog sections.
+// Statuses are ink; the pastel accents belong to media types.
 const STATUS_PICKER = [
-  { value: 'want', label: 'Want to Try', color: 'var(--color-accent-primary)' },
-  { value: 'watching', label: 'In Progress', color: 'var(--color-accent-tv)' },
-  { value: 'finished', label: 'Finished', color: 'var(--color-accent-books)' },
+  { value: 'want', label: 'Want to Try', color: 'var(--color-text-primary)' },
+  { value: 'watching', label: 'In Progress', color: 'var(--color-text-primary)' },
+  { value: 'finished', label: 'Finished', color: 'var(--color-text-primary)' },
   { value: 'dropped', label: 'Dropped', color: 'var(--color-text-muted)' },
 ]
 

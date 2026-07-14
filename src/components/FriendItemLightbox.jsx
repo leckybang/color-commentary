@@ -16,10 +16,11 @@ import { searchGoogleBooks } from '../services/providers/googleBooks'
 
 const TYPE_LABELS = { music: 'Music', movie: 'Movie', tv: 'TV', book: 'Book' }
 
+// Statuses are ink; the pastel accents belong to media types.
 const ADD_OPTIONS = [
-  { status: 'want', label: 'Want to Try', icon: Bookmark, color: 'var(--color-accent-primary)' },
-  { status: 'watching', label: 'In Progress', icon: Play, color: 'var(--color-accent-tv)' },
-  { status: 'finished', label: 'Finished', icon: Check, color: 'var(--color-accent-books)' },
+  { status: 'want', label: 'Want to Try', icon: Bookmark },
+  { status: 'watching', label: 'In Progress', icon: Play },
+  { status: 'finished', label: 'Finished', icon: Check },
 ]
 
 // Session-scoped detail cache so reopening the same title doesn't refetch.
@@ -221,12 +222,12 @@ export default function FriendItemLightbox({ item, isOpen, onClose, addItem, inC
           {/* Add to your catalog, with the status that fits */}
           <div className="pt-3 border-t border-border">
             {owned && !addedAs ? (
-              <p className="flex items-center justify-center gap-1.5 py-2 text-sm font-medium text-accent-books">
+              <p className="flex items-center justify-center gap-1.5 py-2 text-sm font-medium text-text-primary">
                 <Library size={15} />
                 Already in your log
               </p>
             ) : addedAs ? (
-              <p className="flex items-center justify-center gap-1.5 py-2 text-sm font-medium text-accent-books">
+              <p className="flex items-center justify-center gap-1.5 py-2 text-sm font-medium text-text-primary">
                 <Check size={15} />
                 Added as {ADD_OPTIONS.find((o) => o.status === addedAs)?.label}
               </p>
@@ -252,8 +253,8 @@ export default function FriendItemLightbox({ item, isOpen, onClose, addItem, inC
                   </button>
                   <button
                     onClick={() => handleAdd('finished', { rating: finishRating, review: finishReview.trim() })}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold text-white transition-all active:scale-95"
-                    style={{ backgroundColor: 'var(--color-accent-books)' }}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all active:scale-95"
+                    style={{ backgroundColor: 'var(--color-nav-bg)', color: 'var(--color-nav-text)', boxShadow: '2px 2px 0 var(--color-accent-primary)' }}
                   >
                     <Check size={13} />
                     {finishRating > 0 || finishReview.trim() ? 'Save to log' : 'Log without rating'}
@@ -270,12 +271,7 @@ export default function FriendItemLightbox({ item, isOpen, onClose, addItem, inC
                       <button
                         key={o.status}
                         onClick={() => (o.status === 'finished' ? setFinishing(true) : handleAdd(o.status))}
-                        className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold border transition-all active:scale-95 hover:opacity-90"
-                        style={{
-                          backgroundColor: `color-mix(in srgb, ${o.color} 15%, transparent)`,
-                          borderColor: `color-mix(in srgb, ${o.color} 35%, transparent)`,
-                          color: o.color,
-                        }}
+                        className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold border-[1.5px] border-text-primary text-text-primary bg-bg-secondary transition-all active:scale-95 hover:bg-bg-hover"
                       >
                         <Icon size={13} />
                         {o.label}
