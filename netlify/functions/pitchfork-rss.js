@@ -123,7 +123,7 @@ export async function handler(event) {
     const res = await fetch(FEED_URL, {
       headers: {
         // Pitchfork's RSS server rejects requests without a UA / wrong Accept.
-        'User-Agent': 'ColorCommentaryBot/1.0 (+https://color-commentary.netlify.app)',
+        'User-Agent': 'ColorCommentaryBot/1.0 (+https://colorcommentary.app)',
         Accept: 'application/rss+xml, application/xml;q=0.9, */*;q=0.8',
       },
     })

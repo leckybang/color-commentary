@@ -86,7 +86,7 @@ Google Books **works without a key** but aggressively rate-limits (returns 429 e
 
 Add this to Netlify env vars (and optionally your local `.env`):
 ```
-ALLOWED_ORIGIN=https://color-commentary.netlify.app
+ALLOWED_ORIGIN=https://colorcommentary.app
 ```
 (Replace with your actual domain. Localhost is always allowed automatically.)
 

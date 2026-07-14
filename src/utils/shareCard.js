@@ -12,7 +12,7 @@
 const W = 1080
 const H = 1350
 
-const SITE_URL = 'color-commentary.netlify.app'
+const SITE_URL = 'colorcommentary.app'
 
 const INK = '#1b1a16'
 const PORCELAIN = '#f0efea'
