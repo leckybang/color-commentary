@@ -12,6 +12,7 @@ import MyProfile from './pages/MyProfile'
 import Friends from './pages/Friends'
 import People from './pages/People'
 import PublicProfile from './pages/PublicProfile'
+import Privacy from './pages/Privacy'
 import CookieConsent from './components/common/CookieConsent'
 
 function ProtectedRoute({ children }) {
@@ -93,6 +94,7 @@ function AppRoutes() {
         <Route path="/group-chat" element={<Navigate to="/people?tab=chat" replace />} />
       </Route>
       <Route path="/u/:username" element={<PublicProfileRoute />} />
+      <Route path="/privacy" element={<Privacy />} />
       <Route path="/moodboard" element={<Moodboard />} />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>

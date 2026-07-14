@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { isSupabaseConfigured } from '../lib/supabase'
 import { Play, Radar, BookMarked, Star, Users } from 'lucide-react'
@@ -236,7 +237,11 @@ export default function Login() {
         </div>
 
         <p className="text-center text-[11px] text-text-muted mt-8">
-          color-commentary.netlify.app
+          colorcommentary.app
+          <span className="mx-1.5">·</span>
+          <Link to="/privacy" className="hover:text-text-secondary transition-colors">
+            Privacy
+          </Link>
         </p>
       </div>
     </div>
