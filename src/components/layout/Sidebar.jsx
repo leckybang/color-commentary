@@ -72,7 +72,7 @@ export default function Sidebar() {
               </span>
             </h1>
           </div>
-          <p className="text-[11px] text-text-muted mt-2.5">your media universe, annotated.</p>
+          <p className="text-[11px] text-text-muted mt-2.5">Consume more culture.</p>
         </div>
 
         <nav className="flex-1 p-3 space-y-1.5">
