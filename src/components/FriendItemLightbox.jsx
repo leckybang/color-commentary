@@ -16,11 +16,12 @@ import { searchGoogleBooks } from '../services/providers/googleBooks'
 
 const TYPE_LABELS = { music: 'Music', movie: 'Movie', tv: 'TV', book: 'Book' }
 
-// Statuses are ink; the pastel accents belong to media types.
+// Statuses have their own palette (coral/teal/gold), distinct from the
+// media-type accents.
 const ADD_OPTIONS = [
-  { status: 'want', label: 'Want to Try', icon: Bookmark },
-  { status: 'watching', label: 'In Progress', icon: Play },
-  { status: 'finished', label: 'Finished', icon: Check },
+  { status: 'want', label: 'Want to Try', icon: Bookmark, color: 'var(--color-status-want)' },
+  { status: 'watching', label: 'In Progress', icon: Play, color: 'var(--color-status-progress)' },
+  { status: 'finished', label: 'Finished', icon: Check, color: 'var(--color-status-finished)' },
 ]
 
 // Session-scoped detail cache so reopening the same title doesn't refetch.
@@ -271,7 +272,12 @@ export default function FriendItemLightbox({ item, isOpen, onClose, addItem, inC
                       <button
                         key={o.status}
                         onClick={() => (o.status === 'finished' ? setFinishing(true) : handleAdd(o.status))}
-                        className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold border-[1.5px] border-text-primary text-text-primary bg-bg-secondary transition-all active:scale-95 hover:bg-bg-hover"
+                        className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold border-[1.5px] transition-all active:scale-95 hover:opacity-90"
+                        style={{
+                          color: o.color,
+                          backgroundColor: `color-mix(in srgb, ${o.color} 12%, var(--color-bg-secondary))`,
+                          borderColor: `color-mix(in srgb, ${o.color} 40%, transparent)`,
+                        }}
                       >
                         <Icon size={13} />
                         {o.label}

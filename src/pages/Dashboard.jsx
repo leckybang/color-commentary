@@ -227,7 +227,7 @@ export default function Dashboard() {
         <div className="ink-card bg-bg-secondary rounded-2xl p-5 mb-6">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <Play size={18} className="text-accent-primary" />
+              <Play size={18} style={{ color: 'var(--color-status-progress)' }} />
               <h2 className="font-semibold text-text-primary">Jump back in</h2>
             </div>
             <Link to="/catalog" className="text-sm text-accent-primary hover:underline flex items-center gap-1">
@@ -369,7 +369,7 @@ export default function Dashboard() {
                       <div className="flex items-center gap-1 mt-1">
                         {note.type && (
                           inCatalog(note.text, note.type) ? (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-text-primary" title="Already in your log">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold" style={{ color: 'var(--color-status-finished)' }} title="Already in your log">
                               <Check size={11} />
                               Saved
                             </span>
@@ -470,7 +470,7 @@ export default function Dashboard() {
                     >
                       <CoverArt title={item.title} type={item.type} creator={item.creator} coverUrl={item.coverUrl} size="md" />
                       <p className="text-xs font-medium text-text-primary truncate mt-1.5">{item.title}</p>
-                      <p className="text-[10px] truncate" style={{ color: owned ? 'var(--color-text-primary)' : getMediaColor(item.type) }}>
+                      <p className="text-[10px] truncate" style={{ color: owned ? 'var(--color-status-finished)' : getMediaColor(item.type) }}>
                         {owned ? '✓ In your log' : `${item.userCount} logged this`}
                       </p>
                     </div>

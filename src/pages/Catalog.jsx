@@ -25,13 +25,12 @@ const TYPE_TO_SEARCH_TYPES = {
 }
 
 // Ordered sections rendered when no status filter is active
-// Statuses are INK, not color: the pastel accents belong to media types
-// (music/movies/TV/books), and borrowing them here (In Progress in TV blue,
-// Finished in book green) made the app look color-confused.
+// Statuses have their OWN palette (coral/teal/gold), deliberately distinct
+// from the media-type accents so a finished movie never dresses like a book.
 const STATUS_SECTIONS = [
-  { key: 'want',     label: 'Want to Try',  icon: Library, color: 'var(--color-text-primary)' },
-  { key: 'watching', label: 'In Progress',  icon: Play,    color: 'var(--color-text-primary)' },
-  { key: 'finished', label: 'Finished',     icon: Check,   color: 'var(--color-text-primary)' },
+  { key: 'want',     label: 'Want to Try',  icon: Library, color: 'var(--color-status-want)' },
+  { key: 'watching', label: 'In Progress',  icon: Play,    color: 'var(--color-status-progress)' },
+  { key: 'finished', label: 'Finished',     icon: Check,   color: 'var(--color-status-finished)' },
   { key: 'dropped',  label: 'Dropped',      icon: X,       color: 'var(--color-text-muted)' },
 ]
 
@@ -397,7 +396,12 @@ export default function Catalog() {
               <button
                 key={s.key}
                 onClick={() => jumpToSection(s.key)}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold border-[1.5px] border-border bg-bg-secondary text-text-primary transition-all hover:bg-bg-hover"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold border-[1.5px] transition-all hover:opacity-90"
+                style={{
+                  color: s.color,
+                  backgroundColor: `color-mix(in srgb, ${s.color} 12%, var(--color-bg-secondary))`,
+                  borderColor: `color-mix(in srgb, ${s.color} 40%, transparent)`,
+                }}
               >
                 {s.label}
                 <span className="opacity-60">{count}</span>

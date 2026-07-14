@@ -106,7 +106,7 @@ function BucketSection({ bucket, items, onItemClick, inCatalog }) {
             >
               <CoverArt title={item.title} type={item.type} creator={item.creator} coverUrl={item.coverUrl} size="lg" />
               <p className="text-xs font-medium text-text-primary truncate mt-1.5">{item.title}</p>
-              <p className="text-[10px] truncate" style={{ color: owned ? 'var(--color-text-primary)' : getMediaColor(item.type) }}>
+              <p className="text-[10px] truncate" style={{ color: owned ? 'var(--color-status-finished)' : getMediaColor(item.type) }}>
                 {owned ? '✓ In your log' : item.source || item.creator || ''}
               </p>
             </div>

@@ -31,7 +31,7 @@ export function AddFromFriendButton({ item, addItem, inCatalog }) {
   if (!addItem || !inCatalog) return null
   if (inCatalog(item.title, item.type)) {
     return (
-      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-text-primary shrink-0" title="Already in your log">
+      <span className="inline-flex items-center gap-1 text-[11px] font-bold shrink-0" style={{ color: 'var(--color-status-finished)' }} title="Already in your log">
         <Check size={12} />
         Saved
       </span>
