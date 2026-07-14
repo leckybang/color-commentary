@@ -65,7 +65,7 @@ Deno.serve(async () => {
           Your weekly dispatch is ready. New releases and discoveries based on your taste — we've been paying attention.
         </p>
         <div style="margin: 30px 0;">
-          <a href="https://color-commentary.netlify.app/radar"
+          <a href="https://colorcommentary.app/radar"
              style="display: inline-block; background: #c49bff; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600;">
             Read Your Radar →
           </a>
@@ -75,7 +75,7 @@ Deno.serve(async () => {
         </p>
         <p style="font-size: 12px; color: #aaa; margin-top: 40px; border-top: 1px solid #eee; padding-top: 20px;">
           You're receiving this because you opted in to Weekly Radar emails.
-          <a href="https://color-commentary.netlify.app/calibrate" style="color: #c49bff;">Manage preferences</a>
+          <a href="https://colorcommentary.app/calibrate" style="color: #c49bff;">Manage preferences</a>
         </p>
       </div>
     `
