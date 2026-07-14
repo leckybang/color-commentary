@@ -366,43 +366,6 @@ export default function Dashboard() {
                       <p className="text-[10px] text-text-muted truncate">
                         {note.creator || formatDate(note.createdAt)}
                       </p>
-                      <div className="flex items-center gap-1 mt-1">
-                        {note.type && (
-                          inCatalog(note.text, note.type) ? (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold" style={{ color: 'var(--color-status-finished)' }} title="Already in your log">
-                              <Check size={11} />
-                              Saved
-                            </span>
-                          ) : (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                addItem({
-                                  title: note.text,
-                                  creator: note.creator || '',
-                                  type: note.type,
-                                  year: note.year || '',
-                                  coverUrl: note.coverUrl || '',
-                                  status: 'want',
-                                })
-                                deleteNote(note.id)
-                              }}
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-accent-primary text-white hover:bg-accent-hover transition-colors"
-                              title="Move to your log (Want to Try)"
-                            >
-                              <Plus size={11} />
-                              Add
-                            </button>
-                          )
-                        )}
-                        <button
-                          onClick={(e) => { e.stopPropagation(); deleteNote(note.id) }}
-                          className="p-1 rounded text-text-muted hover:text-accent-movies transition-colors"
-                          title="Not interested, remove"
-                        >
-                          <X size={13} />
-                        </button>
-                      </div>
                     </div>
                   )
                 })}
@@ -523,6 +486,7 @@ export default function Dashboard() {
         addItem={addItem}
         inCatalog={inCatalog}
         onAdded={(it) => { if (it.noteId) deleteNote(it.noteId) }}
+        onDismiss={friendDetailItem?.noteId ? (it) => deleteNote(it.noteId) : undefined}
       />
     </div>
   )

@@ -337,7 +337,7 @@ export default function FriendItemLightbox({ item, isOpen, onClose, addItem, inC
                 }}
                 className="w-full mt-2 py-1.5 text-xs text-text-muted hover:text-text-secondary transition-colors"
               >
-                Not for me
+                {item.noteId ? 'Remove note' : 'Not for me'}
               </button>
             )}
           </div>

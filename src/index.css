@@ -54,6 +54,14 @@ h1, h2, h3 {
   border: 1.5px solid var(--color-text-primary) !important;
 }
 
+/* iOS Safari force-zooms the page when a focused input's font-size is under
+   16px — keep form fields at 16px on phones so modals stay framed. */
+@media (max-width: 640px) {
+  input, select, textarea {
+    font-size: 16px;
+  }
+}
+
 /* Horizontal shelves scroll without showing a track */
 .no-scrollbar {
   scrollbar-width: none;
