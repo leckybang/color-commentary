@@ -242,6 +242,10 @@ export default function Login() {
           <Link to="/privacy" className="hover:text-text-secondary transition-colors">
             Privacy
           </Link>
+          <span className="mx-1.5">·</span>
+          <Link to="/terms" className="hover:text-text-secondary transition-colors">
+            Terms
+          </Link>
         </p>
       </div>
     </div>
