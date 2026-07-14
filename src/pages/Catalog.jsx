@@ -557,15 +557,14 @@ export default function Catalog() {
                   type="button"
                   onClick={() => !editItem && setFormData({ ...formData, type: t.value })}
                   disabled={!!editItem}
-                  className={`flex-1 py-2 rounded-lg text-xs font-medium border transition-all ${
-                    formData.type === t.value
-                      ? 'border-transparent'
-                      : 'bg-bg-tertiary border-border text-text-muted hover:bg-bg-hover'
+                  className={`flex-1 py-2 rounded-lg text-xs border-[1.5px] transition-all ${
+                    formData.type === t.value ? 'font-bold' : 'font-medium hover:opacity-90'
                   } ${editItem ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'}`}
-                  style={formData.type === t.value ? {
-                    backgroundColor: `color-mix(in srgb, ${t.color} 20%, transparent)`,
+                  style={{
                     color: t.color,
-                  } : {}}
+                    backgroundColor: `color-mix(in srgb, ${t.color} ${formData.type === t.value ? 22 : 8}%, var(--color-bg-secondary))`,
+                    borderColor: formData.type === t.value ? `color-mix(in srgb, ${t.color} 55%, transparent)` : 'transparent',
+                  }}
                 >
                   {t.label}
                 </button>
