@@ -77,6 +77,17 @@ export default function Privacy() {
           </p>
         </Section>
 
+        <Section title="Analytics">
+          <p>
+            We use <strong className="text-text-primary">Google Analytics</strong> to
+            understand how visitors find and use the app, so we can improve it. It
+            tells us things like which pages are popular and roughly where our
+            visitors come from. Analytics cookies are optional: they are only set
+            after you accept them in the cookie banner, and you can decline without
+            affecting how the app works.
+          </p>
+        </Section>
+
         <Section title="Services we rely on">
           <p>
             To make the app work we send requests to a handful of trusted
