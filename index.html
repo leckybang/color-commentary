@@ -7,6 +7,33 @@
     <!-- Google site verification (OAuth consent screen / Search Console) -->
     <meta name="google-site-verification" content="_-iWoEE5TnE_-Meb99u6tWyjU9CD5OC1ipnB8OjVIVk" />
 
+    <!-- Google Analytics (GA4) with Consent Mode v2 -->
+    <!-- Color Commentary property measurement ID -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-RRX6JK3GC1"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() { dataLayer.push(arguments); }
+      gtag('js', new Date());
+
+      // Default everything to denied so no analytics cookies are set until the
+      // visitor accepts via the cookie banner (see CookieConsent.jsx).
+      gtag('consent', 'default', {
+        ad_storage: 'denied',
+        ad_user_data: 'denied',
+        ad_personalization: 'denied',
+        analytics_storage: 'denied',
+      });
+
+      // Honor a previously saved choice so returning visitors are not re-prompted.
+      try {
+        if (localStorage.getItem('cc_cookie_consent') === 'accepted') {
+          gtag('consent', 'update', { analytics_storage: 'granted' });
+        }
+      } catch (e) {}
+
+      gtag('config', 'G-RRX6JK3GC1');
+    </script>
+
     <!-- Favicon + Apple Touch Icon -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
