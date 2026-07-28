@@ -17,6 +17,7 @@ import { buildItemCard } from '../utils/shareCard'
 import { usePublicProfile } from '../hooks/usePublicProfile'
 import ShareCardPreview from './common/ShareCardPreview'
 import { formatRating } from '../utils/ratingUtils'
+import VibeTagPicker, { VibeTagList } from './common/VibeTags'
 
 const TYPE_LABELS = { music: 'Music', movie: 'Movie', tv: 'TV', book: 'Book' }
 
@@ -41,6 +42,7 @@ export default function FriendItemLightbox({ item, isOpen, onClose, addItem, inC
   const [finishing, setFinishing] = useState(false)
   const [finishRating, setFinishRating] = useState(0)
   const [finishReview, setFinishReview] = useState('')
+  const [finishVibes, setFinishVibes] = useState([])
   const { username } = usePublicProfile()
   const [shareCard, setShareCard] = useState(null) // { url, blob, filename }
   const [buildingCard, setBuildingCard] = useState(false)
@@ -54,6 +56,7 @@ export default function FriendItemLightbox({ item, isOpen, onClose, addItem, inC
     setFinishing(false)
     setFinishRating(0)
     setFinishReview('')
+    setFinishVibes([])
     setShareCard(null)
     setDetail(key ? detailCache.get(key) || null : null)
   }
@@ -133,7 +136,7 @@ export default function FriendItemLightbox({ item, isOpen, onClose, addItem, inC
     setBuildingCard(true)
     try {
       const { blob, filename } = await buildItemCard(
-        { ...item, rating: finishRating, review: finishReview.trim() },
+        { ...item, rating: finishRating, review: finishReview.trim(), vibeTags: finishVibes },
         { username }
       )
       setShareCard({ blob, filename, url: URL.createObjectURL(blob) })
@@ -208,6 +211,8 @@ export default function FriendItemLightbox({ item, isOpen, onClose, addItem, inC
                   {item.friendName && <span className="text-xs font-normal text-text-muted">from {item.friendName}</span>}
                 </p>
               )}
+              {/* How they described it, when the item came from a friend's log. */}
+              <VibeTagList tags={item.vibeTags} size="xs" className="mt-2" />
             </div>
           </div>
 
@@ -275,9 +280,15 @@ export default function FriendItemLightbox({ item, isOpen, onClose, addItem, inC
               </div>
             ) : finishing ? (
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-text-muted mb-2">Nice! How was it?</p>
+                {/* Sentence case, not the uppercase the other section labels
+                    use — this one is a full sentence, and all-caps at that
+                    length reads as shouting. */}
+                <p className="text-sm font-semibold text-text-primary mb-2">Way to finish something. What'd you think?</p>
                 <div className="flex justify-center mb-3">
                   <StarRating rating={finishRating} onChange={setFinishRating} size={26} />
+                </div>
+                <div className="mb-3">
+                  <VibeTagPicker tags={finishVibes} onChange={setFinishVibes} compact />
                 </div>
                 <textarea
                   value={finishReview}
@@ -294,12 +305,12 @@ export default function FriendItemLightbox({ item, isOpen, onClose, addItem, inC
                     Back
                   </button>
                   <button
-                    onClick={() => handleAdd('finished', { rating: finishRating, review: finishReview.trim() })}
+                    onClick={() => handleAdd('finished', { rating: finishRating, review: finishReview.trim(), vibeTags: finishVibes })}
                     className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all active:scale-95"
                     style={{ backgroundColor: 'var(--color-nav-bg)', color: 'var(--color-nav-text)', boxShadow: '2px 2px 0 var(--color-accent-primary)' }}
                   >
                     <Check size={13} />
-                    {finishRating > 0 || finishReview.trim() ? 'Save to log' : 'Log without rating'}
+                    {finishRating > 0 || finishReview.trim() || finishVibes.length > 0 ? 'Save to log' : 'Log without rating'}
                   </button>
                 </div>
               </div>
