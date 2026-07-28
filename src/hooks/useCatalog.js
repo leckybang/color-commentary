@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from './useAuth'
 import { supabase, shouldSync, isRealUuid } from '../lib/syncToSupabase'
 import { normalizeRating } from '../utils/ratingUtils'
@@ -24,6 +24,8 @@ function fromDb(row) {
     dateConsumed: row.date_consumed || null,
     hidden: !!row.hidden,
     vibeTags: sanitizeVibeTags(row.vibe_tags),
+    releaseDate: row.release_date || '',
+    releaseDateCheckedAt: row.release_date_checked_at || null,
   }
 }
 
@@ -47,6 +49,8 @@ function toDb(item, userId) {
     date_consumed: item.dateConsumed || null,
     hidden: !!item.hidden,
     vibe_tags: sanitizeVibeTags(item.vibeTags),
+    release_date: item.releaseDate || null,
+    release_date_checked_at: item.releaseDateCheckedAt || null,
   }
 }
 
@@ -73,6 +77,18 @@ export function useCatalog() {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
 
+  // Mirrors `items` for the mutation helpers below. They used to rebuild the
+  // list from the `items` closure, which is stale the moment two updates
+  // happen before a re-render — each one recomputes from the same snapshot and
+  // the last write silently drops the others. The release-date lookup does
+  // exactly that (several items resolving in a row), but two quick taps on
+  // different cards would have hit it too.
+  const itemsRef = useRef(items)
+  const commit = (updated) => {
+    itemsRef.current = updated
+    setItems(updated)
+  }
+
   const storageKey = user ? `cc_catalog_${user.uid}` : null
   const canSync = shouldSync(user)
 
@@ -80,7 +96,7 @@ export function useCatalog() {
     if (!storageKey) return
 
     const saved = localStorage.getItem(storageKey)
-    if (saved) setItems(JSON.parse(saved).map(applyRatingRule))
+    if (saved) commit(JSON.parse(saved).map(applyRatingRule))
     setLoading(false)
 
     if (canSync) {
@@ -97,7 +113,7 @@ export function useCatalog() {
           if (data) {
             const mapped = data.map(fromDb)
             const migrated = mapped.map(applyRatingRule)
-            setItems(migrated)
+            commit(migrated)
             if (storageKey) localStorage.setItem(storageKey, JSON.stringify(migrated))
             // One-time backfill: persist any rows the rule promoted (rated but
             // still "want", or finished with no date). Idempotent — once written
@@ -119,7 +135,7 @@ export function useCatalog() {
   }, [storageKey, canSync, user?.uid])
 
   const saveLocal = (updated) => {
-    setItems(updated)
+    commit(updated)
     if (storageKey) localStorage.setItem(storageKey, JSON.stringify(updated))
   }
 
@@ -136,7 +152,7 @@ export function useCatalog() {
       vibeTags: [],
       ...item,
     })
-    saveLocal([newItem, ...items])
+    saveLocal([newItem, ...itemsRef.current])
 
     if (canSync && isRealUuid(newItem.id)) {
       supabase
@@ -151,7 +167,7 @@ export function useCatalog() {
   }
 
   const updateItem = (id, updates) => {
-    const next = items.map((item) => (item.id === id ? applyRatingRule({ ...item, ...updates }) : item))
+    const next = itemsRef.current.map((item) => (item.id === id ? applyRatingRule({ ...item, ...updates }) : item))
     saveLocal(next)
 
     if (canSync && isRealUuid(id)) {
@@ -170,7 +186,7 @@ export function useCatalog() {
   }
 
   const deleteItem = (id) => {
-    saveLocal(items.filter((item) => item.id !== id))
+    saveLocal(itemsRef.current.filter((item) => item.id !== id))
 
     if (canSync && isRealUuid(id)) {
       supabase

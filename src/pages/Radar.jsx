@@ -1,7 +1,11 @@
 import { useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Radar as RadarIcon, BadgeCheck, Calendar, Loader2, RefreshCw, ChevronDown, ChevronUp, Check, Bookmark, Info, Music, Film, Tv, BookOpen, Newspaper, ExternalLink, TrendingUp, Award, Trophy, Users, Zap, Flame } from 'lucide-react'
 import CoverArt from '../components/common/CoverArt'
 import FriendItemLightbox from '../components/FriendItemLightbox'
+import ItemLightbox from '../components/ItemLightbox'
+import { useUpcomingWatchlist } from '../hooks/useUpcomingWatchlist'
+import { formatReleaseWindow } from '../services/releaseDates'
 import { usePopularItems } from '../hooks/usePopularItems'
 import ExternalLinks from '../components/common/ExternalLinks'
 import { useCatalog } from '../hooks/useCatalog'
@@ -82,7 +86,7 @@ const BUCKETS = [
   },
 ]
 
-function BucketSection({ bucket, items, onItemClick, inCatalog }) {
+function BucketSection({ bucket, items, onItemClick, inCatalog, children }) {
   const Icon = bucket.icon
   if (!items || items.length === 0) {
     return (
@@ -92,7 +96,9 @@ function BucketSection({ bucket, items, onItemClick, inCatalog }) {
           <h2 className="text-lg font-semibold text-text-primary">{bucket.label}</h2>
         </div>
         <p className="text-xs text-text-muted mb-3">{bucket.blurb}</p>
-        <p className="text-xs text-text-muted italic">Nothing in this bucket this week.</p>
+        {/* Even with no picks from the feeds, the "from your list" band below
+            can still have something worth showing. */}
+        {children || <p className="text-xs text-text-muted italic">Nothing in this bucket this week.</p>}
       </section>
     )
   }
@@ -127,15 +133,56 @@ function BucketSection({ bucket, items, onItemClick, inCatalog }) {
           )
         })}
       </div>
+      {children}
     </section>
   )
 }
 
+/**
+ * The half of Coming Soon that's about you rather than the feeds: items you
+ * already saved as Want to Try whose release date is still ahead.
+ */
+function FromYourList({ items, onItemClick }) {
+  if (items.length === 0) return null
+  return (
+    <div className="mt-4 pt-4 border-t border-dotted border-border">
+      <div className="flex items-center gap-2 mb-1">
+        <Bookmark size={14} className="text-accent-primary" />
+        <p className="text-[11px] font-bold uppercase tracking-wide text-text-secondary">From your list</p>
+      </div>
+      <p className="text-xs text-text-muted mb-3">Things you already saved that aren't out yet.</p>
+      <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-1 px-1 pb-1">
+        {items.map((item) => (
+          <button
+            key={item.id}
+            onClick={() => onItemClick(item)}
+            className="w-28 shrink-0 text-left group"
+            title={item.title}
+          >
+            <CoverArt title={item.title} type={item.type} creator={item.creator} coverUrl={item.coverUrl} size="lg" />
+            <p className="text-xs font-medium text-text-primary truncate mt-1.5">{item.title}</p>
+            <p className="text-[10px] truncate font-semibold" style={{ color: getMediaColor(item.type) }}>
+              {formatReleaseWindow(item.releaseDate)}
+            </p>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function Radar() {
-  const { items: catalogItems, addItem } = useCatalog()
+  const navigate = useNavigate()
+  const { items: catalogItems, addItem, updateItem, deleteItem } = useCatalog()
   const { radar, loading, error, refresh: refreshRadar, isDemo } = useWeeklyRadar()
   const popular = usePopularItems()
   const [detailItem, setDetailItem] = useState(null)
+  // Your own upcoming saves, plus the lightbox for opening them. These are
+  // catalog items, so they get the real ItemLightbox rather than the
+  // add-to-log one the radar picks use.
+  const { upcoming: upcomingMine } = useUpcomingWatchlist(catalogItems, updateItem)
+  const [ownItemId, setOwnItemId] = useState(null)
+  const ownItem = ownItemId ? catalogItems.find((i) => i.id === ownItemId) || null : null
 
   const inCatalog = (title, type) =>
     catalogItems.some(
@@ -239,8 +286,10 @@ export default function Radar() {
             // A bucket the payload doesn't carry at all (an older cached
             // radar, or a source that's down) is hidden rather than shown
             // empty. Buckets the payload DOES carry still render their own
-            // "nothing this week" line.
-            .filter((b) => radar?.[b.key] !== undefined)
+            // "nothing this week" line. Coming Soon is the exception: your own
+            // upcoming saves don't depend on the feeds, so it shows for those
+            // even when the feed side is missing.
+            .filter((b) => radar?.[b.key] !== undefined || (b.key === 'soon' && upcomingMine.length > 0))
             .map((b) => (
               <BucketSection
                 key={b.key}
@@ -250,7 +299,11 @@ export default function Radar() {
                 onItemClick={(item) =>
                   setDetailItem({ ...item, sourceLabel: b.label, sourceLink: reviewLink(item) })
                 }
-              />
+              >
+                {b.key === 'soon' && (
+                  <FromYourList items={upcomingMine} onItemClick={(item) => setOwnItemId(item.id)} />
+                )}
+              </BucketSection>
             ))}
         </>
       ) : !loading ? (
@@ -267,6 +320,27 @@ export default function Radar() {
         addItem={addItem}
         inCatalog={inCatalog}
         onDismiss={handleDismiss}
+      />
+
+      {/* Items from your own log open the full lightbox. Edit lives on the
+          Log page, so that button deep-links there. */}
+      <ItemLightbox
+        item={ownItem}
+        isOpen={!!ownItem}
+        onClose={() => setOwnItemId(null)}
+        onEdit={(item) => {
+          setOwnItemId(null)
+          navigate(`/catalog?edit=${item.id}`)
+        }}
+        onUpdate={updateItem}
+        onFinish={(item) =>
+          updateItem(item.id, { status: 'finished', dateConsumed: new Date().toISOString() })
+        }
+        onDelete={(item) => {
+          deleteItem(item.id)
+          setOwnItemId(null)
+        }}
+        addItem={addItem}
       />
 
       {/* What this means — small footer */}

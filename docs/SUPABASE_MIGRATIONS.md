@@ -4,6 +4,30 @@ Run these in your **Supabase SQL Editor** to keep your database schema up to dat
 
 ---
 
+## 2026-07 — Watchlist release dates ✅ APPLIED
+
+> Applied to the live project as migration `catalog_item_release_dates` on 2026-07-28. Additive; the old client ignores both columns.
+
+```sql
+-- Release dates for watchlist items, so Coming Soon can tell you when
+-- something you already saved is actually out.
+--
+-- TEXT, not DATE, on purpose: providers report varying precision ("2027",
+-- "2026-11", "2026-11-04") and a date column would force us to invent a day.
+-- The strings are ISO-prefixed, so lexicographic comparison against today's
+-- date still orders them correctly, and a bare year matching the current year
+-- sorts as past — the conservative reading when the day is unknown.
+ALTER TABLE public.catalog_items
+  ADD COLUMN IF NOT EXISTS release_date text;
+
+-- When we last asked a provider. Lets the client skip re-querying every
+-- session and stay inside the Google Books / TMDB quotas.
+ALTER TABLE public.catalog_items
+  ADD COLUMN IF NOT EXISTS release_date_checked_at timestamptz;
+```
+
+---
+
 ## 2026-07 — Half-star ratings + vibe tags ✅ APPLIED
 
 > Applied to the live project as migration `half_star_ratings_and_vibe_tags` on 2026-07-28.

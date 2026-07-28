@@ -23,6 +23,9 @@ function normalizeTMDB(item) {
     title,
     creator: '', // TMDB /search/multi doesn't include director; we could enrich later
     year: rawDate.slice(0, 4),
+    // Full date kept alongside the year — the release-date lookup needs the
+    // day, not just the year, to say "out in 3 weeks".
+    releaseDate: rawDate,
     coverUrl: item.poster_path ? `${IMG_BASE}${item.poster_path}` : '',
     overview: item.overview || '',
   }
