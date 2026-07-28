@@ -16,6 +16,7 @@ import EmojiPicker from '../components/common/EmojiPicker'
 import { AddFromFriendButton } from '../components/FriendsFeedRows'
 import FriendItemLightbox from '../components/FriendItemLightbox'
 import { isSupabaseConfigured } from '../lib/supabase'
+import { formatRating } from '../utils/ratingUtils'
 
 // Inline stats so we can compute over either the owner's catalog or a
 // friend's catalog (useCatalog.getStats is hard-wired to the signed-in user).
@@ -274,7 +275,7 @@ export default function PublicProfile({ isSelf }) {
                 {item.rating > 0 && (
                   <div className="flex items-center justify-center gap-0.5 mt-1">
                     <Star size={10} fill="#f59e0b" stroke="#f59e0b" />
-                    <span className="text-xs text-amber-500">{item.rating}</span>
+                    <span className="text-xs text-amber-500">{formatRating(item.rating)}</span>
                   </div>
                 )}
                 {canGrab && (

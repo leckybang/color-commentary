@@ -92,9 +92,9 @@ function normalizeListItem(item, type) {
   }
 }
 
-async function fetchTMDBList(path, type, { signal } = {}) {
+async function fetchTMDBList(path, type, { signal, page = 1 } = {}) {
   if (!TMDB_API_KEY) return []
-  const url = `${BASE}${path}${path.includes('?') ? '&' : '?'}api_key=${TMDB_API_KEY}&language=en-US&page=1`
+  const url = `${BASE}${path}${path.includes('?') ? '&' : '?'}api_key=${TMDB_API_KEY}&language=en-US&page=${page}`
   try {
     const res = await fetch(url, { signal })
     if (!res.ok) return []
@@ -104,6 +104,24 @@ async function fetchTMDBList(path, type, { signal } = {}) {
     if (err.name !== 'AbortError') console.error('TMDB list failed', path, err)
     return []
   }
+}
+
+/**
+ * Pull several pages of a list at once. The radar rotates its picks weekly,
+ * which only works if there's a pool deeper than one page to rotate through.
+ */
+async function fetchTMDBPages(path, type, pages, { signal } = {}) {
+  const batches = await Promise.all(
+    Array.from({ length: pages }, (_, i) => fetchTMDBList(path, type, { signal, page: i + 1 }))
+  )
+  const seen = new Set()
+  const out = []
+  for (const item of batches.flat()) {
+    if (!item.externalId || seen.has(item.externalId)) continue
+    seen.add(item.externalId)
+    out.push(item)
+  }
+  return out
 }
 
 function toISODate(d) {
@@ -123,13 +141,16 @@ function daysFromNow(days) {
 }
 
 /**
- * Buzzy new movies — released in the last ~45 days or landing in the next
- * ~30. Filtered by vote count so we skip obscure/amateur uploads and sorted
- * by popularity so the biggest recent drops float to the top.
+ * Buzzy new movies — out in the last ~60 days. The window used to run 30 days
+ * INTO the future, which meant unreleased films were labelled "Just released"
+ * on the radar. Anything still ahead of us belongs in Coming Soon now.
+ *
+ * Filtered by vote count so we skip obscure/amateur uploads and sorted by
+ * popularity so the biggest recent drops float to the top.
  */
 export async function fetchTMDBNewMovies(limit = 10, { signal } = {}) {
-  const from = daysAgo(45)
-  const to = daysFromNow(30)
+  const from = daysAgo(60)
+  const to = toISODate(new Date())
   const path =
     `/discover/movie` +
     `?primary_release_date.gte=${from}` +
@@ -138,8 +159,43 @@ export async function fetchTMDBNewMovies(limit = 10, { signal } = {}) {
     `&vote_count.gte=20` +
     `&with_release_type=2|3` + // theatrical + theatrical-limited
     `&region=US`
-  const results = await fetchTMDBList(path, 'movie', { signal })
+  const results = await fetchTMDBPages(path, 'movie', 2, { signal })
   return results.slice(0, limit)
+}
+
+/**
+ * Not out yet — the next ~120 days of theatrical releases.
+ *
+ * Deliberately does NOT filter on vote count: an unreleased film has no
+ * ratings by definition, so the usual quality gate would empty the list. A
+ * poster is the proxy instead — TMDB entries with real marketing behind them
+ * have art, placeholder stubs don't.
+ */
+export async function fetchTMDBUpcomingMovies(limit = 10, { signal } = {}) {
+  const from = daysFromNow(1)
+  const to = daysFromNow(120)
+  const path =
+    `/discover/movie` +
+    `?primary_release_date.gte=${from}` +
+    `&primary_release_date.lte=${to}` +
+    `&sort_by=popularity.desc` +
+    `&with_release_type=2|3` +
+    `&region=US`
+  const results = await fetchTMDBPages(path, 'movie', 2, { signal })
+  return results.filter((m) => m.coverUrl).slice(0, limit)
+}
+
+/** Series premiering in the next ~120 days. Same no-votes-yet logic as above. */
+export async function fetchTMDBUpcomingTV(limit = 10, { signal } = {}) {
+  const from = daysFromNow(1)
+  const to = daysFromNow(120)
+  const path =
+    `/discover/tv` +
+    `?first_air_date.gte=${from}` +
+    `&first_air_date.lte=${to}` +
+    `&sort_by=popularity.desc`
+  const results = await fetchTMDBPages(path, 'tv', 2, { signal })
+  return results.filter((t) => t.coverUrl).slice(0, limit)
 }
 
 /**
@@ -158,7 +214,7 @@ export async function fetchTMDBNewTV(limit = 10, { signal } = {}) {
     `&first_air_date.lte=${to}` +
     `&sort_by=popularity.desc` +
     `&vote_count.gte=10`
-  const results = await fetchTMDBList(path, 'tv', { signal })
+  const results = await fetchTMDBPages(path, 'tv', 2, { signal })
   return results.slice(0, limit)
 }
 

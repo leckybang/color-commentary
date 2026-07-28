@@ -8,6 +8,8 @@ import {
   getRecentHighlyRated,
 } from '../utils/catalogStats'
 import CoverArt from './common/CoverArt'
+import { formatRating } from '../utils/ratingUtils'
+import { topVibeTags, VIBE_GROUPS } from '../data/vibeTags'
 
 const TYPE_META = {
   book: { label: 'Books', icon: BookOpen, color: 'var(--color-accent-books)' },
@@ -109,7 +111,7 @@ function ItemRow({ item, onClick }) {
       </div>
       <div className="flex items-center gap-0.5 shrink-0">
         <Star size={11} fill="currentColor" className="text-amber-500" />
-        <span className="text-xs font-medium text-amber-500">{item.rating}</span>
+        <span className="text-xs font-medium text-amber-500">{formatRating(item.rating)}</span>
       </div>
     </button>
   )
@@ -136,6 +138,7 @@ export default function CatalogInsights({ items, onItemClick, defaultOpen = fals
   const activity = useMemo(() => getActivityByType(items, activePeriod), [items, activePeriod])
   const topRated = useMemo(() => getTopRated(items, 5, 4), [items])
   const recentStars = useMemo(() => getRecentHighlyRated(items, 5, 30, 4), [items])
+  const topVibes = useMemo(() => topVibeTags(items, 4), [items])
 
   // Collapsed-header summary: lead with the smallest non-empty "added" window
   // (never a row of zeros) plus what's in progress. This line is all most
@@ -235,6 +238,30 @@ export default function CatalogInsights({ items, onItemClick, defaultOpen = fals
 
           {/* Proportion bar */}
           <ProportionBar by={activity.by} />
+
+          {/* Top vibes — the non-star signal, once there's enough to say
+              something. */}
+          {topVibes.length > 0 && (
+            <div>
+              <p className="text-[11px] font-medium text-text-secondary uppercase tracking-wide mb-1.5">
+                How you talk about things
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {topVibes.map(({ tag, count }) => {
+                  const color = VIBE_GROUPS.find((g) => g.key === tag.group)?.color || 'var(--color-accent-primary)'
+                  return (
+                    <span
+                      key={tag.id}
+                      className="text-xs px-2.5 py-1 rounded-full font-semibold"
+                      style={{ backgroundColor: `color-mix(in srgb, ${color} 16%, transparent)`, color }}
+                    >
+                      {tag.label} <span className="opacity-60">{count}</span>
+                    </span>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
           {!compact && (topRated.length > 0 || recentStars.length > 0) && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">

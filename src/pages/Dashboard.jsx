@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Music, Film, Tv, BookOpen, Radar, Star, CalendarPlus, Plus, ArrowRight, SlidersHorizontal, Trophy, Library, MessageCircle, Users, X, Send, Flame, Check, Play } from 'lucide-react'
 import { useCatalog } from '../hooks/useCatalog'
 import { useTasteProfile } from '../hooks/useTasteProfile'
@@ -14,11 +14,14 @@ import CalibrationOnboarding from '../components/CalibrationOnboarding'
 import InsightsHero from '../components/InsightsHero'
 import QuickAdd from '../components/QuickAdd'
 import CatalogSeeds from '../components/CatalogSeeds'
+import ItemLightbox from '../components/ItemLightbox'
+import Celebration from '../components/common/Celebration'
 import { FriendsFeedShelf } from '../components/FriendsFeedRows'
 import FriendItemLightbox from '../components/FriendItemLightbox'
 import { useFriendsFeed } from '../hooks/useFriendsFeed'
 import { usePopularItems } from '../hooks/usePopularItems'
 import { CALIBRATION_QUESTIONS } from '../data/calibrationData'
+import { formatRating } from '../utils/ratingUtils'
 
 const SCRATCHPAD_TYPE_TO_SEARCH = {
   music: ['music'],
@@ -40,7 +43,8 @@ function getGreeting(name) {
 
 export default function Dashboard() {
   const { user } = useAuth()
-  const { items, getStats, addItem } = useCatalog()
+  const navigate = useNavigate()
+  const { items, getStats, addItem, updateItem, deleteItem } = useCatalog()
   const { profile, isProfileEmpty, saveProfile } = useTasteProfile()
   const { radar, loading: radarLoading, isDemo: radarIsDemo } = useWeeklyRadar()
   const { notes, addNote, deleteNote } = useScratchpad()
@@ -50,6 +54,19 @@ export default function Dashboard() {
   const [noteType, setNoteType] = useState('movie')
   const [noteMeta, setNoteMeta] = useState(null) // from picked search result
   const [friendDetailItem, setFriendDetailItem] = useState(null)
+  // Your OWN catalog items open the full lightbox right here — tapping a cover
+  // on the dashboard used to dump you on the Log page to find it again.
+  const [lightboxItemId, setLightboxItemId] = useState(null)
+  const [celebrating, setCelebrating] = useState(null)
+
+  // Re-derive from the live catalog so edits made inside the lightbox show up
+  // immediately instead of freezing at the snapshot from when it opened.
+  const lightboxItem = lightboxItemId ? items.find((i) => i.id === lightboxItemId) || null : null
+
+  const handleFinish = (item) => {
+    updateItem(item.id, { status: 'finished', dateConsumed: new Date().toISOString() })
+    setCelebrating(item)
+  }
 
   // Onboarding: show once when profile is empty and user hasn't gone through it yet
   const onboardingKey = user ? `cc_onboarding_done_${user.uid}` : null
@@ -100,9 +117,11 @@ export default function Dashboard() {
         n--
       }
     }
-    take('New & Trending', radar.fresh, 3)
-    take('Hyped', radar.hyped, 3)
-    take("Critics' Darlings", radar.darlings, 2)
+    take('New & Trending', radar.fresh, 2)
+    take('Coming Soon', radar.soon, 2)
+    take('Hyped', radar.hyped, 2)
+    take("Critics' Darlings", radar.darlings, 1)
+    take('Accolade', radar.accolades, 1)
     return picks
   }, [radar])
 
@@ -151,7 +170,7 @@ export default function Dashboard() {
       See all picks <ArrowRight size={14} />
     </Link>
   </div>
-  <p className="text-xs text-text-muted mb-3">New & Trending · Hyped · Critics' Darlings.</p>
+  <p className="text-xs text-text-muted mb-3">New &amp; Trending · Coming Soon · Hyped · Critics' Darlings · Accolades.</p>
   {radarIsDemo && radar && (
     <p className="text-xs text-text-muted mb-3 italic">
       Demo picks. Sign in for real ones.
@@ -236,10 +255,15 @@ export default function Dashboard() {
           </div>
           <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-1 px-1 pb-1">
             {items.filter((i) => i.status === 'watching').slice(0, 8).map((it) => (
-              <Link key={it.id} to="/catalog" className="shrink-0 w-20" title={it.title}>
+              <button
+                key={it.id}
+                onClick={() => setLightboxItemId(it.id)}
+                className="shrink-0 w-20 text-left"
+                title={it.title}
+              >
                 <CoverArt title={it.title} type={it.type} creator={it.creator} coverUrl={it.coverUrl} size="md" />
                 <p className="text-[10px] text-text-muted truncate mt-1">{it.title}</p>
-              </Link>
+              </button>
             ))}
           </div>
         </div>
@@ -455,16 +479,21 @@ export default function Dashboard() {
               <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-1 px-1 pb-1">
                 {recentItems.map((item) => {
                   return (
-                    <Link to="/catalog" key={item.id} className="w-24 shrink-0 group" title={item.title}>
+                    <button
+                      onClick={() => setLightboxItemId(item.id)}
+                      key={item.id}
+                      className="w-24 shrink-0 group text-left"
+                      title={item.title}
+                    >
                       <CoverArt title={item.title} type={item.type} creator={item.creator} coverUrl={item.coverUrl} size="md" />
                       <p className="text-xs font-medium text-text-primary truncate mt-1.5">{item.title}</p>
                       {item.rating > 0 && (
                         <span className="flex items-center gap-0.5 text-[10px] font-semibold text-amber-500">
                           <Star size={9} fill="currentColor" />
-                          {item.rating}
+                          {formatRating(item.rating)}
                         </span>
                       )}
-                    </Link>
+                    </button>
                   )
                 })}
               </div>
@@ -487,6 +516,34 @@ export default function Dashboard() {
         inCatalog={inCatalog}
         onAdded={(it) => { if (it.noteId) deleteNote(it.noteId) }}
         onDismiss={friendDetailItem?.noteId ? (it) => deleteNote(it.noteId) : undefined}
+      />
+
+      {/* Your own items — the same lightbox the Log uses. Edit is the one
+          thing that still needs the Log, so it deep-links there. */}
+      <ItemLightbox
+        item={lightboxItem}
+        isOpen={!!lightboxItem}
+        onClose={() => setLightboxItemId(null)}
+        onEdit={(item) => {
+          setLightboxItemId(null)
+          navigate(`/catalog?edit=${item.id}`)
+        }}
+        onUpdate={updateItem}
+        onFinish={handleFinish}
+        onDelete={(item) => {
+          deleteItem(item.id)
+          setLightboxItemId(null)
+        }}
+        addItem={addItem}
+      />
+
+      <Celebration
+        key={celebrating?.id || 'none'}
+        item={celebrating}
+        onRate={(rating) => celebrating && updateItem(celebrating.id, { rating })}
+        onReview={(review) => celebrating && updateItem(celebrating.id, { review })}
+        onVibes={(vibeTags) => celebrating && updateItem(celebrating.id, { vibeTags })}
+        onClose={() => setCelebrating(null)}
       />
     </div>
   )

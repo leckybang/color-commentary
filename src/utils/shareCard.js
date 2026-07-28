@@ -9,6 +9,8 @@
  * falls back to a colored placeholder tile.
  */
 
+import { starString } from './ratingUtils'
+
 const W = 1080
 const H = 1350
 
@@ -178,7 +180,7 @@ function buildSvg(insights, coverMap, username, fontDataUrl) {
   const faveRows = rowFaves.map((f, i) => {
     const y = rowsStart + i * (rowH + rowGap)
     const color = TYPE_COLORS[f.type] || '#c49bff'
-    const stars = '★'.repeat(f.rating) + '☆'.repeat(Math.max(0, 5 - f.rating))
+    const stars = starString(f.rating)
     return `
       <g transform="translate(90 ${y})">
         <rect x="0" y="0" width="900" height="${rowH}" rx="20" fill="${CARD}" stroke="${INK}" stroke-width="2.5"/>
@@ -200,10 +202,10 @@ function buildSvg(insights, coverMap, username, fontDataUrl) {
         <rect x="0" y="0" width="900" height="150" rx="20" fill="#f0b429" fill-opacity="0.16"/>
         <rect x="0" y="0" width="900" height="150" rx="20" fill="none" stroke="${INK}" stroke-width="2.5"/>
         ${coverSvg({ dataUrl: coverMap.get(pick.id), type: pick.type, x: 24, y: 14, w: 82, h: 122, clipId: 'fivestar-cov' })}
-        <text x="132" y="52" font-family="Helvetica, Arial, sans-serif" font-size="21" font-weight="bold" fill="#a16207" letter-spacing="4">FIVE-STAR PICK${escapeXml(extra)}</text>
+        <text x="132" y="52" font-family="Helvetica, Arial, sans-serif" font-size="21" font-weight="bold" fill="#a16207" letter-spacing="4">RAVE${escapeXml(extra)}</text>
         <text x="132" y="98" font-family="${DISPLAY_FONT}" font-size="33" font-weight="800" fill="${INK}" letter-spacing="-0.5">${escapeXml(truncate(pick.title, 29))}</text>
         ${pick.creator ? `<text x="132" y="132" font-family="Helvetica, Arial, sans-serif" font-size="24" fill="${SEC}">${escapeXml(truncate(pick.creator, 36))}</text>` : ''}
-        <text x="872" y="88" text-anchor="end" font-family="Helvetica, Arial, sans-serif" font-size="30" fill="#d97706" letter-spacing="2">★★★★★</text>
+        <text x="872" y="88" text-anchor="end" font-family="Helvetica, Arial, sans-serif" font-size="30" fill="#d97706" letter-spacing="2">${escapeXml(starString(pick.rating))}</text>
       </g>`
   }
 
@@ -324,7 +326,7 @@ function firstSentence(s = '') {
 
 function buildItemSvg(item, coverDataUrl, username, fontDataUrl) {
   const color = TYPE_COLORS[item.type] || '#c49bff'
-  const stars = item.rating > 0 ? '★'.repeat(item.rating) + '☆'.repeat(Math.max(0, 5 - item.rating)) : ''
+  const stars = starString(item.rating)
   const titleLines = wrapText(item.title, 22, 2)
   const quote = item.review ? firstSentence(item.review) : ''
   const reviewLines = quote ? wrapText(quote, 42, 2) : []

@@ -13,9 +13,11 @@ import ItemLightbox from '../components/ItemLightbox'
 import Celebration from '../components/common/Celebration'
 import CatalogInsights from '../components/CatalogInsights'
 import QuickAdd from '../components/QuickAdd'
+import VibeTagPicker, { VibeTagList } from '../components/common/VibeTags'
 import { filterCatalog, sortCatalog, MEDIA_TYPES, STATUS_OPTIONS, getMediaColor } from '../utils/filterUtils'
+import { formatRating } from '../utils/ratingUtils'
 
-const EMPTY_ITEM = { title: '', creator: '', type: null, genre: '', status: 'want', rating: 0, review: '', coverUrl: '', year: '', hidden: false }
+const EMPTY_ITEM = { title: '', creator: '', type: null, genre: '', status: 'want', rating: 0, review: '', coverUrl: '', year: '', hidden: false, vibeTags: [] }
 
 const TYPE_TO_SEARCH_TYPES = {
   music: ['music'],
@@ -101,12 +103,30 @@ export default function Catalog() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
 
+  // ?edit=<id> — how the Dashboard lightbox hands an item over for a full
+  // edit. Waits for the catalog to load before giving up on the id.
+  useEffect(() => {
+    const editId = searchParams.get('edit')
+    if (!editId) return
+    const target = items.find((i) => i.id === editId)
+    if (!target) return
+    setFormData(target)
+    setEditItem(target)
+    setSaveAttempted(false)
+    setShowAddModal(true)
+    const next = new URLSearchParams(searchParams)
+    next.delete('edit')
+    setSearchParams(next, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, items])
+
   const filtered = sortCatalog(filterCatalog(items, filters), sortBy)
   // A type-only filter (from the top tab strip) should still show the status
   // groupings — only "non-type" filters collapse the view to flat.
   const hasActiveFilters = !!(filters.status && filters.status !== 'all') ||
     !!(filters.search && filters.search.trim()) ||
     !!(filters.genre && filters.genre.trim()) ||
+    !!(filters.vibe && filters.vibe !== 'all') ||
     !!filters.rating
 
   // Build Next Up items (in order) from catalog
@@ -291,7 +311,7 @@ export default function Catalog() {
         <div className="flex items-center justify-center gap-1 mt-0.5 min-h-[14px]">
           <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: section?.color || 'var(--color-text-muted)' }} aria-hidden="true" />
           {item.rating > 0 ? (
-            <span className="text-[10px] font-semibold text-amber-500">★ {item.rating}</span>
+            <span className="text-[10px] font-semibold text-amber-500">★ {formatRating(item.rating)}</span>
           ) : (
             <span className="text-[10px] text-text-muted truncate">{section?.label || ''}</span>
           )}
@@ -469,8 +489,14 @@ export default function Catalog() {
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-text-primary truncate">{item.title}</p>
                     <p className="text-sm text-text-muted truncate">{item.creator}</p>
+                    <VibeTagList tags={item.vibeTags} size="xs" className="mt-1" />
                   </div>
-                  {item.rating > 0 && <StarRating rating={item.rating} readonly size={14} />}
+                  {item.rating > 0 && (
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <StarRating rating={item.rating} readonly size={14} />
+                      <span className="text-xs font-semibold text-amber-500">{formatRating(item.rating)}</span>
+                    </div>
+                  )}
                 </div>
               )
             })}
@@ -525,6 +551,7 @@ export default function Catalog() {
         item={celebrating}
         onRate={(rating) => celebrating && updateItem(celebrating.id, { rating })}
         onReview={(review) => celebrating && updateItem(celebrating.id, { review })}
+        onVibes={(vibeTags) => celebrating && updateItem(celebrating.id, { vibeTags })}
         onClose={() => setCelebrating(null)}
       />
 
@@ -648,13 +675,29 @@ export default function Catalog() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-2">Rating</label>
-            <StarRating
-              rating={formData.rating}
-              // Rating something means you finished it — reflect that in the
-              // status right away (still overridable via the Status select).
-              onChange={(r) => setFormData({ ...formData, rating: r, status: r > 0 ? 'finished' : formData.status })}
-              size={28}
+            <label className="block text-sm font-medium text-text-secondary mb-2">
+              Rating
+              <span className="ml-2 text-xs text-text-muted font-normal">Half stars count. Tap the left side of a star.</span>
+            </label>
+            <div className="flex items-center gap-3">
+              <StarRating
+                rating={formData.rating}
+                // Rating something means you finished it — reflect that in the
+                // status right away (still overridable via the Status select).
+                onChange={(r) => setFormData({ ...formData, rating: r, status: r > 0 ? 'finished' : formData.status })}
+                size={28}
+              />
+              {formData.rating > 0 && (
+                <span className="text-sm font-semibold text-amber-500">{formatRating(formData.rating)}</span>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-text-secondary mb-2">Vibe</label>
+            <VibeTagPicker
+              tags={formData.vibeTags}
+              onChange={(vibeTags) => setFormData({ ...formData, vibeTags })}
             />
           </div>
 

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Radar as RadarIcon, BadgeCheck, Calendar, Loader2, RefreshCw, ChevronDown, ChevronUp, Check, Bookmark, Info, Music, Film, Tv, BookOpen, Newspaper, ExternalLink, TrendingUp, Award, Users, Zap, Flame } from 'lucide-react'
+import { Radar as RadarIcon, BadgeCheck, Calendar, Loader2, RefreshCw, ChevronDown, ChevronUp, Check, Bookmark, Info, Music, Film, Tv, BookOpen, Newspaper, ExternalLink, TrendingUp, Award, Trophy, Users, Zap, Flame } from 'lucide-react'
 import CoverArt from '../components/common/CoverArt'
 import FriendItemLightbox from '../components/FriendItemLightbox'
 import { usePopularItems } from '../hooks/usePopularItems'
@@ -53,6 +53,13 @@ const BUCKETS = [
     blurb: 'Just dropped: this week\'s releases and brand-new list arrivals.',
   },
   {
+    key: 'soon',
+    label: 'Coming Soon',
+    icon: Calendar,
+    color: 'var(--color-accent-primary)',
+    blurb: 'Dated and not out yet. Films and series only for now.',
+  },
+  {
     key: 'hyped',
     label: 'Hyped',
     icon: TrendingUp,
@@ -65,6 +72,13 @@ const BUCKETS = [
     icon: Award,
     color: 'var(--color-accent-primary)',
     blurb: 'Quietly raved picks from NYT Books, Pitchfork, and top-scored screen.',
+  },
+  {
+    key: 'accolades',
+    label: 'Recent Accolades',
+    icon: Trophy,
+    color: 'var(--color-accent-primary)',
+    blurb: 'Nominated or decorated. Film and literary prizes, via Wikidata.',
   },
 ]
 
@@ -134,20 +148,14 @@ export default function Radar() {
     setDismissed((prev) => new Set([...prev, item.title]))
   }
 
-  const fresh = useMemo(
-    () => (radar?.fresh || []).filter((r) => !dismissed.has(r.title)),
-    [radar, dismissed]
-  )
-  const hyped = useMemo(
-    () => (radar?.hyped || []).filter((r) => !dismissed.has(r.title)),
-    [radar, dismissed]
-  )
-  const darlings = useMemo(
-    () => (radar?.darlings || []).filter((r) => !dismissed.has(r.title)),
-    [radar, dismissed]
-  )
-  const totalPicks = fresh.length + hyped.length + darlings.length
-  const bucketItems = { fresh, hyped, darlings }
+  const bucketItems = useMemo(() => {
+    const out = {}
+    for (const bucket of BUCKETS) {
+      out[bucket.key] = (radar?.[bucket.key] || []).filter((r) => !dismissed.has(r.title))
+    }
+    return out
+  }, [radar, dismissed])
+  const totalPicks = Object.values(bucketItems).reduce((n, list) => n + list.length, 0)
 
   // catalogItems isn't read directly here — useCatalog is consumed for addItem.
   void catalogItems
@@ -227,17 +235,23 @@ export default function Radar() {
 
       {radar && totalPicks > 0 ? (
         <>
-          {BUCKETS.filter((b) => b.key !== 'fresh' || radar?.fresh !== undefined).map((b) => (
-            <BucketSection
-              key={b.key}
-              bucket={b}
-              items={bucketItems[b.key]}
-              inCatalog={inCatalog}
-              onItemClick={(item) =>
-                setDetailItem({ ...item, sourceLabel: b.label, sourceLink: reviewLink(item) })
-              }
-            />
-          ))}
+          {BUCKETS
+            // A bucket the payload doesn't carry at all (an older cached
+            // radar, or a source that's down) is hidden rather than shown
+            // empty. Buckets the payload DOES carry still render their own
+            // "nothing this week" line.
+            .filter((b) => radar?.[b.key] !== undefined)
+            .map((b) => (
+              <BucketSection
+                key={b.key}
+                bucket={b}
+                items={bucketItems[b.key]}
+                inCatalog={inCatalog}
+                onItemClick={(item) =>
+                  setDetailItem({ ...item, sourceLabel: b.label, sourceLink: reviewLink(item) })
+                }
+              />
+            ))}
         </>
       ) : !loading ? (
         <div className="text-center py-12 bg-bg-secondary border border-border rounded-2xl">
@@ -258,7 +272,7 @@ export default function Radar() {
       {/* What this means — small footer */}
       {radar && (
         <div className="text-[11px] text-text-muted/80 italic text-center pt-2">
-          Sources: NYT Best Sellers + reviews · TMDB critic scores · Pitchfork Best New Music · Spotify.{' '}
+          Sources: NYT Best Sellers + reviews · TMDB critic scores and release calendar · Pitchfork Best New Music · Spotify · Wikidata awards.{' '}
           <BadgeCheck size={10} className="inline -mt-0.5" /> Real picks, real sources.
         </div>
       )}

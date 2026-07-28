@@ -4,6 +4,8 @@ import { Star, Plus, Check } from 'lucide-react'
 import { getMediaColor } from '../utils/filterUtils'
 import CoverArt from './common/CoverArt'
 import { useItemReactions, REACTION_EMOJI } from '../hooks/useItemReactions'
+import { formatRating } from '../utils/ratingUtils'
+import { VibeTagList } from './common/VibeTags'
 
 const VERBS = {
   want: 'wants to try',
@@ -170,11 +172,12 @@ export default function FriendsFeedRows({ items, addItem, inCatalog, compact = f
                 {item.rating > 0 && (
                   <span className="flex items-center gap-0.5 text-xs font-semibold text-amber-500">
                     <Star size={11} fill="currentColor" />
-                    {item.rating}
+                    {formatRating(item.rating)}
                   </span>
                 )}
                 <span className="text-[11px] text-text-muted">{timeAgo(item.at)}</span>
               </div>
+              <VibeTagList tags={item.vibeTags} size="xs" className="mt-1" />
               {reactionsEnabled && (
                 <div className="flex items-center gap-1 mt-1.5">
                   {REACTION_EMOJI.map((emoji) => {

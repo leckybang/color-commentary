@@ -11,6 +11,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { PartyPopper, X, Share2, Loader2 } from 'lucide-react'
 import StarRating from './StarRating'
+import VibeTagPicker from './VibeTags'
+import { formatRating } from '../../utils/ratingUtils'
 import { buildItemCard } from '../../utils/shareCard'
 import { usePublicProfile } from '../../hooks/usePublicProfile'
 import ShareCardPreview from './ShareCardPreview'
@@ -123,11 +125,13 @@ const FINISH_LINES = [
   'One more for the collection.',
 ]
 
-export default function Celebration({ item, onRate, onReview, onClose }) {
+export default function Celebration({ item, onRate, onReview, onVibes, onClose }) {
   const canvasRef = useRef(null)
-  // Two-beat flow: rate → jot a thought → done. State resets per item because
-  // Catalog remounts this via a key, so no manual reset is needed.
+  // Two-beat flow: rate → tag the vibe and jot a thought → done. State resets
+  // per item because Catalog remounts this via a key, so no manual reset is
+  // needed.
   const [rating, setRating] = useState(0)
+  const [vibeTags, setVibeTags] = useState([])
   const [thoughts, setThoughts] = useState('')
   const [step, setStep] = useState('rate') // 'rate' | 'thoughts' | 'done'
   const { username } = usePublicProfile()
@@ -160,6 +164,13 @@ export default function Celebration({ item, onRate, onReview, onClose }) {
     }
   }
 
+  // Vibes save on tap rather than on "Save note" — someone who tags and then
+  // hits Skip should still keep their tags.
+  const handleVibes = (next) => {
+    setVibeTags(next)
+    onVibes?.(next)
+  }
+
   const handleSaveThoughts = () => {
     const t = thoughts.trim()
     if (t) onReview(t)
@@ -171,7 +182,7 @@ export default function Celebration({ item, onRate, onReview, onClose }) {
     setBuildingCard(true)
     try {
       const { blob, filename } = await buildItemCard(
-        { ...item, rating, review: thoughts.trim() },
+        { ...item, rating, review: thoughts.trim(), vibeTags },
         { username }
       )
       setShareCard({ blob, filename, url: URL.createObjectURL(blob) })
@@ -196,7 +207,7 @@ export default function Celebration({ item, onRate, onReview, onClose }) {
         style={{ width: '100vw', height: '100vh' }}
       />
       {/* Quick-rate card */}
-      <div className="relative bg-bg-secondary border border-border rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center animate-[cc-pop_220ms_ease-out]">
+      <div className="relative bg-bg-secondary border border-border rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center animate-[cc-pop_220ms_ease-out] max-h-[90vh] overflow-y-auto">
         <button
           onClick={onClose}
           className="absolute top-3 right-3 p-1.5 rounded-lg text-text-muted hover:bg-bg-hover transition-colors"
@@ -232,9 +243,16 @@ export default function Celebration({ item, onRate, onReview, onClose }) {
 
         {step === 'thoughts' && (
           <>
-            <div className="flex justify-center mt-4 mb-3">
+            <div className="flex items-center justify-center gap-2 mt-4 mb-4">
               <StarRating rating={rating} readonly size={20} />
+              <span className="text-sm font-semibold text-amber-500">{formatRating(rating)}</span>
             </div>
+
+            <div className="text-left mb-4">
+              <p className="text-sm text-text-secondary mb-2 text-center">What kind of good (or bad) was it?</p>
+              <VibeTagPicker tags={vibeTags} onChange={handleVibes} compact />
+            </div>
+
             <p className="text-sm text-text-secondary mb-2">Any thoughts while it's fresh?</p>
             <textarea
               autoFocus
@@ -257,10 +275,10 @@ export default function Celebration({ item, onRate, onReview, onClose }) {
               </button>
               <button
                 onClick={handleSaveThoughts}
-                disabled={!thoughts.trim()}
+                disabled={!thoughts.trim() && vibeTags.length === 0}
                 className="px-4 py-2 rounded-lg text-sm font-semibold bg-accent-primary text-white hover:bg-accent-hover transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                Save note
+                {thoughts.trim() ? 'Save note' : 'Done'}
               </button>
             </div>
           </>

@@ -3,6 +3,7 @@ export function filterCatalog(items, filters) {
     if (filters.type && filters.type !== 'all' && item.type !== filters.type) return false
     if (filters.status && filters.status !== 'all' && item.status !== filters.status) return false
     if (filters.rating && item.rating < filters.rating) return false
+    if (filters.vibe && filters.vibe !== 'all' && !(item.vibeTags || []).includes(filters.vibe)) return false
     if (filters.genre && item.genre && !item.genre.toLowerCase().includes(filters.genre.toLowerCase())) return false
     if (filters.search) {
       const q = filters.search.toLowerCase()

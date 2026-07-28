@@ -10,7 +10,14 @@
  */
 
 import { getWeeklyRadar as getMockRadar } from './mockData'
-import { fetchTMDBNewMovies, fetchTMDBNewTV, searchTMDB, fetchTMDBCredits } from './providers/tmdb'
+import {
+  fetchTMDBNewMovies,
+  fetchTMDBNewTV,
+  fetchTMDBUpcomingMovies,
+  fetchTMDBUpcomingTV,
+  searchTMDB,
+  fetchTMDBCredits,
+} from './providers/tmdb'
 import { fetchNYTBestsellers } from './providers/nytBooks'
 import { searchGoogleBooks } from './providers/googleBooks'
 
@@ -29,8 +36,114 @@ function weekKey() {
 }
 
 function cacheKey(uid) {
-  // v3: edition-duplicate fix — v2 caches can hold the same book twice.
-  return `cc_radar_v3_${uid}_${weekKey()}`
+  // v4: rotation + Coming Soon / Accolades buckets. Older caches have neither.
+  return `cc_radar_v4_${uid}_${weekKey()}`
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Rotation
+//
+// The radar used to take the top N off each sorted source list, which meant
+// a title that ranked highly stayed on the radar until it fell off the source
+// — for a NYT list book, potentially months. Two things fix that: a pool
+// deeper than the slice we show, and a memory of what was already shown.
+// ─────────────────────────────────────────────────────────────────────────
+
+/** How many past weeks of picks to actively avoid repeating. */
+const REPEAT_MEMORY_WEEKS = 3
+
+function seenKey(uid) {
+  return `cc_radar_seen_v1_${uid}`
+}
+
+/** { itemKey: weekKey } for everything shown recently. */
+function readSeen(uid) {
+  try {
+    const raw = localStorage.getItem(seenKey(uid))
+    return raw ? JSON.parse(raw) : {}
+  } catch {
+    return {}
+  }
+}
+
+function writeSeen(uid, seen) {
+  try {
+    localStorage.setItem(seenKey(uid), JSON.stringify(seen))
+  } catch {
+    // Quota or private browsing — rotation degrades to "no memory", which is
+    // exactly the old behaviour. Not worth failing the radar over.
+  }
+}
+
+/** Week keys for the last N weeks, today included. */
+function recentWeekKeys(n) {
+  const out = []
+  for (let i = 0; i < n; i++) {
+    const d = new Date()
+    d.setDate(d.getDate() - i * 7)
+    const year = d.getFullYear()
+    const onejan = new Date(year, 0, 1)
+    const week = Math.ceil(((d - onejan) / 86400000 + onejan.getDay() + 1) / 7)
+    out.push(`${year}-W${week}`)
+  }
+  return out
+}
+
+/** Small deterministic string hash — the seed for this week's shuffle. */
+function hashString(str) {
+  let h = 2166136261
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  return h >>> 0
+}
+
+/**
+ * Fisher-Yates with a seeded generator. Seeded rather than random so the radar
+ * is stable within a week (refresh doesn't reshuffle under you) but different
+ * between weeks.
+ */
+function seededShuffle(items, seed) {
+  const out = [...items]
+  let state = seed || 1
+  const next = () => {
+    // xorshift32
+    state ^= state << 13
+    state ^= state >>> 17
+    state ^= state << 5
+    return (state >>> 0) / 4294967296
+  }
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(next() * (i + 1))
+    ;[out[i], out[j]] = [out[j], out[i]]
+  }
+  return out
+}
+
+/**
+ * Pick `count` items from a pool, preferring ones not shown in PREVIOUS weeks.
+ *
+ * "Previous" matters: the current week is deliberately excluded from the
+ * demotion set. The cache only lives 30 minutes, so if this week counted, the
+ * second build of the week would demote everything the first build just
+ * showed and hand back a completely different radar — a Weekly Radar that
+ * actually turns over every half hour. Excluding the current week keeps the
+ * picks stable from Monday to Sunday and rotates them once, on the boundary.
+ *
+ * Recently-shown items aren't banned, only demoted — a thin pool should still
+ * fill the shelf rather than leave a gap.
+ */
+function rotate(pool, count, { seen, avoidWeeks, seed, keyOf }) {
+  if (pool.length === 0) return []
+  const shuffled = seededShuffle(pool, seed)
+  const unseen = []
+  const repeats = []
+  for (const item of shuffled) {
+    if (avoidWeeks.includes(seen[keyOf(item)])) repeats.push(item)
+    else unseen.push(item)
+  }
+  return [...unseen, ...repeats].slice(0, count)
 }
 
 function readCache(uid) {
@@ -143,6 +256,26 @@ async function enrichCoverArt(items, { signal } = {}) {
   )
 }
 
+/**
+ * Award nominees + winners, via the awards-radar function (Wikidata).
+ * Coverage is genuinely partial — see the note in the function — so this
+ * returning a short list, or nothing, is a normal outcome rather than a
+ * failure to handle loudly.
+ */
+async function fetchAccolades({ signal } = {}) {
+  try {
+    const res = await fetch('/.netlify/functions/awards-radar', { signal })
+    if (!res.ok) return []
+    const ct = res.headers.get('content-type') || ''
+    if (!ct.includes('application/json')) return []
+    const data = await res.json()
+    return Array.isArray(data.items) ? data.items : []
+  } catch (err) {
+    if (err.name !== 'AbortError') console.warn('awards-radar fetch failed', err.message)
+    return []
+  }
+}
+
 async function fetchPitchforkBNM({ signal } = {}) {
   try {
     const res = await fetch('/.netlify/functions/pitchfork-rss', { signal })
@@ -158,143 +291,205 @@ async function fetchPitchforkBNM({ signal } = {}) {
 }
 
 /**
- * Real-user radar — two generic buckets:
+ * Real-user radar — five generic buckets:
  *
- *   HYPED: popular + well-reviewed new things (top critic-scored TMDB by
- *     popularity, top NYT bestsellers, fresh Pitchfork BNM albums for music,
- *     plus a couple of fresh Spotify drops when available).
- *   CRITICS' DARLINGS: NYT-reviewed books, the top critic-scored TMDB
- *     titles, more Pitchfork "Best New Music". Things the press loves.
+ *   NEW & TRENDING: strictly current releases and brand-new list arrivals.
+ *   COMING SOON:    not out yet. Films and series with a dated release ahead
+ *                   of us. Books are missing here on purpose — see below.
+ *   HYPED:          popular + well-reviewed (top critic-scored TMDB by
+ *                   popularity, top NYT bestsellers, Pitchfork BNM albums).
+ *   CRITICS' DARLINGS: NYT-reviewed books, top critic-scored screen, more
+ *                   Pitchfork "Best New Music". Things the press loves.
+ *   RECENT ACCOLADES: award nominees and winners, from Wikidata.
  *
  * All real data from APIs we already use — no LLM recall, no hallucinated
  * picks. No personalization either; same dispatch for everyone.
  *
- * Music backbone is Pitchfork BNM (always real, has reviewUrl). Spotify
- * new releases are sprinkled in when reachable but never required — if
- * the Spotify creds aren't set, the bucket still has music.
+ * Each bucket takes a POOL several times larger than what it shows and then
+ * rotates through it (see `rotate`), so a book that sits on the NYT list for
+ * six months doesn't sit on the radar for six months.
+ *
+ * No upcoming books: there is no free feed of forthcoming titles. Google
+ * Books' `orderBy=newest` sorts by when a volume was INDEXED, not published,
+ * so it returns decades-old books and no future dates at all; the NYT Books
+ * API only covers what's already selling. Rather than fake it, Coming Soon is
+ * screen-only until there's a real source.
  */
-async function buildRealRadar({ signal } = {}) {
-  const [music, movies, tv, booksNYT, pitchfork] = await Promise.all([
-    fetchSpotifyNewReleases({ signal }),
-    fetchTMDBNewMovies(20, { signal }),
-    fetchTMDBNewTV(20, { signal }),
-    fetchNYTBestsellers(15, { signal }),
-    fetchPitchforkBNM({ signal }),
-  ])
+async function buildRealRadar({ signal, uid = 'anonymous' } = {}) {
+  const [music, movies, tv, booksNYT, pitchfork, upcomingMovies, upcomingTV, accoladeItems] =
+    await Promise.all([
+      fetchSpotifyNewReleases({ signal }),
+      fetchTMDBNewMovies(40, { signal }),
+      fetchTMDBNewTV(40, { signal }),
+      fetchNYTBestsellers(30, { signal }),
+      fetchPitchforkBNM({ signal }),
+      fetchTMDBUpcomingMovies(20, { signal }),
+      fetchTMDBUpcomingTV(20, { signal }),
+      fetchAccolades({ signal }),
+    ])
 
-  const tag = (items, bucket, extras = {}) =>
+  const tag = (items, bucket, extras = () => ({})) =>
     items.map((it) => ({ ...it, bucket, isTastemaker: true, ...extras(it) }))
 
   const daysOld = (d) => (d ? (Date.now() - new Date(d).getTime()) / 86400000 : Infinity)
+  const daysAhead = (d) => (d ? (new Date(d).getTime() - Date.now()) / 86400000 : -Infinity)
   // Key on type+title (not externalId): the same work can carry different
   // provider ids across editions, and a duplicate title IS the bug.
   const itemKey = (it) => `${it.type}:${(it.title || '').toLowerCase().trim()}`
 
+  // Rotation state — one seed for the whole build so the buckets shuffle
+  // together and stay stable for the week.
+  const seen = readSeen(uid)
+  // recentWeeks[0] is the current week — kept for pruning the store, dropped
+  // from the demotion set so rebuilds within a week stay stable.
+  const recentWeeks = recentWeekKeys(REPEAT_MEMORY_WEEKS)
+  const avoidWeeks = recentWeeks.slice(1)
+  const seed = hashString(`${uid}:${weekKey()}`)
+  const spin = (pool, count) => rotate(pool, count, { seen, avoidWeeks, seed, keyOf: itemKey })
+
   // ── NEW & TRENDING — strictly current, built first so the other buckets
   // can exclude anything shown here. This is the antidote to list warhorses
   // (a book can sit on the NYT list for a year; it isn't *new*).
-  const freshBooks = booksNYT
+  const freshBookPool = booksNYT
     .filter((b) => (b.weeksOnList ?? 99) <= 4)
     .sort((a, b) => (a.rank || 99) - (b.rank || 99))
-    .slice(0, 3)
-  const freshMovies = [...movies]
+  const freshMoviePool = movies
     .filter((m) => daysOld(m.releaseDate) <= 21 && (m.voteCount || 0) >= 10)
     .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
-    .slice(0, 2)
-  const freshTV = [...tv]
+  const freshTVPool = tv
     .filter((t) => daysOld(t.releaseDate) <= 30 && (t.voteCount || 0) >= 5)
     .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
-    .slice(0, 2)
-  const freshPitchfork = pitchfork
-    .filter((p) => daysOld(p.releaseDate) <= 14)
-    .slice(0, 2)
-    .map((p) => ({ ...p, bucket: 'fresh', isTastemaker: true }))
-  // Spotify tag:new is inherently ≤ ~2 weeks old — it lives here now.
-  const freshSpotify = tag((music || []).slice(0, 2), 'fresh', () => ({ source: 'New on Spotify', blurb: '' }))
+  const freshPitchforkPool = pitchfork.filter((p) => daysOld(p.releaseDate) <= 14)
 
   const fresh = [
-    ...tag(freshBooks, 'fresh', (b) => ({
+    ...tag(spin(freshBookPool, 3), 'fresh', (b) => ({
       source: (b.weeksOnList ?? 99) <= 1 ? 'Debuted on the NYT list this week' : `New to the NYT list${b.rank ? ` · #${b.rank}` : ''}`,
       blurb: b.description || '',
     })),
-    ...tag(freshMovies, 'fresh', (m) => ({ source: 'Just released · trending', blurb: m.description || '' })),
-    ...tag(freshTV, 'fresh', (t) => ({ source: 'Just premiered · trending', blurb: t.description || '' })),
-    ...freshPitchfork,
-    ...freshSpotify,
+    ...tag(spin(freshMoviePool, 2), 'fresh', (m) => ({ source: 'Just released · trending', blurb: m.description || '' })),
+    ...tag(spin(freshTVPool, 2), 'fresh', (t) => ({ source: 'Just premiered · trending', blurb: t.description || '' })),
+    ...tag(spin(freshPitchforkPool, 2), 'fresh'),
+    // Spotify tag:new is inherently ≤ ~2 weeks old — it lives here.
+    ...tag(spin(music || [], 2), 'fresh', () => ({ source: 'New on Spotify', blurb: '' })),
   ]
-  const freshKeys = new Set(fresh.map(itemKey))
+  const usedKeys = new Set(fresh.map(itemKey))
+  const unused = (items) => items.filter((it) => !usedKeys.has(itemKey(it)))
 
-  // ── HYPED ── (long-running list warhorses capped at ~3 months so the same
+  // ── COMING SOON ── dated, not out yet. Sorted by how close it is, because
+  // "next week" is more useful than "in four months".
+  const soonPool = [...upcomingMovies, ...upcomingTV]
+    .filter((it) => daysAhead(it.releaseDate) > 0)
+    .sort((a, b) => daysAhead(a.releaseDate) - daysAhead(b.releaseDate))
+  // Rotation is deliberately NOT applied here: a release calendar that
+  // shuffles is a worse calendar. The list churns on its own as dates pass.
+  const soon = tag(unused(soonPool).slice(0, 8), 'soon', (it) => ({
+    source: releaseCountdown(it.releaseDate),
+    blurb: it.description || '',
+  }))
+  soon.forEach((it) => usedKeys.add(itemKey(it)))
+
+  // ── HYPED ── (long-running list warhorses capped at ~2 months so the same
   // titles don't park here forever)
-  const hypedMovies = [...movies]
+  const hypedMoviePool = movies
     .filter((m) => (m.voteAverage || 0) >= 7 && (m.voteCount || 0) >= 100)
     .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
-    .slice(0, 3)
-  const hypedTV = [...tv]
+  const hypedTVPool = tv
     .filter((t) => (t.voteAverage || 0) >= 7 && (t.voteCount || 0) >= 50)
     .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
-    .slice(0, 3)
-  const hypedBooks = booksNYT
-    .filter((b) => (b.rank || 99) <= 5 && (b.weeksOnList ?? 99) <= 8)
+  const hypedBookPool = booksNYT
+    .filter((b) => (b.rank || 99) <= 8 && (b.weeksOnList ?? 99) <= 8)
     .sort((a, b) => (a.weeksOnList ?? 99) - (b.weeksOnList ?? 99))
-    .slice(0, 3)
-
-  // Music: Pitchfork is the reliable backbone (real titles + real review
-  // URLs). Each pick keeps its own honest source/review tag.
-  const hypedPitchfork = pitchfork.slice(0, 2).map((p) => ({ ...p, bucket: 'hyped', isTastemaker: true }))
 
   const hyped = [
-    ...tag(hypedBooks, 'hyped', (b) => ({ source: `NYT Best Seller${b.rank ? ` · #${b.rank}` : ''}`, blurb: b.description || 'A current New York Times best seller.' })),
-    ...tag(hypedMovies, 'hyped', (m) => ({ source: `Critics ${m.voteAverage.toFixed(1)}/10 · trending`, blurb: m.description || '' })),
-    ...tag(hypedTV, 'hyped', (t) => ({ source: `Critics ${t.voteAverage.toFixed(1)}/10 · trending`, blurb: t.description || '' })),
-    ...hypedPitchfork,
-  ].filter((it) => !freshKeys.has(itemKey(it)))
+    ...tag(spin(unused(hypedBookPool), 3), 'hyped', (b) => ({ source: `NYT Best Seller${b.rank ? ` · #${b.rank}` : ''}`, blurb: b.description || 'A current New York Times best seller.' })),
+    ...tag(spin(unused(hypedMoviePool), 3), 'hyped', (m) => ({ source: `Critics ${m.voteAverage.toFixed(1)}/10 · trending`, blurb: m.description || '' })),
+    ...tag(spin(unused(hypedTVPool), 3), 'hyped', (t) => ({ source: `Critics ${t.voteAverage.toFixed(1)}/10 · trending`, blurb: t.description || '' })),
+    // Music: Pitchfork is the reliable backbone (real titles + real review
+    // URLs). Each pick keeps its own honest source/review tag.
+    ...tag(spin(unused(pitchfork), 2), 'hyped'),
+  ]
+  hyped.forEach((it) => usedKeys.add(itemKey(it)))
 
   // ── CRITICS' DARLINGS ──
-  const reviewedBooks = booksNYT.filter((b) => b.reviewUrl).slice(0, 3)
-  const acclaimedMovies = [...movies]
+  const reviewedBookPool = booksNYT.filter((b) => b.reviewUrl)
+  const acclaimedMoviePool = movies
     .filter((m) => (m.voteAverage || 0) >= 7.6 && (m.voteCount || 0) >= 200)
     .sort((a, b) => (b.voteAverage || 0) - (a.voteAverage || 0))
-    .slice(0, 2)
-  const acclaimedTV = [...tv]
+  const acclaimedTVPool = tv
     .filter((t) => (t.voteAverage || 0) >= 7.6 && (t.voteCount || 0) >= 100)
     .sort((a, b) => (b.voteAverage || 0) - (a.voteAverage || 0))
-    .slice(0, 2)
-  // Pitchfork BNM picks not already in hyped go to darlings.
-  const usedPitchforkIds = new Set(hypedPitchfork.map((p) => p.externalId))
-  const darlingsPitchfork = pitchfork
-    .filter((p) => !usedPitchforkIds.has(p.externalId))
-    .slice(0, 3)
-    .map((p) => ({ ...p, bucket: 'darlings', isTastemaker: true }))
-  const darlings = [
-    ...tag(reviewedBooks, 'darlings', () => ({ source: 'New York Times · reviewed', blurb: '' })),
-    ...darlingsPitchfork,
-    ...tag(acclaimedMovies, 'darlings', (m) => ({ source: `Critics' score ${m.voteAverage.toFixed(1)}/10`, blurb: m.description || '' })),
-    ...tag(acclaimedTV, 'darlings', (t) => ({ source: `Critics' score ${t.voteAverage.toFixed(1)}/10`, blurb: t.description || '' })),
-  ].filter((it) => !freshKeys.has(itemKey(it)))
 
-  // Backfill cover art for anything missing it (e.g. Pitchfork RSS items).
-  let [freshFinal, hypedFinal, darlingsFinal] = await Promise.all([
+  const darlings = [
+    ...tag(spin(unused(reviewedBookPool), 3), 'darlings', () => ({ source: 'New York Times · reviewed', blurb: '' })),
+    ...tag(spin(unused(pitchfork), 3), 'darlings'),
+    ...tag(spin(unused(acclaimedMoviePool), 2), 'darlings', (m) => ({ source: `Critics' score ${m.voteAverage.toFixed(1)}/10`, blurb: m.description || '' })),
+    ...tag(spin(unused(acclaimedTVPool), 2), 'darlings', (t) => ({ source: `Critics' score ${t.voteAverage.toFixed(1)}/10`, blurb: t.description || '' })),
+  ]
+  darlings.forEach((it) => usedKeys.add(itemKey(it)))
+
+  // ── RECENT ACCOLADES ── already deduped and sorted server-side.
+  const accolades = tag(unused(accoladeItems).slice(0, 8), 'accolades', (a) => ({
+    source: a.award || 'Award nominee',
+    blurb: '',
+  }))
+
+  // Backfill cover art for anything missing it (Pitchfork RSS and the Wikidata
+  // accolades arrive with none).
+  let [freshFinal, soonFinal, hypedFinal, darlingsFinal, accoladesFinal] = await Promise.all([
     enrichCoverArt(fresh, { signal }),
+    enrichCoverArt(soon, { signal }),
     enrichCoverArt(hyped, { signal }),
     enrichCoverArt(darlings, { signal }),
+    enrichCoverArt(accolades, { signal }),
   ])
 
   // Enrich TMDB items (movies / TV) with director + lead cast. Cheap parallel
   // calls; missing credits just leave creator/cast empty.
-  ;[freshFinal, hypedFinal, darlingsFinal] = await Promise.all([
+  ;[freshFinal, soonFinal, hypedFinal, darlingsFinal] = await Promise.all([
     enrichTMDBCredits(freshFinal, { signal }),
+    enrichTMDBCredits(soonFinal, { signal }),
     enrichTMDBCredits(hypedFinal, { signal }),
     enrichTMDBCredits(darlingsFinal, { signal }),
   ])
 
+  // Remember what went out this week so next week's build can move past it.
+  const thisWeek = weekKey()
+  const nextSeen = {}
+  // Carry forward only the weeks we still care about, so this never grows
+  // without bound.
+  for (const [key, week] of Object.entries(seen)) {
+    if (recentWeeks.includes(week)) nextSeen[key] = week
+  }
+  for (const item of [...freshFinal, ...hypedFinal, ...darlingsFinal, ...accoladesFinal]) {
+    nextSeen[itemKey(item)] = thisWeek
+  }
+  writeSeen(uid, nextSeen)
+
   return {
     fresh: freshFinal,
+    soon: soonFinal,
     hyped: hypedFinal,
     darlings: darlingsFinal,
+    accolades: accoladesFinal,
     generatedAt: new Date().toISOString(),
     isDemo: false,
   }
+}
+
+/** "Out Friday" / "Out in 3 weeks" / "Out March 12". */
+function releaseCountdown(dateStr) {
+  if (!dateStr) return 'Coming soon'
+  const date = new Date(dateStr)
+  if (Number.isNaN(date.getTime())) return 'Coming soon'
+  const days = Math.ceil((date.getTime() - Date.now()) / 86400000)
+  if (days <= 0) return 'Out now'
+  if (days === 1) return 'Out tomorrow'
+  if (days <= 7) return `Out in ${days} days`
+  if (days <= 28) {
+    const weeks = Math.round(days / 7)
+    return `Out in ${weeks} ${weeks === 1 ? 'week' : 'weeks'}`
+  }
+  return `Out ${date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}`
 }
 
 async function enrichTMDBCredits(items, { signal } = {}) {
@@ -336,7 +531,7 @@ export async function getWeeklyRadar(user, profile, catalogItems = [], opts = {}
   const key = `${uid}_${weekKey()}_${opts.forceRefresh ? 'refresh' : 'normal'}`
   if (inflight.has(key)) return inflight.get(key)
 
-  const promise = buildRealRadar(opts)
+  const promise = buildRealRadar({ ...opts, uid })
     .then((fresh) => {
       // Don't cache empty results — a failed API fetch (missing env vars, outage)
       // shouldn't lock the user out for 30 minutes.

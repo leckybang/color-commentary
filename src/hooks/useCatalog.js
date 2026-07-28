@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from './useAuth'
 import { supabase, shouldSync, isRealUuid } from '../lib/syncToSupabase'
+import { normalizeRating } from '../utils/ratingUtils'
+import { sanitizeVibeTags } from '../data/vibeTags'
 
 /**
  * Map a Supabase row (snake_case) → app item shape (camelCase).
@@ -13,13 +15,15 @@ function fromDb(row) {
     type: row.type,
     genre: row.genre || '',
     status: row.status || 'want',
-    rating: row.rating || 0,
+    // numeric(2,1) can arrive as a string depending on the driver path.
+    rating: normalizeRating(row.rating),
     review: row.review || '',
     coverUrl: row.cover_url || '',
     year: row.year || '',
     dateAdded: row.date_added || row.created_at,
     dateConsumed: row.date_consumed || null,
     hidden: !!row.hidden,
+    vibeTags: sanitizeVibeTags(row.vibe_tags),
   }
 }
 
@@ -35,13 +39,14 @@ function toDb(item, userId) {
     type: item.type,
     genre: item.genre || null,
     status: item.status || 'want',
-    rating: item.rating || 0,
+    rating: normalizeRating(item.rating),
     review: item.review || '',
     cover_url: item.coverUrl || null,
     year: item.year || null,
     date_added: item.dateAdded || new Date().toISOString(),
     date_consumed: item.dateConsumed || null,
     hidden: !!item.hidden,
+    vibe_tags: sanitizeVibeTags(item.vibeTags),
   }
 }
 
@@ -51,7 +56,9 @@ function toDb(item, userId) {
  * Finished item carries a completion date so Insights can place it in time.
  */
 function applyRatingRule(item) {
-  let next = item
+  // Also the normalization pass for items rehydrated from localStorage, which
+  // predate half-steps and the vibe-tag field.
+  let next = { ...item, rating: normalizeRating(item.rating), vibeTags: sanitizeVibeTags(item.vibeTags) }
   if ((next.rating || 0) > 0 && next.status === 'want') {
     next = { ...next, status: 'finished' }
   }
@@ -126,6 +133,7 @@ export function useCatalog() {
       coverUrl: '',
       genre: '',
       year: '',
+      vibeTags: [],
       ...item,
     })
     saveLocal([newItem, ...items])

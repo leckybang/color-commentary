@@ -11,6 +11,7 @@ import { useTheme } from '../hooks/useTheme'
 import { useHeavyRotation } from '../hooks/useHeavyRotation'
 import { usePublicProfile } from '../hooks/usePublicProfile'
 import { useCatalog } from '../hooks/useCatalog'
+import { formatRating } from '../utils/ratingUtils'
 
 const CATEGORIES = [
   {
@@ -460,7 +461,7 @@ export default function Profile({ hidePublicProfile = false, hideHeader = false 
                         <div key={item.id} className="flex items-center gap-2 text-sm">
                           <span className="text-text-primary truncate flex-1 min-w-0">{item.title}</span>
                           {item.creator && <span className="text-xs text-text-muted truncate">{item.creator}</span>}
-                          <span className="text-xs text-amber-500 shrink-0">★ {item.rating}</span>
+                          <span className="text-xs text-amber-500 shrink-0">★ {formatRating(item.rating)}</span>
                         </div>
                       ))}
                     </div>

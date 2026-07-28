@@ -16,6 +16,7 @@ import { searchGoogleBooks } from '../services/providers/googleBooks'
 import { buildItemCard } from '../utils/shareCard'
 import { usePublicProfile } from '../hooks/usePublicProfile'
 import ShareCardPreview from './common/ShareCardPreview'
+import { formatRating } from '../utils/ratingUtils'
 
 const TYPE_LABELS = { music: 'Music', movie: 'Movie', tv: 'TV', book: 'Book' }
 
@@ -203,7 +204,7 @@ export default function FriendItemLightbox({ item, isOpen, onClose, addItem, inC
               {item.rating > 0 && (
                 <p className="flex items-center gap-1 mt-2 text-sm font-semibold text-amber-500">
                   <Star size={13} fill="currentColor" />
-                  {item.rating}/5
+                  {formatRating(item.rating)}/5
                   {item.friendName && <span className="text-xs font-normal text-text-muted">from {item.friendName}</span>}
                 </p>
               )}
