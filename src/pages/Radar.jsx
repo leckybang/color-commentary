@@ -4,8 +4,10 @@ import { Radar as RadarIcon, BadgeCheck, Calendar, Loader2, RefreshCw, ChevronDo
 import CoverArt from '../components/common/CoverArt'
 import FriendItemLightbox from '../components/FriendItemLightbox'
 import ItemLightbox from '../components/ItemLightbox'
+import { useAuth } from '../hooks/useAuth'
 import { useUpcomingWatchlist } from '../hooks/useUpcomingWatchlist'
 import { formatReleaseWindow } from '../services/releaseDates'
+import { readDismissed, addDismissed, pickKey } from '../services/dismissedPicks'
 import { usePopularItems } from '../hooks/usePopularItems'
 import ExternalLinks from '../components/common/ExternalLinks'
 import { useCatalog } from '../hooks/useCatalog'
@@ -173,6 +175,7 @@ function FromYourList({ items, onItemClick }) {
 
 export default function Radar() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const { items: catalogItems, addItem, updateItem, deleteItem } = useCatalog()
   const { radar, loading, error, refresh: refreshRadar, isDemo } = useWeeklyRadar()
   const popular = usePopularItems()
@@ -189,16 +192,18 @@ export default function Radar() {
       (i) => i.type === type && i.title.trim().toLowerCase() === String(title).trim().toLowerCase()
     )
 
-  const [dismissed, setDismissed] = useState(new Set())
+  // Dismissals persist per user — see services/dismissedPicks.js. Seeded from
+  // storage on mount so a pick you rejected last week stays gone.
+  const [dismissed, setDismissed] = useState(() => readDismissed(user?.uid))
 
   const handleDismiss = (item) => {
-    setDismissed((prev) => new Set([...prev, item.title]))
+    setDismissed(addDismissed(user?.uid, item))
   }
 
   const bucketItems = useMemo(() => {
     const out = {}
     for (const bucket of BUCKETS) {
-      out[bucket.key] = (radar?.[bucket.key] || []).filter((r) => !dismissed.has(r.title))
+      out[bucket.key] = (radar?.[bucket.key] || []).filter((r) => !dismissed.has(pickKey(r)))
     }
     return out
   }, [radar, dismissed])

@@ -20,6 +20,7 @@ import {
 } from './providers/tmdb'
 import { fetchNYTBestsellers } from './providers/nytBooks'
 import { searchGoogleBooks } from './providers/googleBooks'
+import { readDismissed, pickKey } from './dismissedPicks'
 
 const CACHE_TTL_MS = 30 * 60 * 1000 // 30 minutes
 
@@ -345,7 +346,13 @@ async function buildRealRadar({ signal, uid = 'anonymous' } = {}) {
   const recentWeeks = recentWeekKeys(REPEAT_MEMORY_WEEKS)
   const avoidWeeks = recentWeeks.slice(1)
   const seed = hashString(`${uid}:${weekKey()}`)
-  const spin = (pool, count) => rotate(pool, count, { seen, avoidWeeks, seed, keyOf: itemKey })
+
+  // "Not for me" picks are dropped from the pools rather than filtered out at
+  // render, so their slot gets backfilled with the next candidate instead of
+  // leaving the shelf a tile short.
+  const dismissed = readDismissed(uid)
+  const spin = (pool, count) =>
+    rotate(pool.filter((it) => !dismissed.has(pickKey(it))), count, { seen, avoidWeeks, seed, keyOf: itemKey })
 
   // ── NEW & TRENDING — strictly current, built first so the other buckets
   // can exclude anything shown here. This is the antidote to list warhorses
@@ -373,7 +380,11 @@ async function buildRealRadar({ signal, uid = 'anonymous' } = {}) {
     ...tag(spin(music || [], 2), 'fresh', () => ({ source: 'New on Spotify', blurb: '' })),
   ]
   const usedKeys = new Set(fresh.map(itemKey))
-  const unused = (items) => items.filter((it) => !usedKeys.has(itemKey(it)))
+  // Drops both already-placed picks and dismissed ones. Coming Soon and
+  // Accolades take their slices straight from here rather than through
+  // `spin`, so the dismissal filter has to live at this level too.
+  const unused = (items) =>
+    items.filter((it) => !usedKeys.has(itemKey(it)) && !dismissed.has(pickKey(it)))
 
   // ── COMING SOON ── dated, not out yet. Sorted by how close it is, because
   // "next week" is more useful than "in four months".
