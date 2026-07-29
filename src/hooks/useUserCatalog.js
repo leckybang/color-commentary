@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { normalizeRating } from '../utils/ratingUtils'
+import { sanitizeVibeTags } from '../data/vibeTags'
 
 /**
  * Fetches the catalog items for a specific user (someone other than the
@@ -53,7 +55,8 @@ export function useUserCatalog(userId) {
               type: row.type,
               genre: row.genre || '',
               status: row.status || 'want',
-              rating: row.rating || 0,
+              rating: normalizeRating(row.rating),
+              vibeTags: sanitizeVibeTags(row.vibe_tags),
               review: row.review || '',
               coverUrl: row.cover_url || '',
               year: row.year || '',

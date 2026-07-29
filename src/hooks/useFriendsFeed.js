@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from './useAuth'
 import { useFriends } from './useFriends'
 import { supabase, shouldSync } from '../lib/syncToSupabase'
+import { normalizeRating } from '../utils/ratingUtils'
+import { sanitizeVibeTags } from '../data/vibeTags'
 
 // Demo-mode feed so the page feels alive before real friends show up.
 const MOCK_FEED = {
@@ -77,7 +79,7 @@ export function useFriendsFeed(limit = 25) {
     Promise.resolve().then(() => setLoading(true))
     supabase
       .from('catalog_items')
-      .select('id, user_id, title, creator, type, genre, year, status, rating, cover_url, date_added, date_consumed')
+      .select('id, user_id, title, creator, type, genre, year, status, rating, vibe_tags, cover_url, date_added, date_consumed')
       .in('user_id', following.map((f) => f.userId))
       .order('date_added', { ascending: false })
       .limit(limit)
@@ -100,7 +102,8 @@ export function useFriendsFeed(limit = 25) {
                 creator: row.creator || '',
                 type: row.type,
                 status: row.status || 'want',
-                rating: row.rating || 0,
+                rating: normalizeRating(row.rating),
+                vibeTags: sanitizeVibeTags(row.vibe_tags),
                 genre: row.genre || '',
                 year: row.year || '',
                 coverUrl: row.cover_url || '',

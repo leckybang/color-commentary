@@ -6,6 +6,8 @@
  * its dateConsumed if present, otherwise the date it was added.
  */
 
+import { isRave } from './ratingUtils'
+
 const TYPE_NOUNS = {
   music: { one: 'album', many: 'albums' },
   movie: { one: 'film', many: 'films' },
@@ -81,9 +83,11 @@ export function computeInsights(items = []) {
   const topGenreEntry = Object.entries(genreCounts).sort((a, b) => b[1] - a[1])[0]
   const topGenre = topGenreEntry && topGenreEntry[1] >= 2 ? topGenreEntry[0] : null
 
-  // Five-star picks, most recent first — the share card spotlights the top one.
+  // Rave picks, most recent first — the share card spotlights the top one.
+  // 4.5 counts: with half stars, holding out for a clean 5 leaves the
+  // spotlight empty for anyone who rates carefully.
   const fiveStars = scope
-    .filter((i) => i.rating === 5)
+    .filter((i) => isRave(i.rating))
     .sort((a, b) => finishedDate(b) - finishedDate(a))
   const fiveStarCount = fiveStars.length
 

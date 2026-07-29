@@ -9,6 +9,9 @@
  * falls back to a colored placeholder tile.
  */
 
+import { starString } from './ratingUtils'
+import { sanitizeVibeTags, getVibeTag } from '../data/vibeTags'
+
 const W = 1080
 const H = 1350
 
@@ -178,7 +181,7 @@ function buildSvg(insights, coverMap, username, fontDataUrl) {
   const faveRows = rowFaves.map((f, i) => {
     const y = rowsStart + i * (rowH + rowGap)
     const color = TYPE_COLORS[f.type] || '#c49bff'
-    const stars = '★'.repeat(f.rating) + '☆'.repeat(Math.max(0, 5 - f.rating))
+    const stars = starString(f.rating)
     return `
       <g transform="translate(90 ${y})">
         <rect x="0" y="0" width="900" height="${rowH}" rx="20" fill="${CARD}" stroke="${INK}" stroke-width="2.5"/>
@@ -200,10 +203,10 @@ function buildSvg(insights, coverMap, username, fontDataUrl) {
         <rect x="0" y="0" width="900" height="150" rx="20" fill="#f0b429" fill-opacity="0.16"/>
         <rect x="0" y="0" width="900" height="150" rx="20" fill="none" stroke="${INK}" stroke-width="2.5"/>
         ${coverSvg({ dataUrl: coverMap.get(pick.id), type: pick.type, x: 24, y: 14, w: 82, h: 122, clipId: 'fivestar-cov' })}
-        <text x="132" y="52" font-family="Helvetica, Arial, sans-serif" font-size="21" font-weight="bold" fill="#a16207" letter-spacing="4">FIVE-STAR PICK${escapeXml(extra)}</text>
+        <text x="132" y="52" font-family="Helvetica, Arial, sans-serif" font-size="21" font-weight="bold" fill="#a16207" letter-spacing="4">RAVE${escapeXml(extra)}</text>
         <text x="132" y="98" font-family="${DISPLAY_FONT}" font-size="33" font-weight="800" fill="${INK}" letter-spacing="-0.5">${escapeXml(truncate(pick.title, 29))}</text>
         ${pick.creator ? `<text x="132" y="132" font-family="Helvetica, Arial, sans-serif" font-size="24" fill="${SEC}">${escapeXml(truncate(pick.creator, 36))}</text>` : ''}
-        <text x="872" y="88" text-anchor="end" font-family="Helvetica, Arial, sans-serif" font-size="30" fill="#d97706" letter-spacing="2">★★★★★</text>
+        <text x="872" y="88" text-anchor="end" font-family="Helvetica, Arial, sans-serif" font-size="30" fill="#d97706" letter-spacing="2">${escapeXml(starString(pick.rating))}</text>
       </g>`
   }
 
@@ -322,9 +325,58 @@ function firstSentence(s = '') {
   return m ? m[0].trim() : String(s).trim()
 }
 
+// ── Vibe chips ──
+const VIBE_CHIP_H = 46
+const VIBE_CHIP_GAP = 14
+// Keeps the row inside the card's inner margins.
+const VIBE_ROW_MAX_W = 880
+const VIBE_LOVED_FILL = '#7fe0a0'
+
+/** The item's vibe tags, resolved to label + group. */
+function itemVibes(item) {
+  return sanitizeVibeTags(item?.vibeTags).map(getVibeTag).filter(Boolean)
+}
+
+/**
+ * A centered row of vibe chips.
+ *
+ * There's no text measurement in a raw SVG string, so widths are estimated
+ * from character count using the same ratio the username pill already uses.
+ * Chips that don't fit the row are dropped rather than wrapped — an
+ * overflowing row would break the card's measured vertical stack, and the
+ * first two tags carry the point anyway.
+ */
+function vibeChipsSvg(tags, centerX, y) {
+  if (!tags || tags.length === 0) return ''
+
+  const kept = []
+  let total = 0
+  for (const tag of tags) {
+    const w = 34 + tag.label.length * 15.5
+    const add = w + (kept.length ? VIBE_CHIP_GAP : 0)
+    if (total + add > VIBE_ROW_MAX_W) break
+    kept.push({ tag, w })
+    total += add
+  }
+  if (kept.length === 0) return ''
+
+  let x = centerX - total / 2
+  return kept
+    .map(({ tag, w }) => {
+      const fill = tag.group === 'loved' ? VIBE_LOVED_FILL : MUTED
+      const chip = `
+      <rect x="${x}" y="${y}" width="${w}" height="${VIBE_CHIP_H}" rx="23" fill="${fill}" fill-opacity="0.3"/>
+      <rect x="${x}" y="${y}" width="${w}" height="${VIBE_CHIP_H}" rx="23" fill="none" stroke="${INK}" stroke-width="2"/>
+      <text x="${x + w / 2}" y="${y + 31}" text-anchor="middle" font-family="${DISPLAY_FONT}" font-size="25" font-weight="700" fill="${INK}">${escapeXml(tag.label)}</text>`
+      x += w + VIBE_CHIP_GAP
+      return chip
+    })
+    .join('')
+}
+
 function buildItemSvg(item, coverDataUrl, username, fontDataUrl) {
   const color = TYPE_COLORS[item.type] || '#c49bff'
-  const stars = item.rating > 0 ? '★'.repeat(item.rating) + '☆'.repeat(Math.max(0, 5 - item.rating)) : ''
+  const stars = starString(item.rating)
   const titleLines = wrapText(item.title, 22, 2)
   const quote = item.review ? firstSentence(item.review) : ''
   const reviewLines = quote ? wrapText(quote, 42, 2) : []
@@ -342,28 +394,48 @@ function buildItemSvg(item, coverDataUrl, username, fontDataUrl) {
   // ── Vertical layout: measure the content stack, then center it between
   // the wordmark row (~y 190) and the footer pill (y 1244) so the card
   // balances itself whatever the content length. ──
-  const coverW = 380
-  const coverH = 500
-  const coverX = (W - coverW) / 2
-
   const eyebrowH = 34
   const gapEyebrowPill = 40
   const pillH = 44
   const gapPillCover = 26
-  const gapCoverTitle = 84
   const titleH = titleLines.length * 62
   const creatorH = item.creator ? 52 : 0
   const starsH = stars ? 66 : 0
+  const vibes = itemVibes(item)
+  const gapStarsVibes = vibes.length > 0 ? 12 : 0
+  const vibesH = vibes.length > 0 ? VIBE_CHIP_H : 0
   const reviewBoxH = reviewLines.length > 0 ? 40 + reviewLines.length * 40 : 0
   const gapStarsReview = reviewLines.length > 0 ? 34 : 0
 
-  const contentH =
-    eyebrowH + gapEyebrowPill + pillH + gapPillCover + coverH +
-    gapCoverTitle + titleH + creatorH + starsH + gapStarsReview + reviewBoxH
-
   const regionTop = 190
   const regionBottom = 1210
-  const startY = regionTop + Math.max(0, (regionBottom - regionTop - contentH) / 2)
+  const regionH = regionBottom - regionTop
+
+  // Everything except the cover and the gap above the title, which are the
+  // two things we're willing to compress.
+  const fixedH =
+    eyebrowH + gapEyebrowPill + pillH + gapPillCover +
+    titleH + creatorH + starsH + gapStarsVibes + vibesH +
+    gapStarsReview + reviewBoxH
+
+  // A fully-loaded card (two title lines, creator, stars, vibes, a two-line
+  // quote) overflows the region at the natural cover size and runs the review
+  // box into the footer pill. Claw the overflow back from the title gap first,
+  // then scale the cover — both degrade gracefully, where a collision doesn't.
+  let gapCoverTitle = 84
+  let coverH = 500
+  const over = fixedH + coverH + gapCoverTitle - regionH
+  if (over > 0) {
+    const fromGap = Math.min(over, gapCoverTitle - 44)
+    gapCoverTitle -= fromGap
+    coverH = Math.max(330, coverH - (over - fromGap))
+  }
+  // Keep the cover's 380x500 aspect so art isn't stretched.
+  const coverW = Math.round(coverH * (380 / 500))
+  const coverX = (W - coverW) / 2
+
+  const contentH = fixedH + coverH + gapCoverTitle
+  const startY = regionTop + Math.max(0, (regionH - contentH) / 2)
 
   const eyebrowY = startY + 27
   const pillY = startY + eyebrowH + gapEyebrowPill
@@ -384,6 +456,13 @@ function buildItemSvg(item, coverDataUrl, username, fontDataUrl) {
     ? `<text x="${W / 2}" y="${y + 6}" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="44" fill="#d97706" letter-spacing="6">${stars}</text>`
     : ''
   if (stars) y += 66
+
+  let vibesSvg = ''
+  if (vibes.length > 0) {
+    y += gapStarsVibes
+    vibesSvg = vibeChipsSvg(vibes, W / 2, y)
+    y += VIBE_CHIP_H
+  }
 
   let reviewSvg = ''
   if (reviewLines.length > 0) {
@@ -429,6 +508,7 @@ function buildItemSvg(item, coverDataUrl, username, fontDataUrl) {
     ${titleSvg}
     ${creatorSvg}
     ${starsSvg}
+    ${vibesSvg}
     ${reviewSvg}
 
     ${(() => {

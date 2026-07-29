@@ -9,12 +9,15 @@
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { X, Edit2, Loader2, Music, Film, Tv, BookOpen, Star, Award, Trash2, EyeOff } from 'lucide-react'
+import { X, Edit2, Loader2, Music, Film, Tv, BookOpen, Award, Trash2, EyeOff } from 'lucide-react'
 import CoverArt from './common/CoverArt'
 import ExternalLinks from './common/ExternalLinks'
+import StarRating from './common/StarRating'
+import VibeTagPicker from './common/VibeTags'
 import SuggestionLightbox from './SuggestionLightbox'
 import { getMediaColor } from '../utils/filterUtils'
 import { splitAccolades } from '../utils/mediaText'
+import { formatRating } from '../utils/ratingUtils'
 
 const DETAIL_TTL_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
 
@@ -51,21 +54,6 @@ function writeDetailCache(itemId, data) {
   try {
     localStorage.setItem(detailCacheKey(itemId), JSON.stringify({ data, cachedAt: Date.now() }))
   } catch {}
-}
-
-function StarDisplay({ rating }) {
-  if (!rating || rating <= 0) return null
-  return (
-    <div className="flex items-center gap-0.5">
-      {[1, 2, 3, 4, 5].map((n) => (
-        <Star
-          key={n}
-          size={13}
-          className={n <= rating ? 'text-yellow-400 fill-yellow-400' : 'text-text-muted/30'}
-        />
-      ))}
-    </div>
-  )
 }
 
 function SuggestionCard({ suggestion, onOpen }) {
@@ -282,11 +270,6 @@ export default function ItemLightbox({ item, isOpen, onClose, onEdit, onUpdate, 
                       </span>
                     )}
                   </div>
-                  {item.rating > 0 && (
-                    <div className="mt-2">
-                      <StarDisplay rating={item.rating} />
-                    </div>
-                  )}
                 </div>
               </div>
 
@@ -309,6 +292,27 @@ export default function ItemLightbox({ item, isOpen, onClose, onEdit, onUpdate, 
                     </button>
                   )
                 })}
+              </div>
+
+              {/* Rate + tag right here. Opening Edit just to move a star was
+                  the long way round. */}
+              <div className="bg-bg-tertiary/60 rounded-xl p-3.5 space-y-3">
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-bold uppercase tracking-wide text-text-muted">Your rating</span>
+                  <StarRating
+                    rating={item.rating || 0}
+                    onChange={(r) => onUpdate?.(item.id, { rating: r })}
+                    size={22}
+                  />
+                  {item.rating > 0 && (
+                    <span className="text-sm font-semibold text-amber-500">{formatRating(item.rating)}</span>
+                  )}
+                </div>
+                <VibeTagPicker
+                  tags={item.vibeTags}
+                  onChange={(vibeTags) => onUpdate?.(item.id, { vibeTags })}
+                  compact
+                />
               </div>
 
               {item.review && (

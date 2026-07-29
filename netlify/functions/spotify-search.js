@@ -16,6 +16,9 @@ function normalizeAlbum(album) {
     title: album.name,
     creator: (album.artists || []).map(a => a.name).join(', '),
     year: (album.release_date || '').slice(0, 4),
+    // Spotify reports release_date at varying precision; pass it through so
+    // the release-date lookup can say more than just the year.
+    releaseDate: album.release_date || '',
     coverUrl: album.images?.[1]?.url || album.images?.[0]?.url || '',
     spotifyUrl: album.external_urls?.spotify || '',
     subtype: 'album',
@@ -31,6 +34,7 @@ function normalizeTrack(track) {
     title: track.name,
     creator: (track.artists || []).map(a => a.name).join(', '),
     year: (track.album?.release_date || '').slice(0, 4),
+    releaseDate: track.album?.release_date || '',
     coverUrl: track.album?.images?.[1]?.url || track.album?.images?.[0]?.url || '',
     spotifyUrl: track.external_urls?.spotify || '',
     subtype: 'track',

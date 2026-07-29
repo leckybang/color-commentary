@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Search, SlidersHorizontal } from 'lucide-react'
 import { MEDIA_TYPES, STATUS_OPTIONS } from '../../utils/filterUtils'
+import { VIBE_GROUPS, vibeTagsIn } from '../../data/vibeTags'
 
 export default function FilterBar({ filters, onChange, sortBy, onSortChange }) {
   const update = (key, value) => onChange({ ...filters, [key]: value })
@@ -8,6 +9,7 @@ export default function FilterBar({ filters, onChange, sortBy, onSortChange }) {
   const filtersInUse =
     !!(filters.type && filters.type !== 'all') ||
     !!(filters.status && filters.status !== 'all') ||
+    !!(filters.vibe && filters.vibe !== 'all') ||
     sortBy !== 'dateAdded'
   const [open, setOpen] = useState(false)
 
@@ -57,6 +59,17 @@ export default function FilterBar({ filters, onChange, sortBy, onSortChange }) {
             <option value="all">All Status</option>
             {STATUS_OPTIONS.map((s) => (
               <option key={s.value} value={s.value}>{s.label}</option>
+            ))}
+          </select>
+
+          <select value={filters.vibe || 'all'} onChange={(e) => update('vibe', e.target.value)} className={selectCls}>
+            <option value="all">Any Vibe</option>
+            {VIBE_GROUPS.map((group) => (
+              <optgroup key={group.key} label={group.label}>
+                {vibeTagsIn(group.key).map((tag) => (
+                  <option key={tag.id} value={tag.id}>{tag.label}</option>
+                ))}
+              </optgroup>
             ))}
           </select>
 

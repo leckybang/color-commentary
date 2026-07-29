@@ -12,6 +12,8 @@ import { Link } from 'react-router-dom'
 import { Trophy, Share2, Star, Loader2, ArrowRight, Download } from 'lucide-react'
 import CoverArt from './common/CoverArt'
 import Modal from './common/Modal'
+import StarRating from './common/StarRating'
+import { formatRating } from '../utils/ratingUtils'
 import { getMediaColor } from '../utils/filterUtils'
 import { usePublicProfile } from '../hooks/usePublicProfile'
 import { computeInsights, insightsHeadline } from '../utils/insights'
@@ -151,7 +153,7 @@ export default function InsightsHero({ items, stats = {} }) {
               {insights.fiveStarCount > 0 && (
                 <span className="inline-flex items-center gap-1 text-xs px-3 py-1 rounded-full font-bold text-text-primary border-[1.5px] border-text-primary" style={{ backgroundColor: '#ffd76e' }}>
                   <Star size={11} fill="currentColor" />
-                  {insights.fiveStarCount} five-star {insights.fiveStarCount === 1 ? 'pick' : 'picks'}
+                  {insights.fiveStarCount} {insights.fiveStarCount === 1 ? 'rave' : 'raves'}
                 </span>
               )}
               {insights.topGenre && (
@@ -191,10 +193,9 @@ export default function InsightsHero({ items, stats = {} }) {
                     <CoverArt title={f.title} type={f.type} creator={f.creator} coverUrl={f.coverUrl} size="sm" />
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-text-primary truncate">{f.title}</p>
-                      <div className="flex items-center gap-1 text-amber-500 mt-0.5">
-                        {Array.from({ length: f.rating }).map((_, i) => (
-                          <Star key={i} size={10} fill="currentColor" />
-                        ))}
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <StarRating rating={f.rating} readonly size={10} />
+                        <span className="text-[10px] font-semibold text-amber-500">{formatRating(f.rating)}</span>
                       </div>
                     </div>
                   </div>

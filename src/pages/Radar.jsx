@@ -1,7 +1,13 @@
 import { useState, useMemo } from 'react'
-import { Radar as RadarIcon, BadgeCheck, Calendar, Loader2, RefreshCw, ChevronDown, ChevronUp, Check, Bookmark, Info, Music, Film, Tv, BookOpen, Newspaper, ExternalLink, TrendingUp, Award, Users, Zap, Flame } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Radar as RadarIcon, BadgeCheck, Calendar, Loader2, RefreshCw, ChevronDown, ChevronUp, Check, Bookmark, Info, Music, Film, Tv, BookOpen, Newspaper, ExternalLink, TrendingUp, Award, Trophy, Users, Zap, Flame } from 'lucide-react'
 import CoverArt from '../components/common/CoverArt'
 import FriendItemLightbox from '../components/FriendItemLightbox'
+import ItemLightbox from '../components/ItemLightbox'
+import { useAuth } from '../hooks/useAuth'
+import { useUpcomingWatchlist } from '../hooks/useUpcomingWatchlist'
+import { formatReleaseWindow } from '../services/releaseDates'
+import { readDismissed, addDismissed, pickKey } from '../services/dismissedPicks'
 import { usePopularItems } from '../hooks/usePopularItems'
 import ExternalLinks from '../components/common/ExternalLinks'
 import { useCatalog } from '../hooks/useCatalog'
@@ -53,6 +59,13 @@ const BUCKETS = [
     blurb: 'Just dropped: this week\'s releases and brand-new list arrivals.',
   },
   {
+    key: 'soon',
+    label: 'Coming Soon',
+    icon: Calendar,
+    color: 'var(--color-accent-primary)',
+    blurb: 'Dated and not out yet. Films and series only for now.',
+  },
+  {
     key: 'hyped',
     label: 'Hyped',
     icon: TrendingUp,
@@ -66,9 +79,16 @@ const BUCKETS = [
     color: 'var(--color-accent-primary)',
     blurb: 'Quietly raved picks from NYT Books, Pitchfork, and top-scored screen.',
   },
+  {
+    key: 'accolades',
+    label: 'Recent Accolades',
+    icon: Trophy,
+    color: 'var(--color-accent-primary)',
+    blurb: 'Nominated or decorated. Film and literary prizes, via Wikidata.',
+  },
 ]
 
-function BucketSection({ bucket, items, onItemClick, inCatalog }) {
+function BucketSection({ bucket, items, onItemClick, inCatalog, children }) {
   const Icon = bucket.icon
   if (!items || items.length === 0) {
     return (
@@ -78,7 +98,9 @@ function BucketSection({ bucket, items, onItemClick, inCatalog }) {
           <h2 className="text-lg font-semibold text-text-primary">{bucket.label}</h2>
         </div>
         <p className="text-xs text-text-muted mb-3">{bucket.blurb}</p>
-        <p className="text-xs text-text-muted italic">Nothing in this bucket this week.</p>
+        {/* Even with no picks from the feeds, the "from your list" band below
+            can still have something worth showing. */}
+        {children || <p className="text-xs text-text-muted italic">Nothing in this bucket this week.</p>}
       </section>
     )
   }
@@ -113,41 +135,79 @@ function BucketSection({ bucket, items, onItemClick, inCatalog }) {
           )
         })}
       </div>
+      {children}
     </section>
   )
 }
 
+/**
+ * The half of Coming Soon that's about you rather than the feeds: items you
+ * already saved as Want to Try whose release date is still ahead.
+ */
+function FromYourList({ items, onItemClick }) {
+  if (items.length === 0) return null
+  return (
+    <div className="mt-4 pt-4 border-t border-dotted border-border">
+      <div className="flex items-center gap-2 mb-1">
+        <Bookmark size={14} className="text-accent-primary" />
+        <p className="text-[11px] font-bold uppercase tracking-wide text-text-secondary">From your list</p>
+      </div>
+      <p className="text-xs text-text-muted mb-3">Things you already saved that aren't out yet.</p>
+      <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-1 px-1 pb-1">
+        {items.map((item) => (
+          <button
+            key={item.id}
+            onClick={() => onItemClick(item)}
+            className="w-28 shrink-0 text-left group"
+            title={item.title}
+          >
+            <CoverArt title={item.title} type={item.type} creator={item.creator} coverUrl={item.coverUrl} size="lg" />
+            <p className="text-xs font-medium text-text-primary truncate mt-1.5">{item.title}</p>
+            <p className="text-[10px] truncate font-semibold" style={{ color: getMediaColor(item.type) }}>
+              {formatReleaseWindow(item.releaseDate)}
+            </p>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function Radar() {
-  const { items: catalogItems, addItem } = useCatalog()
+  const navigate = useNavigate()
+  const { user } = useAuth()
+  const { items: catalogItems, addItem, updateItem, deleteItem } = useCatalog()
   const { radar, loading, error, refresh: refreshRadar, isDemo } = useWeeklyRadar()
   const popular = usePopularItems()
   const [detailItem, setDetailItem] = useState(null)
+  // Your own upcoming saves, plus the lightbox for opening them. These are
+  // catalog items, so they get the real ItemLightbox rather than the
+  // add-to-log one the radar picks use.
+  const { upcoming: upcomingMine } = useUpcomingWatchlist(catalogItems, updateItem)
+  const [ownItemId, setOwnItemId] = useState(null)
+  const ownItem = ownItemId ? catalogItems.find((i) => i.id === ownItemId) || null : null
 
   const inCatalog = (title, type) =>
     catalogItems.some(
       (i) => i.type === type && i.title.trim().toLowerCase() === String(title).trim().toLowerCase()
     )
 
-  const [dismissed, setDismissed] = useState(new Set())
+  // Dismissals persist per user — see services/dismissedPicks.js. Seeded from
+  // storage on mount so a pick you rejected last week stays gone.
+  const [dismissed, setDismissed] = useState(() => readDismissed(user?.uid))
 
   const handleDismiss = (item) => {
-    setDismissed((prev) => new Set([...prev, item.title]))
+    setDismissed(addDismissed(user?.uid, item))
   }
 
-  const fresh = useMemo(
-    () => (radar?.fresh || []).filter((r) => !dismissed.has(r.title)),
-    [radar, dismissed]
-  )
-  const hyped = useMemo(
-    () => (radar?.hyped || []).filter((r) => !dismissed.has(r.title)),
-    [radar, dismissed]
-  )
-  const darlings = useMemo(
-    () => (radar?.darlings || []).filter((r) => !dismissed.has(r.title)),
-    [radar, dismissed]
-  )
-  const totalPicks = fresh.length + hyped.length + darlings.length
-  const bucketItems = { fresh, hyped, darlings }
+  const bucketItems = useMemo(() => {
+    const out = {}
+    for (const bucket of BUCKETS) {
+      out[bucket.key] = (radar?.[bucket.key] || []).filter((r) => !dismissed.has(pickKey(r)))
+    }
+    return out
+  }, [radar, dismissed])
+  const totalPicks = Object.values(bucketItems).reduce((n, list) => n + list.length, 0)
 
   // catalogItems isn't read directly here — useCatalog is consumed for addItem.
   void catalogItems
@@ -227,17 +287,29 @@ export default function Radar() {
 
       {radar && totalPicks > 0 ? (
         <>
-          {BUCKETS.filter((b) => b.key !== 'fresh' || radar?.fresh !== undefined).map((b) => (
-            <BucketSection
-              key={b.key}
-              bucket={b}
-              items={bucketItems[b.key]}
-              inCatalog={inCatalog}
-              onItemClick={(item) =>
-                setDetailItem({ ...item, sourceLabel: b.label, sourceLink: reviewLink(item) })
-              }
-            />
-          ))}
+          {BUCKETS
+            // A bucket the payload doesn't carry at all (an older cached
+            // radar, or a source that's down) is hidden rather than shown
+            // empty. Buckets the payload DOES carry still render their own
+            // "nothing this week" line. Coming Soon is the exception: your own
+            // upcoming saves don't depend on the feeds, so it shows for those
+            // even when the feed side is missing.
+            .filter((b) => radar?.[b.key] !== undefined || (b.key === 'soon' && upcomingMine.length > 0))
+            .map((b) => (
+              <BucketSection
+                key={b.key}
+                bucket={b}
+                items={bucketItems[b.key]}
+                inCatalog={inCatalog}
+                onItemClick={(item) =>
+                  setDetailItem({ ...item, sourceLabel: b.label, sourceLink: reviewLink(item) })
+                }
+              >
+                {b.key === 'soon' && (
+                  <FromYourList items={upcomingMine} onItemClick={(item) => setOwnItemId(item.id)} />
+                )}
+              </BucketSection>
+            ))}
         </>
       ) : !loading ? (
         <div className="text-center py-12 bg-bg-secondary border border-border rounded-2xl">
@@ -255,10 +327,31 @@ export default function Radar() {
         onDismiss={handleDismiss}
       />
 
+      {/* Items from your own log open the full lightbox. Edit lives on the
+          Log page, so that button deep-links there. */}
+      <ItemLightbox
+        item={ownItem}
+        isOpen={!!ownItem}
+        onClose={() => setOwnItemId(null)}
+        onEdit={(item) => {
+          setOwnItemId(null)
+          navigate(`/catalog?edit=${item.id}`)
+        }}
+        onUpdate={updateItem}
+        onFinish={(item) =>
+          updateItem(item.id, { status: 'finished', dateConsumed: new Date().toISOString() })
+        }
+        onDelete={(item) => {
+          deleteItem(item.id)
+          setOwnItemId(null)
+        }}
+        addItem={addItem}
+      />
+
       {/* What this means — small footer */}
       {radar && (
         <div className="text-[11px] text-text-muted/80 italic text-center pt-2">
-          Sources: NYT Best Sellers + reviews · TMDB critic scores · Pitchfork Best New Music · Spotify.{' '}
+          Sources: NYT Best Sellers + reviews · TMDB critic scores and release calendar · Pitchfork Best New Music · Spotify · Wikidata awards.{' '}
           <BadgeCheck size={10} className="inline -mt-0.5" /> Real picks, real sources.
         </div>
       )}

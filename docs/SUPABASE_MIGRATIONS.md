@@ -4,6 +4,66 @@ Run these in your **Supabase SQL Editor** to keep your database schema up to dat
 
 ---
 
+## 2026-07 — Watchlist release dates ✅ APPLIED
+
+> Applied to the live project as migration `catalog_item_release_dates` on 2026-07-28. Additive; the old client ignores both columns.
+
+```sql
+-- Release dates for watchlist items, so Coming Soon can tell you when
+-- something you already saved is actually out.
+--
+-- TEXT, not DATE, on purpose: providers report varying precision ("2027",
+-- "2026-11", "2026-11-04") and a date column would force us to invent a day.
+-- The strings are ISO-prefixed, so lexicographic comparison against today's
+-- date still orders them correctly, and a bare year matching the current year
+-- sorts as past — the conservative reading when the day is unknown.
+ALTER TABLE public.catalog_items
+  ADD COLUMN IF NOT EXISTS release_date text;
+
+-- When we last asked a provider. Lets the client skip re-querying every
+-- session and stay inside the Google Books / TMDB quotas.
+ALTER TABLE public.catalog_items
+  ADD COLUMN IF NOT EXISTS release_date_checked_at timestamptz;
+```
+
+---
+
+## 2026-07 — Half-star ratings + vibe tags ✅ APPLIED
+
+> Applied to the live project as migration `half_star_ratings_and_vibe_tags` on 2026-07-28.
+>
+> Both changes are backward compatible, so the DB could go first: existing
+> integer ratings are all valid `numeric(2,1)` values, and the old client
+> (which only writes whole numbers and never reads `vibe_tags`) keeps working
+> against the new schema.
+
+```sql
+-- Ratings move from whole stars to halves. numeric(2,1) holds 0.0–5.0 and the
+-- constraint mirrors normalizeRating() in src/utils/ratingUtils.js: in range,
+-- and landing on a half step.
+ALTER TABLE public.catalog_items
+  ALTER COLUMN rating TYPE numeric(2,1) USING rating::numeric(2,1);
+
+ALTER TABLE public.catalog_items
+  DROP CONSTRAINT IF EXISTS catalog_items_rating_half_step;
+
+ALTER TABLE public.catalog_items
+  ADD CONSTRAINT catalog_items_rating_half_step
+  CHECK (rating >= 0 AND rating <= 5 AND (rating * 2) = floor(rating * 2));
+
+-- Vibe tags: why you consumed it, beyond artistic quality. The vocabulary is
+-- fixed in src/data/vibeTags.js and enforced client-side (sanitizeVibeTags
+-- drops anything unrecognized on both read and write), so the column stays a
+-- plain text array. The GIN index is for filtering by tag.
+ALTER TABLE public.catalog_items
+  ADD COLUMN IF NOT EXISTS vibe_tags text[] NOT NULL DEFAULT '{}';
+
+CREATE INDEX IF NOT EXISTS catalog_items_vibe_tags_idx
+  ON public.catalog_items USING GIN (vibe_tags);
+```
+
+---
+
 ## 2026-07 — Friend-of-friend discovery ✅ APPLIED
 
 > Applied as migration `public_following_lists_readable` on 2026-07-10.
