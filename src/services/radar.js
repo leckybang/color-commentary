@@ -20,7 +20,7 @@ import {
 } from './providers/tmdb'
 import { fetchNYTBestsellers } from './providers/nytBooks'
 import { searchGoogleBooks } from './providers/googleBooks'
-import { readDismissed, pickKey } from './dismissedPicks'
+import { readCachedDismissed, pickKey } from './dismissedPicks'
 
 const CACHE_TTL_MS = 30 * 60 * 1000 // 30 minutes
 
@@ -212,7 +212,34 @@ async function fetchSpotifyNewReleases() {
 // Some items (e.g. Pitchfork RSS items) arrive without cover art.
 // Look them up in the same media APIs the rest of the radar uses so the
 // cards show real covers instead of the gradient fallback. Best-effort.
-async function spotifyCoverFor(query, signal) {
+
+function normalizeForMatch(s) {
+  return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+}
+
+/**
+ * Does this search result actually describe the work we asked about?
+ *
+ * Cover lookups used to take the first result that had an image, whatever it
+ * was. That put a romance novel's cover on a Booker nominee: the search for
+ * "Love Forms Claire Adam" matched an unrelated book on the author's first
+ * name, and it outranked the real one because an older title has more
+ * ratings. A wrong cover is worse than no cover — the gradient fallback at
+ * least shows the right title — so a result now has to match before we use it.
+ *
+ * Prefix matching, not equality, because providers append subtitles and
+ * edition markers ("Seascraper: A Novel").
+ */
+function titleMatches(candidate, wanted) {
+  const a = normalizeForMatch(candidate)
+  const b = normalizeForMatch(wanted)
+  if (!a || !b) return false
+  return a === b || a.startsWith(b) || b.startsWith(a)
+}
+
+async function spotifyCoverFor(title, creator, signal) {
+  const query = `${title} ${creator || ''}`.trim()
+  if (!query) return ''
   try {
     const res = await fetch(
       `/.netlify/functions/spotify-search?q=${encodeURIComponent(query.slice(0, 100))}`,
@@ -222,7 +249,7 @@ async function spotifyCoverFor(query, signal) {
     const ct = res.headers.get('content-type') || ''
     if (!ct.includes('application/json')) return ''
     const data = await res.json()
-    const hit = (data.results || []).find((r) => r.coverUrl)
+    const hit = (data.results || []).find((r) => r.coverUrl && titleMatches(r.title, title))
     return hit?.coverUrl || ''
   } catch {
     return ''
@@ -233,21 +260,26 @@ async function enrichCoverArt(items, { signal } = {}) {
   return Promise.all(
     items.map(async (item) => {
       if (item.coverUrl) return item
-      const q = `${item.title} ${item.creator || ''}`.trim()
-      if (!q) return item
+      if (!item.title) return item
       try {
         let coverUrl = ''
         if (item.type === 'music') {
-          coverUrl = await spotifyCoverFor(q, signal)
+          coverUrl = await spotifyCoverFor(item.title, item.creator, signal)
         } else if (item.type === 'movie' || item.type === 'tv') {
           const results = await searchTMDB(item.title, { signal })
           const match =
-            results.find((r) => r.type === item.type && r.coverUrl) ||
-            results.find((r) => r.coverUrl)
+            results.find((r) => r.type === item.type && r.coverUrl && titleMatches(r.title, item.title)) ||
+            results.find((r) => r.coverUrl && titleMatches(r.title, item.title))
           coverUrl = match?.coverUrl || ''
         } else if (item.type === 'book') {
-          const results = await searchGoogleBooks(q, { signal })
-          coverUrl = results.find((r) => r.coverUrl)?.coverUrl || ''
+          // Operator-scoped, so the title and author are matched as separate
+          // fields. Passing "<title> <author>" as one blob let the blended
+          // search match either string anywhere and return the wrong book.
+          const query = item.creator
+            ? `intitle:"${item.title}" inauthor:"${item.creator}"`
+            : `intitle:"${item.title}"`
+          const results = await searchGoogleBooks(query, { signal })
+          coverUrl = results.find((r) => r.coverUrl && titleMatches(r.title, item.title))?.coverUrl || ''
         }
         return coverUrl ? { ...item, coverUrl } : item
       } catch {
@@ -350,7 +382,7 @@ async function buildRealRadar({ signal, uid = 'anonymous' } = {}) {
   // "Not for me" picks are dropped from the pools rather than filtered out at
   // render, so their slot gets backfilled with the next candidate instead of
   // leaving the shelf a tile short.
-  const dismissed = readDismissed(uid)
+  const dismissed = readCachedDismissed(uid)
   const spin = (pool, count) =>
     rotate(pool.filter((it) => !dismissed.has(pickKey(it))), count, { seen, avoidWeeks, seed, keyOf: itemKey })
 

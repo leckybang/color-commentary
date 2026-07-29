@@ -42,7 +42,11 @@ const AWARDS = {
 }
 
 const MAX_ITEMS = 12
-// Award seasons move on the order of months. A day-long cache is generous.
+// Award seasons move on the order of months, so the function holds its own
+// answer for a day. The HTTP header is deliberately shorter (an hour): the
+// in-memory cache already absorbs the SPARQL cost, and a day-long browser
+// cache means a correction to this shelf takes a day to reach anyone who
+// already loaded it.
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000
 let cache = { at: 0, items: null }
 
@@ -130,15 +134,19 @@ export async function handler(event) {
   if (cache.items && Date.now() - cache.at < CACHE_TTL_MS) {
     return {
       statusCode: 200,
-      headers: { ...corsHeaders(origin), 'Cache-Control': 'public, max-age=86400' },
+      headers: { ...corsHeaders(origin), 'Cache-Control': 'public, max-age=3600' },
       body: JSON.stringify({ items: cache.items, cached: true }),
     }
   }
 
-  // Two years back: long enough to cover a full award cycle (a film released
-  // in autumn is nominated the following spring), short enough to stay "recent".
+  // Eighteen months back. Award seasons run roughly six months behind release
+  // (an autumn film is nominated the following spring), so this covers the
+  // current cycle and the one before it. Two years pulled in the cycle before
+  // THAT, which is how a shelf labelled "Recent" ended up showing 2024 films.
+  // Fewer, current picks beat a full shelf of stale ones — and the set grows
+  // on its own as each new season is entered into Wikidata.
   const since = new Date()
-  since.setFullYear(since.getFullYear() - 2)
+  since.setMonth(since.getMonth() - 18)
   const sinceIso = `${since.toISOString().slice(0, 10)}T00:00:00Z`
 
   try {
@@ -166,7 +174,7 @@ export async function handler(event) {
 
     return {
       statusCode: 200,
-      headers: { ...corsHeaders(origin), 'Cache-Control': 'public, max-age=86400' },
+      headers: { ...corsHeaders(origin), 'Cache-Control': 'public, max-age=3600' },
       body: JSON.stringify({ items }),
     }
   } catch (err) {

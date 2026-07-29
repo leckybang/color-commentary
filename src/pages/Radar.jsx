@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Radar as RadarIcon, BadgeCheck, Calendar, Loader2, RefreshCw, ChevronDown, ChevronUp, Check, Bookmark, Info, Music, Film, Tv, BookOpen, Newspaper, ExternalLink, TrendingUp, Award, Trophy, Users, Zap, Flame } from 'lucide-react'
 import CoverArt from '../components/common/CoverArt'
@@ -7,7 +7,7 @@ import ItemLightbox from '../components/ItemLightbox'
 import { useAuth } from '../hooks/useAuth'
 import { useUpcomingWatchlist } from '../hooks/useUpcomingWatchlist'
 import { formatReleaseWindow } from '../services/releaseDates'
-import { readDismissed, addDismissed, pickKey } from '../services/dismissedPicks'
+import { readCachedDismissed, fetchDismissed, dismissPick, pickKey } from '../services/dismissedPicks'
 import { usePopularItems } from '../hooks/usePopularItems'
 import ExternalLinks from '../components/common/ExternalLinks'
 import { useCatalog } from '../hooks/useCatalog'
@@ -192,12 +192,19 @@ export default function Radar() {
       (i) => i.type === type && i.title.trim().toLowerCase() === String(title).trim().toLowerCase()
     )
 
-  // Dismissals persist per user — see services/dismissedPicks.js. Seeded from
-  // storage on mount so a pick you rejected last week stays gone.
-  const [dismissed, setDismissed] = useState(() => readDismissed(user?.uid))
+  // Dismissals live in Supabase — see services/dismissedPicks.js. Seed from
+  // the local mirror so the shelf is correct on first paint, then reconcile
+  // with the server so a pick dismissed on another device is gone here too.
+  const [dismissed, setDismissed] = useState(() => readCachedDismissed(user?.uid))
+
+  useEffect(() => {
+    let cancelled = false
+    fetchDismissed(user).then((set) => { if (!cancelled) setDismissed(set) })
+    return () => { cancelled = true }
+  }, [user])
 
   const handleDismiss = (item) => {
-    setDismissed(addDismissed(user?.uid, item))
+    setDismissed(dismissPick(user, item))
   }
 
   const bucketItems = useMemo(() => {
