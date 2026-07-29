@@ -4,6 +4,42 @@ Run these in your **Supabase SQL Editor** to keep your database schema up to dat
 
 ---
 
+## 2026-07 — Dismissed radar picks ✅ APPLIED
+
+> Applied to the live project as migration `dismissed_radar_picks` on 2026-07-29.
+>
+> "Not for me" was localStorage only, so a dismissal on one device never
+> reached another. The client still keeps a localStorage mirror — the radar
+> builder filters its candidate pools synchronously and can't await a round
+> trip mid-build — but this table is the source of truth, and the Radar page
+> reconciles against it on mount (pushing up any local-only dismissals).
+
+```sql
+CREATE TABLE IF NOT EXISTS public.dismissed_picks (
+  user_id uuid NOT NULL REFERENCES auth.users (id) ON DELETE CASCADE,
+  item_key text NOT NULL,   -- "type:lowercased title"; radar picks have no stable id
+  title text,
+  type text,
+  dismissed_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (user_id, item_key)
+);
+
+ALTER TABLE public.dismissed_picks ENABLE ROW LEVEL SECURITY;
+
+-- Strictly your own. Nothing here is shared, so there is no public read path.
+CREATE POLICY "Own dismissals are readable"
+  ON public.dismissed_picks FOR SELECT USING (user_id = auth.uid());
+CREATE POLICY "Own dismissals are insertable"
+  ON public.dismissed_picks FOR INSERT WITH CHECK (user_id = auth.uid());
+CREATE POLICY "Own dismissals are deletable"
+  ON public.dismissed_picks FOR DELETE USING (user_id = auth.uid());
+
+CREATE INDEX IF NOT EXISTS dismissed_picks_user_idx
+  ON public.dismissed_picks (user_id);
+```
+
+---
+
 ## 2026-07 — Watchlist release dates ✅ APPLIED
 
 > Applied to the live project as migration `catalog_item_release_dates` on 2026-07-28. Additive; the old client ignores both columns.
