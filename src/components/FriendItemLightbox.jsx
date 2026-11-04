@@ -216,8 +216,13 @@ export default function FriendItemLightbox({ item, isOpen, onClose, addItem, inC
             </div>
           </div>
 
-          {(detail?.description || item.blurb || item.description) && (() => {
-            const { accolades, body } = splitAccolades(detail?.description || item.blurb || item.description)
+          {/* A curated blurb the item already carries (e.g. a Pitchfork review
+              excerpt on a Radar pick) wins over the fetched detail. The detail
+              fetch is a FALLBACK for items that arrive with no text of their
+              own (friends' logged items, scratchpad notes) — it must not clobber
+              a real description once it resolves. */}
+          {(item.blurb || item.description || detail?.description) && (() => {
+            const { accolades, body } = splitAccolades(item.blurb || item.description || detail?.description)
             return (
               <div className="space-y-2">
                 {accolades && (

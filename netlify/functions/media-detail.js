@@ -209,9 +209,13 @@ async function musicDetail(item) {
     related = dedupeRelated(candidates, album.name, MAX_RELATED)
   }
 
-  // Spotify exposes no album description or critic rating.
-  const description = artist?.name ? `Album by ${artist.name}.` : ''
-  return { description, rating: null, related }
+  // Spotify exposes no album description or critic rating. We deliberately
+  // DON'T synthesize an "Album by X." line: it adds no information, and album
+  // search here fuzzy-matches, so it was frequently the wrong artist. Worse,
+  // any non-empty description here overrides a real curated blurb (e.g. a
+  // Pitchfork review excerpt) in the lightbox. Leave it empty so the caller
+  // can fall back to the item's own text.
+  return { description: '', rating: null, related }
 }
 
 export async function handler(event) {
