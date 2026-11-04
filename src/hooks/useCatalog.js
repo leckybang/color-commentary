@@ -54,6 +54,23 @@ function toDb(item, userId) {
   }
 }
 
+const DEMO_STORAGE_KEY = 'cc_catalog_demo-user'
+const CARRY_FLAG = 'cc_carry_demo'
+
+/**
+ * Read the demo-mode catalog (items logged while trying the app without an
+ * account). Used once to carry that work into a brand-new real account.
+ */
+function readDemoCatalog() {
+  try {
+    const raw = localStorage.getItem(DEMO_STORAGE_KEY)
+    const arr = raw ? JSON.parse(raw) : []
+    return Array.isArray(arr) ? arr : []
+  } catch {
+    return []
+  }
+}
+
 /**
  * A rating means you actually experienced something — so a rated item can't
  * still be "Want to Try." Promote those to Finished, and make sure every
@@ -113,6 +130,37 @@ export function useCatalog() {
           if (data) {
             const mapped = data.map(fromDb)
             const migrated = mapped.map(applyRatingRule)
+
+            // Demo → real-account carry. When someone tries the demo, logs a
+            // few things, then signs up, their catalog lives under the demo
+            // key and the fresh account is empty. Login flags the intent; we
+            // honor it once, and only when the server account is still empty,
+            // so we never dump demo data onto an established login. New rows
+            // get fresh UUIDs because demo ids aren't sync-safe.
+            let carryFlag = false
+            try { carryFlag = localStorage.getItem(CARRY_FLAG) === '1' } catch { /* ignore */ }
+            if (carryFlag) {
+              try { localStorage.removeItem(CARRY_FLAG) } catch { /* ignore */ }
+              if (migrated.length === 0) {
+                const carried = readDemoCatalog().map((it) =>
+                  applyRatingRule({ ...it, id: crypto.randomUUID() })
+                )
+                if (carried.length > 0) {
+                  commit(carried)
+                  if (storageKey) localStorage.setItem(storageKey, JSON.stringify(carried))
+                  carried.forEach((it) => {
+                    if (isRealUuid(it.id)) {
+                      supabase
+                        .from('catalog_items')
+                        .insert(toDb(it, user.uid))
+                        .then(({ error: e }) => { if (e) console.error('Demo carry insert failed:', e.message) })
+                    }
+                  })
+                  return // first-run import done; skip the normal load/backfill
+                }
+              }
+            }
+
             commit(migrated)
             if (storageKey) localStorage.setItem(storageKey, JSON.stringify(migrated))
             // One-time backfill: persist any rows the rule promoted (rated but

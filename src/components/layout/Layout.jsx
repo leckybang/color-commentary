@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import UpdateToast from '../common/UpdateToast'
+import InstallPrompt from '../common/InstallPrompt'
 
 // Renders nested routes via <Outlet/>, or explicit children when used as a
 // plain wrapper (e.g. the signed-in view of /u/:username).
@@ -14,6 +15,7 @@ export default function Layout({ children }) {
         </div>
       </main>
       <UpdateToast />
+      <InstallPrompt />
     </div>
   )
 }

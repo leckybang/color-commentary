@@ -40,9 +40,25 @@ export default function Login() {
   const [submitting, setSubmitting] = useState(false)
   const [notice, setNotice] = useState(null)
 
+  // If someone tried the demo, logged a few things, and is now creating a real
+  // account, flag their demo catalog to carry across. useCatalog honors this
+  // once, and only into an empty new account, so established logins are safe.
+  const markDemoCarryIfAny = () => {
+    try {
+      const demo = localStorage.getItem('cc_catalog_demo-user')
+      const arr = demo ? JSON.parse(demo) : []
+      if (Array.isArray(arr) && arr.length > 0) {
+        localStorage.setItem('cc_carry_demo', '1')
+      }
+    } catch {
+      /* unreadable storage: nothing to carry */
+    }
+  }
+
   const handleGoogleSignIn = async () => {
     try {
       setAuthError(null)
+      markDemoCarryIfAny()
       await loginWithGoogle()
     } catch (err) {
       setAuthError(err.message || 'Google sign-in failed')
@@ -57,6 +73,7 @@ export default function Login() {
     setAuthError(null)
     setNotice(null)
     try {
+      markDemoCarryIfAny()
       const result = await login(email, name)
       if (result === 'confirm-email') {
         setNotice('Almost there! Check your inbox for a confirmation email, then come back and hit Get Started again.')

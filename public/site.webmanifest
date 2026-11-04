@@ -1,6 +1,6 @@
 {
   "name": "Color Commentary",
-  "short_name": "Color Comm",
+  "short_name": "Color Commentary",
   "description": "Track every book, movie, show, and album in one place, and stay on top of new releases.",
   "start_url": "/",
   "display": "standalone",
