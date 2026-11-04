@@ -89,6 +89,17 @@ export function useCatalog() {
     setItems(updated)
   }
 
+  // The initial Supabase fetch fires on mount and replaces state when it
+  // resolves. If the user logs something in that gap (very easy on the Log
+  // tab, which you navigate TO and immediately add on), the fetch — whose
+  // query predates the insert — comes back without the new row and wipes it
+  // from the UI and localStorage. Track optimistic writes made this session so
+  // that first fetch merges instead of clobbering: session-created rows it
+  // hasn't caught up to are preserved, session edits win over the server copy,
+  // and session deletes stay deleted.
+  const pendingWriteIds = useRef(new Set())
+  const deletedIds = useRef(new Set())
+
   const storageKey = user ? `cc_catalog_${user.uid}` : null
   const canSync = shouldSync(user)
 
@@ -113,8 +124,22 @@ export function useCatalog() {
           if (data) {
             const mapped = data.map(fromDb)
             const migrated = mapped.map(applyRatingRule)
-            commit(migrated)
-            if (storageKey) localStorage.setItem(storageKey, JSON.stringify(migrated))
+
+            // Merge the server snapshot with anything the user changed this
+            // session that the fetch couldn't have seen yet, so an in-flight
+            // load never silently drops a just-logged item.
+            const localById = new Map(itemsRef.current.map((i) => [i.id, i]))
+            const serverIds = new Set(migrated.map((m) => m.id))
+            const reconciled = migrated
+              .filter((m) => !deletedIds.current.has(m.id)) // honor session deletes
+              .map((m) => (pendingWriteIds.current.has(m.id) ? localById.get(m.id) || m : m)) // keep session edits
+            const sessionOnly = itemsRef.current.filter(
+              (i) => pendingWriteIds.current.has(i.id) && !serverIds.has(i.id) && !deletedIds.current.has(i.id)
+            )
+            const merged = [...sessionOnly, ...reconciled]
+
+            commit(merged)
+            if (storageKey) localStorage.setItem(storageKey, JSON.stringify(merged))
             // One-time backfill: persist any rows the rule promoted (rated but
             // still "want", or finished with no date). Idempotent — once written
             // they come back already-correct and produce no further changes.
@@ -152,6 +177,8 @@ export function useCatalog() {
       vibeTags: [],
       ...item,
     })
+    pendingWriteIds.current.add(newItem.id)
+    deletedIds.current.delete(newItem.id)
     saveLocal([newItem, ...itemsRef.current])
 
     if (canSync && isRealUuid(newItem.id)) {
@@ -167,6 +194,7 @@ export function useCatalog() {
   }
 
   const updateItem = (id, updates) => {
+    pendingWriteIds.current.add(id)
     const next = itemsRef.current.map((item) => (item.id === id ? applyRatingRule({ ...item, ...updates }) : item))
     saveLocal(next)
 
@@ -186,6 +214,8 @@ export function useCatalog() {
   }
 
   const deleteItem = (id) => {
+    deletedIds.current.add(id)
+    pendingWriteIds.current.delete(id)
     saveLocal(itemsRef.current.filter((item) => item.id !== id))
 
     if (canSync && isRealUuid(id)) {
