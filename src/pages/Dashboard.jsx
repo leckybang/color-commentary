@@ -10,7 +10,6 @@ import { getMediaColor, MEDIA_TYPES } from '../utils/filterUtils'
 import { formatDate } from '../utils/dateUtils'
 import CoverArt from '../components/common/CoverArt'
 import MediaPickerInput from '../components/common/MediaPickerInput'
-import CalibrationOnboarding from '../components/CalibrationOnboarding'
 import InsightsHero from '../components/InsightsHero'
 import QuickAdd from '../components/QuickAdd'
 import CatalogSeeds from '../components/CatalogSeeds'
@@ -20,7 +19,6 @@ import { FriendsFeedShelf } from '../components/FriendsFeedRows'
 import FriendItemLightbox from '../components/FriendItemLightbox'
 import { useFriendsFeed } from '../hooks/useFriendsFeed'
 import { usePopularItems } from '../hooks/usePopularItems'
-import { CALIBRATION_QUESTIONS } from '../data/calibrationData'
 import { formatRating } from '../utils/ratingUtils'
 
 const SCRATCHPAD_TYPE_TO_SEARCH = {
@@ -45,7 +43,7 @@ export default function Dashboard() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const { items, getStats, addItem, updateItem, deleteItem } = useCatalog()
-  const { profile, isProfileEmpty, saveProfile } = useTasteProfile()
+  const { profile, isProfileEmpty } = useTasteProfile()
   const { radar, loading: radarLoading, isDemo: radarIsDemo } = useWeeklyRadar()
   const { notes, addNote, deleteNote } = useScratchpad()
   const friendsFeed = useFriendsFeed(6)
@@ -66,26 +64,6 @@ export default function Dashboard() {
   const handleFinish = (item) => {
     updateItem(item.id, { status: 'finished', dateConsumed: new Date().toISOString() })
     setCelebrating(item)
-  }
-
-  // Onboarding: show once when profile is empty and user hasn't gone through it yet
-  const onboardingKey = user ? `cc_onboarding_done_${user.uid}` : null
-  const [showOnboarding, setShowOnboarding] = useState(
-    () => !!(onboardingKey && !localStorage.getItem(onboardingKey))
-  )
-
-  const handleOnboardingComplete = (selections) => {
-    const updates = { ...profile }
-    for (const [qId, values] of Object.entries(selections)) {
-      const q = CALIBRATION_QUESTIONS.find((cq) => cq.id === qId)
-      if (!q) continue
-      const existing = updates[q.category]?.[q.field] || []
-      const merged = [...new Set([...existing, ...values])]
-      updates[q.category] = { ...(updates[q.category] || {}), [q.field]: merged }
-    }
-    saveProfile(updates)
-    if (onboardingKey) localStorage.setItem(onboardingKey, '1')
-    setShowOnboarding(false)
   }
 
   const stats = getStats()
@@ -206,16 +184,6 @@ export default function Dashboard() {
 
   return (
     <div>
-      {showOnboarding && (
-        <CalibrationOnboarding
-          onComplete={handleOnboardingComplete}
-          onDismiss={() => {
-            if (onboardingKey) localStorage.setItem(onboardingKey, '1')
-            setShowOnboarding(false)
-          }}
-        />
-      )}
-
       {/* ─── Hero Greeting ─── */}
       <div className="mb-6">
         <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[2.5px] text-text-muted mb-1.5">
