@@ -34,7 +34,9 @@ const STATUS_PICKER = [
 ]
 
 function detailCacheKey(itemId) {
-  return `cc_detail_v2_${itemId}`
+  // v3: music details now carry a real Wikipedia album summary, so older v2
+  // entries (placeholder "Album by X.") should be re-fetched rather than reused.
+  return `cc_detail_v3_${itemId}`
 }
 
 function readDetailCache(itemId) {
