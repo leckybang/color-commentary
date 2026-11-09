@@ -176,7 +176,45 @@ async function booksDetail(item) {
   return { description: clip(withDesc.description), rating, related }
 }
 
-// ─── Music (Spotify) ───
+// ─── Wikipedia (plain-text summaries) ───
+// Spotify gives no album blurb, so pull the real thing from Wikipedia. Same
+// public-Wikimedia pattern the radar already uses; Wikimedia asks for a
+// descriptive, contactable User-Agent.
+const WIKI_UA = 'ColorCommentary/1.0 (media tracker; https://color-commentary.netlify.app)'
+const WIKI_HEADERS = { headers: { 'User-Agent': WIKI_UA } }
+
+// Find the best page for an album and return its summary extract — but only
+// when it's plausibly about that album, so we never attach a same-named
+// film/song/person's summary to a record.
+async function wikipediaAlbumExtract(albumName, artistName) {
+  const terms = [albumName, artistName, 'album'].filter(Boolean).join(' ')
+  const search = await getJson(
+    `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(terms)}&srlimit=1&format=json`,
+    WIKI_HEADERS
+  )
+  const title = search?.query?.search?.[0]?.title
+  if (!title) return ''
+
+  const summary = await getJson(
+    `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`,
+    WIKI_HEADERS
+  )
+  if (!summary || summary.type === 'disambiguation') return ''
+  const extract = (summary.extract || '').trim()
+  if (extract.length < 40) return ''
+
+  // Confirm the page is actually about this record: it should read like a
+  // release (album/EP/record/single) or name the artist. Otherwise a wrong
+  // same-title match (a movie, a band, a person) slips through.
+  const hay = `${title} ${extract}`.toLowerCase()
+  const looksMusical = /\b(album|ep|record|single|soundtrack|mixtape)\b/.test(hay)
+  const namesArtist = artistName && hay.includes(artistName.toLowerCase())
+  if (!looksMusical && !namesArtist) return ''
+
+  return extract
+}
+
+// ─── Music (Spotify + Wikipedia) ───
 async function musicDetail(item) {
   let token
   try { token = await getSpotifyToken() } catch { return { description: '', rating: null, related: [] } }
@@ -191,26 +229,41 @@ async function musicDetail(item) {
   if (!album) return { description: '', rating: null, related: [] }
 
   const artist = album.artists?.[0]
-  let related = []
-  if (artist?.id) {
+  const artistName = artist?.name || item.creator || ''
+
+  // Related works (Spotify) and the description (Wikipedia) are independent —
+  // fetch them together so the lightbox isn't waiting on two round-trips.
+  const [albums, extract] = await Promise.all([
     // NB: this app's Spotify credentials reject limit>10 ("Invalid limit"),
     // so keep it at 10 — plenty after deduping editions/re-releases.
-    const albums = await getJson(
-      `https://api.spotify.com/v1/artists/${artist.id}/albums?include_groups=album,single&limit=10&market=US`,
-      auth
-    )
-    const candidates = (albums?.items || []).map((a) => ({
+    artist?.id
+      ? getJson(
+          `https://api.spotify.com/v1/artists/${artist.id}/albums?include_groups=album,single&limit=10&market=US`,
+          auth
+        )
+      : Promise.resolve(null),
+    wikipediaAlbumExtract(album.name, artistName),
+  ])
+
+  let related = []
+  if (albums) {
+    const candidates = (albums.items || []).map((a) => ({
       title: a.name,
-      creator: a.artists?.[0]?.name || artist.name,
+      creator: a.artists?.[0]?.name || artistName,
       type: 'music',
       coverUrl: a.images?.[1]?.url || a.images?.[0]?.url || '',
-      note: `More from ${artist.name}`,
+      note: `More from ${artistName}`,
     }))
     related = dedupeRelated(candidates, album.name, MAX_RELATED)
   }
 
-  // Spotify exposes no album description or critic rating.
-  const description = artist?.name ? `Album by ${artist.name}.` : ''
+  // Real album summary when Wikipedia has one; otherwise the bare fact, so the
+  // "About" section still says something rather than vanishing.
+  const description = extract
+    ? clip(extract)
+    : (artistName ? `Album by ${artistName}.` : '')
+
+  // Spotify exposes no critic rating for albums.
   return { description, rating: null, related }
 }
 
